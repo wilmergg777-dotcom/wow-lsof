@@ -32,6 +32,7 @@ model SiteSettings {
   miniStoresEnabled Boolean  @default(true)
   coinRate          Int      @default(100) // cuántas monedas vale 1 CUP real
   catalogSeeded     Boolean  @default(false) // ya se publicaron las ofertas iniciales de bienvenida
+  courierFee        Int      @default(200) // CUP que gana el mensajero por entregar una oferta de la web
   updatedAt         DateTime @updatedAt
 }
 
@@ -58,6 +59,7 @@ model MiniStore {
   color           String       @default("#5B21B6") // color de marca para el diseño
   trialEndsAt     DateTime     @default(now()) // fin de la prueba gratis (5 días desde la creación)
   subscribedUntil DateTime? // hasta cuándo pagó la suscripción mensual (200 CUP)
+  courierFee      Int          @default(200) // CUP que gana el mensajero por una entrega de esta tienda
   createdAt       DateTime     @default(now())
   products        MiniProduct[]
   jobOffers       JobOffer[]
@@ -122,6 +124,11 @@ model Order {
   totalCoins    Int? // total en monedas si el pago fue con billetera
   paymentMethod String   @default("cash") // cash | coins | transfer
   transferId    String? // ID de la transferencia si el pago fue por transferencia
+  deliveryMode  String   @default("normal") // normal (repartidor de la tienda) | turbo (público, el primero que lo coge)
+  courierFee    Float    @default(0) // CUP que gana el mensajero por esta entrega
+  storeIds      String   @default("") // tiendas involucradas (separadas por coma) para el reparto por tienda
+  settled       Boolean  @default(false) // liquidación: el mensajero ya entregó el dinero cobrado
+  settledAt     DateTime?
   etaMinutes    Int
   status        String   @default("placed") // placed | in_delivery | delivered
   workerName    String?

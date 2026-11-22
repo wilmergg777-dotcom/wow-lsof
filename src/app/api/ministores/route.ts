@@ -45,6 +45,8 @@ export async function POST(req: Request) {
       color: typeof color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(color) ? color : '#5B21B6',
       // 5 días de prueba gratis desde hoy
       trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      // Tarifa del mensajero por entrega (CUP), la define el dueño
+      courierFee: Number(body.courierFee) > 0 ? Math.round(Number(body.courierFee)) : 200,
     },
     include: { products: true },
   })

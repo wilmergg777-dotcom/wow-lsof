@@ -11,18 +11,31 @@ function calcEta(mapX: number, mapY: number) {
   return Math.round(dist * 1.4) + 15 // entre 15 y ~95 minutos
 }
 
-// GET /api/orders?buyer=Nombre  |  ?status=placed  |  ?worker=Nombre
+// GET /api/orders?buyer=Nombre | ?status=placed | ?worker=Nombre
+// ?mode=turbo -> pedidos turbo públicos (tablero para mensajeros)
+// ?mode=normal&stores=id1,id2 -> pedidos por tienda (solo repartidores contratados)
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const buyer = searchParams.get('buyer')
   const worker = searchParams.get('worker')
   const status = searchParams.get('status')
+  const mode = searchParams.get('mode')
+  const stores = searchParams.get('stores')
 
   const orders = await db.order.findMany({
     where: {
       ...(buyer ? { buyerName: buyer } : {}),
       ...(worker ? { workerName: worker } : {}),
       ...(status ? { status } : {}),
+      ...(mode ? { deliveryMode: mode } : {}),
+      ...(stores
+        ? {
+            OR: stores
+              .split(',')
+              .filter(Boolean)
+              .map((sid) => ({ storeIds: { contains: sid } })),
+          }
+        : {}),
     },
     orderBy: { createdAt: 'desc' },
   })
@@ -57,6 +70,11 @@ export async function POST(req: Request) {
   type StockOp = { id: string; qty: number }
   const offerOps: StockOp[] = []
   const miniOps: StockOp[] = []
+  // Tarifa del mensajero por tienda (la definen el dueño de la
+  // mini tienda o el dueño de la web) y tiendas del pedido
+  const feeBuckets = new Map<string, number>()
+  const settings = await db.siteSettings.findUnique({ where: { id: 'main' } })
+  const webFee = settings?.courierFee ?? 200
   for (const it of items as Array<Record<string, unknown>>) {
     const pid = String(it?.productId || '')
     const kind = String(it?.kind || '')
@@ -75,9 +93,10 @@ export async function POST(req: Request) {
         { status: 400 }
       )
     }
+    feeBuckets.set('web', webFee)
   }
   for (const op of miniOps) {
-    const p = await db.miniProduct.findUnique({ where: { id: op.id } })
+    const p = await db.miniProduct.findUnique({ where: { id: op.id }, include: { store: true } })
     if (!p) {
       return NextResponse.json({ error: 'Un artículo del carrito ya no existe. Actualiza la página.' }, { status: 400 })
     }
@@ -87,6 +106,8 @@ export async function POST(req: Request) {
         { status: 400 }
       )
     }
+    // La tarifa del mensajero la define el dueño de la mini tienda
+    if (!feeBuckets.has(p.storeId)) feeBuckets.set(p.storeId, p.store.courierFee)
   }
   const buyer = String(buyerName).trim()
   const x = Number(mapX) || 50
@@ -129,6 +150,9 @@ export async function POST(req: Request) {
       totalCoins: method === 'coins' ? coinsToPay : null,
       paymentMethod: method,
       transferId: method === 'transfer' ? transferRef : null,
+      deliveryMode: body.deliveryMode === 'turbo' ? 'turbo' : 'normal',
+      courierFee: [...feeBuckets.values()].reduce((a, b) => a + b, 0),
+      storeIds: [...feeBuckets.keys()].filter((k) => k !== 'web').join(','),
       etaMinutes,
     },
   })

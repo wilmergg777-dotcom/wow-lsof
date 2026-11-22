@@ -45,9 +45,19 @@ export function OrdersView() {
               <div key={o.id} className="bg-white rounded-lg border border-[#e3e6e6] p-5">
                 <div className="flex flex-wrap items-center gap-3 justify-between border-b border-[#e3e6e6] pb-3">
                   <div>
-                    <p className="text-[16px] font-bold text-[#0F1111]">Pedido {o.code}</p>
+                    <p className="text-[16px] font-bold text-[#0F1111]">
+                      Pedido {o.code}{' '}
+                      {o.deliveryMode === 'turbo' && (
+                        <span className="inline-flex items-center gap-1 align-middle bg-[#5B21B6] text-white text-[11px] font-bold rounded-full px-2.5 py-0.5 ml-1">
+                          TURBO
+                        </span>
+                      )}
+                    </p>
                     <p className="text-[12px] text-[#565959]">
                       {new Date(o.createdAt).toLocaleString('es')}
+                      {o.deliveryMode === 'turbo'
+                        ? ' · Entrega turbo (mensajero público)'
+                        : ' · Entrega por la tienda'}
                     </p>
                   </div>
                   <span

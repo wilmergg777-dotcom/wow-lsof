@@ -53,6 +53,34 @@ export function AdminView() {
   const [offers, setOffers] = useState<Offer[]>([])
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  // Tarifa del mensajero para las ofertas de la web
+  const [feeDraft, setFeeDraft] = useState('200')
+  const [savingFee, setSavingFee] = useState(false)
+
+  useEffect(() => {
+    if (settings) setFeeDraft(String(settings.courierFee ?? 200))
+  }, [settings?.courierFee])
+
+  const saveFee = async () => {
+    const f = Math.round(Number(feeDraft) || 0)
+    if (f < 0) {
+      toast.error('La tarifa no puede ser negativa')
+      return
+    }
+    setSavingFee(true)
+    try {
+      const updated = await api<Settings>('/api/settings', {
+        method: 'PATCH',
+        body: JSON.stringify({ courierFee: f }),
+      })
+      setSettings(updated)
+      toast.success(`Tarifa guardada: el mensajero gana ${formatPrice(updated.courierFee)} por entregar ofertas de la web`)
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSavingFee(false)
+    }
+  }
 
   const loadMain = useCallback(() => {
     Promise.all([
@@ -197,6 +225,35 @@ export function AdminView() {
               >
                 Estado: {settings?.miniStoresEnabled ? 'Activadas' : 'Desactivadas'}
               </span>
+            </div>
+          </div>
+
+          {/* Tarifa del mensajero para las ofertas de la web */}
+          <div className="bg-[#f6f1fd] border border-[#5B21B6]/30 rounded-lg p-4 mt-4">
+            <h2 className="text-[16px] font-bold text-[#0F1111]">
+              Tarifa del mensajero (ofertas de la web)
+            </h2>
+            <p className="text-[13px] text-[#565959] mt-1 mb-3">
+              Cuánto gana el mensajero por entregar un pedido de las ofertas del dueño de la web.
+              Cada mini tienda define la suya en su panel.
+            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                value={feeDraft}
+                onChange={(e) => setFeeDraft(e.target.value)}
+                type="number"
+                min="0"
+                aria-label="Tarifa del mensajero para la web en CUP"
+                className="w-28 border border-[#888c8c] rounded px-3 py-2 text-[14px] outline-none focus:border-[#e77600]"
+              />
+              <span className="text-[13px] font-bold text-[#0F1111]">CUP por entrega</span>
+              <button
+                onClick={saveFee}
+                disabled={savingFee}
+                className="bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full px-5 py-2 cursor-pointer disabled:opacity-60"
+              >
+                {savingFee ? 'Guardando…' : 'Guardar tarifa'}
+              </button>
             </div>
           </div>
 

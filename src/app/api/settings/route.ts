@@ -20,8 +20,15 @@ export async function GET() {
 // y configura la tasa de cambio (monedas por 1 CUP real)
 export async function PATCH(req: Request) {
   const body = await req.json()
-  if (typeof body.miniStoresEnabled !== 'boolean' && typeof body.coinRate !== 'number') {
-    return NextResponse.json({ error: 'Falta miniStoresEnabled o coinRate' }, { status: 400 })
+  if (
+    typeof body.miniStoresEnabled !== 'boolean' &&
+    typeof body.coinRate !== 'number' &&
+    typeof body.courierFee !== 'number'
+  ) {
+    return NextResponse.json(
+      { error: 'Falta miniStoresEnabled, coinRate o courierFee' },
+      { status: 400 }
+    )
   }
   const settings = await getSettings()
   const rate = Number(body.coinRate)
@@ -35,6 +42,9 @@ export async function PATCH(req: Request) {
         ? { miniStoresEnabled: body.miniStoresEnabled }
         : {}),
       ...(typeof body.coinRate === 'number' ? { coinRate: Math.round(rate) } : {}),
+      ...(typeof body.courierFee === 'number' && body.courierFee >= 0
+        ? { courierFee: Math.round(body.courierFee) }
+        : {}),
     },
   })
   return NextResponse.json(updated)

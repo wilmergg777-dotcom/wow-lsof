@@ -25,6 +25,7 @@ export type MiniStore = {
   color: string // color de marca
   trialEndsAt: string // fin de la prueba gratis (5 días)
   subscribedUntil: string | null // suscripción pagada hasta
+  courierFee: number // CUP que gana el mensajero por entrega de esta tienda
   createdAt: string
   products: MiniProduct[]
 }
@@ -112,6 +113,11 @@ export type Order = {
   totalCoins: number | null // monedas pagadas si el pago fue con billetera
   paymentMethod: 'cash' | 'coins' | 'transfer'
   transferId: string | null // ID de la transferencia si el pago fue por transferencia
+  deliveryMode: 'normal' | 'turbo' // turbo = público al primer mensajero
+  courierFee: number // CUP que gana el mensajero por esta entrega
+  storeIds: string // tiendas involucradas (coma)
+  settled: boolean // liquidación: el mensajero entregó el dinero
+  settledAt: string | null
   etaMinutes: number
   status: 'placed' | 'in_delivery' | 'delivered'
   workerName: string | null
@@ -133,6 +139,7 @@ export type Settings = {
   id: string
   miniStoresEnabled: boolean
   coinRate: number // monedas que valen 1 CUP real
+  courierFee: number // CUP que gana el mensajero por entregar ofertas de la web
   updatedAt: string
 }
 

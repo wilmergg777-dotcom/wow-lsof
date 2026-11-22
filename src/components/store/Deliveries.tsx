@@ -1,32 +1,47 @@
 'use client'
 // ============================================================
-// ENTREGAS (repartidor): pedidos por entregar con el mini mapa
-// El repartidor ve dónde debe entregar cada compra y marca la
-// entrega al finalizar. El comprador recibe notificaciones.
+// ENTREGAS (mensajero): pedidos por entregar con el mini mapa
+// - TURBO: pedidos públicos para TODOS los mensajeros; el
+//   primero que lo coge lo lleva (el que lo coge, hace la
+//   mensajería). La tarifa que gana la define el dueño de la
+//   mini tienda o el dueño de la web.
+// - POR TIENDA: pedidos solo de las tiendas que te contrataron.
 // ============================================================
 import { useCallback, useEffect, useState } from 'react'
-import { Bike, MapPin, PackageOpen } from 'lucide-react'
+import { Bike, MapPin, PackageOpen, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 import { useStore, STORE_NAME } from '@/lib/store'
-import { api, ORDER_STATUS, type Order } from '@/lib/api'
+import { api, ORDER_STATUS, type Application, type JobOffer, type Order } from '@/lib/api'
 import { formatPrice } from '@/lib/products'
 import { MiniMap } from './MiniMap'
 
 export function DeliveriesView() {
   const user = useStore((s) => s.user)
   const openView = useStore((s) => s.openView)
-  const [available, setAvailable] = useState<Order[]>([])
+  const [turbo, setTurbo] = useState<Order[]>([])
+  const [storeOrders, setStoreOrders] = useState<Order[]>([])
   const [mine, setMine] = useState<Order[]>([])
+  const [myStores, setMyStores] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(() => {
     Promise.all([
-      api<Order[]>('/api/orders?status=placed'),
+      api<Order[]>('/api/orders?status=placed&mode=turbo'),
       api<Order[]>(`/api/orders?worker=${encodeURIComponent(user.name)}`),
+      api<Application[]>('/api/applications'),
+      api<JobOffer[]>('/api/joboffers'),
     ])
-      .then(([a, m]) => {
-        setAvailable(a)
+      .then(([t, m, apps, jobs]) => {
+        setTurbo(t)
         setMine(m)
+        // Tiendas que me contrataron (postulaciones aceptadas)
+        const myJobIds = apps
+          .filter((a) => a.applicantName === user.name && a.status === 'accepted')
+          .map((a) => a.jobId)
+        const storeIds = jobs
+          .filter((j) => myJobIds.includes(j.id))
+          .map((j) => j.storeId)
+        setMyStores([...new Set(storeIds)])
       })
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false))
@@ -37,6 +52,19 @@ export function DeliveriesView() {
     const t = setInterval(load, 8000) // se actualiza solo cada 8 segundos
     return () => clearInterval(t)
   }, [load])
+
+  // Pedidos de las tiendas que me contrataron (modo normal)
+  useEffect(() => {
+    if (myStores.length === 0) {
+      setStoreOrders([])
+      return
+    }
+    api<Order[]>(
+      `/api/orders?status=placed&mode=normal&stores=${encodeURIComponent(myStores.join(','))}`
+    )
+      .then(setStoreOrders)
+      .catch(() => setStoreOrders([]))
+  }, [myStores, turbo, mine])
 
   const takeOrder = async (o: Order) => {
     try {
@@ -95,8 +123,9 @@ export function DeliveriesView() {
           <Bike className="w-7 h-7 text-[#5B21B6]" /> Mis entregas
         </h1>
         <p className="text-[14px] text-[#565959] mt-1">
-          Hola {user.name}. Toma pedidos disponibles y usa el mini mapa para llegar al punto de
-          entrega marcado por el comprador.
+          Hola {user.name}. Los pedidos <b>turbo</b> son públicos: el primero que los coge los
+          lleva. Los pedidos de tiendas solo los ven los mensajeros contratados. Cada entrega
+          indica cuánto ganas.
         </p>
       </div>
 
@@ -168,22 +197,25 @@ export function DeliveriesView() {
         )}
       </section>
 
-      {/* Pedidos disponibles */}
+      {/* Pedidos turbo disponibles (públicos, primero en llegar) */}
       <section>
-        <h2 className="text-[18px] font-bold text-[#0F1111] mb-3">
-          Pedidos disponibles ({available.length})
+        <h2 className="text-[18px] font-bold text-[#0F1111] mb-3 flex items-center gap-2">
+          <Zap className="w-5 h-5 text-[#5B21B6]" /> Pedidos turbo disponibles ({turbo.length})
         </h2>
-        {available.length === 0 ? (
+        {turbo.length === 0 ? (
           <p className="bg-white rounded-lg border border-[#e3e6e6] p-5 text-[14px] text-[#565959] flex items-center gap-2">
-            <PackageOpen className="w-5 h-5 text-[#ddd]" /> No hay pedidos esperando repartidor
-            ahora mismo.
+            <PackageOpen className="w-5 h-5 text-[#ddd]" /> No hay pedidos turbo esperando
+            mensajero ahora mismo.
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {available.map((o) => (
-              <div key={o.id} className="bg-white rounded-lg border border-[#e3e6e6] p-5">
+            {turbo.map((o) => (
+              <div key={o.id} className="bg-white rounded-lg border-2 border-[#5B21B6]/40 p-5">
                 <p className="text-[15px] font-bold text-[#0F1111]">
                   Pedido {o.code} · {formatPrice(o.total)}
+                </p>
+                <p className="text-[13px] font-bold text-[#007600] mt-0.5">
+                  Ganas {formatPrice(o.courierFee)} por esta entrega
                 </p>
                 <p
                   className={`text-[13px] font-bold mt-0.5 ${
@@ -199,6 +231,49 @@ export function DeliveriesView() {
                     : o.paymentMethod === 'transfer'
                       ? 'Ya pagado por transferencia'
                       : `Cobrar ${formatPrice(o.total)} en efectivo al entregar`}
+                </p>
+                <p className="text-[13px] text-[#565959] mt-1">
+                  Para <b>{o.buyerName}</b> · {o.address}
+                </p>
+                <p className="text-[13px] text-[#565959] mt-0.5">
+                  {JSON.parse(o.items).length} artículo(s) · estimado {o.etaMinutes} min
+                </p>
+                <div className="my-3">
+                  <MiniMap x={o.mapX} y={o.mapY} height={180} label="Punto de entrega" />
+                </div>
+                <button
+                  onClick={() => takeOrder(o)}
+                  className="w-full bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[14px] font-bold rounded-full py-2 cursor-pointer"
+                >
+                  Tomar este pedido
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Pedidos de las tiendas que me contrataron (modo normal) */}
+      <section>
+        <h2 className="text-[18px] font-bold text-[#0F1111] mb-3">
+          Pedidos de mis tiendas contratadas ({storeOrders.length})
+        </h2>
+        {storeOrders.length === 0 ? (
+          <p className="bg-white rounded-lg border border-[#e3e6e6] p-5 text-[14px] text-[#565959] flex items-center gap-2">
+            <PackageOpen className="w-5 h-5 text-[#ddd]" />{' '}
+            {myStores.length === 0
+              ? 'Aún no te contrató ninguna mini tienda: postúlate en Trabajo de Domicilio.'
+              : 'Tus tiendas contratadas no tienen pedidos esperando ahora mismo.'}
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {storeOrders.map((o) => (
+              <div key={o.id} className="bg-white rounded-lg border border-[#e3e6e6] p-5">
+                <p className="text-[15px] font-bold text-[#0F1111]">
+                  Pedido {o.code} · {formatPrice(o.total)}
+                </p>
+                <p className="text-[13px] font-bold text-[#007600] mt-0.5">
+                  Ganas {formatPrice(o.courierFee)} por esta entrega
                 </p>
                 <p className="text-[13px] text-[#565959] mt-1">
                   Para <b>{o.buyerName}</b> · {o.address}

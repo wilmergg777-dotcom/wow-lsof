@@ -727,6 +727,9 @@ export function ManageStoreView() {
   // Saldo del dueño para pagar la suscripción de la tienda
   const [wallet, setWallet] = useState<Wallet | null>(null)
   const [payingSub, setPayingSub] = useState(false)
+  // Tarifa que gana el mensajero por entrega (la define el dueño)
+  const [feeDraft, setFeeDraft] = useState('200')
+  const [savingFee, setSavingFee] = useState(false)
   // Formulario de oferta de trabajo
   const [oTitle, setOTitle] = useState('')
   const [oZone, setOZone] = useState('')
@@ -791,6 +794,32 @@ export function ManageStoreView() {
     api<MiniStore>(`/api/ministores/${store.id}`)
       .then(setStore)
       .catch(() => {})
+  }
+
+  useEffect(() => {
+    if (store) setFeeDraft(String(store.courierFee))
+  }, [store?.id, store?.courierFee])
+
+  const saveFee = async () => {
+    if (!store) return
+    const f = Math.round(Number(feeDraft) || 0)
+    if (f < 0) {
+      toast.error('La tarifa no puede ser negativa')
+      return
+    }
+    setSavingFee(true)
+    try {
+      const updated = await api<MiniStore>(`/api/ministores/${store.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ownerName: user.name, courierFee: f }),
+      })
+      setStore((prev) => (prev ? { ...prev, courierFee: updated.courierFee } : prev))
+      toast.success(`Tarifa guardada: el mensajero gana ${formatPrice(updated.courierFee)} por entrega`)
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSavingFee(false)
+    }
   }
 
   // Paga la suscripción mensual de la tienda con el saldo interno
@@ -1294,6 +1323,34 @@ export function ManageStoreView() {
             Publica una oferta de trabajo de domicilio. Los repartidores postulan con un formulario
             y tú decides quién trabaja para ti.
           </p>
+
+          {/* Tarifa del mensajero por entrega (la define el dueño) */}
+          <div className="bg-[#f6f1fd] border border-[#5B21B6]/30 rounded-lg p-3 mb-4">
+            <p className="text-[13px] font-bold text-[#5B21B6]">
+              Tarifa que gana el mensajero por entregar tus pedidos
+            </p>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <input
+                value={feeDraft}
+                onChange={(e) => setFeeDraft(e.target.value)}
+                type="number"
+                min="0"
+                aria-label="Tarifa del mensajero en CUP"
+                className="w-28 border border-[#888c8c] rounded px-3 py-1.5 text-[14px] outline-none focus:border-[#5B21B6]"
+              />
+              <span className="text-[13px] font-bold text-[#0F1111]">CUP por entrega</span>
+              <button
+                onClick={saveFee}
+                disabled={savingFee}
+                className="bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[12px] font-bold rounded-full px-4 py-1.5 cursor-pointer disabled:opacity-60"
+              >
+                {savingFee ? 'Guardando…' : 'Guardar tarifa'}
+              </button>
+            </div>
+            <p className="text-[12px] text-[#565959] mt-1.5">
+              Los pedidos turbo muestran esta tarifa en el tablero público de los mensajeros.
+            </p>
+          </div>
 
           <input
             value={oTitle}

@@ -7,10 +7,10 @@
 // o con MONEDAS de la billetera interna.
 // ============================================================
 import { useEffect, useMemo, useState } from 'react'
-import { Banknote, Check, Coins, Copy, CreditCard, MapPin } from 'lucide-react'
+import { Banknote, Check, Coins, Copy, CreditCard, MapPin, Package, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 import { useStore } from '@/lib/store'
-import { api, type Order, type PaymentMethod, type Settings, type Wallet } from '@/lib/api'
+import { api, type MiniStore, type Order, type PaymentMethod, type Settings, type Wallet } from '@/lib/api'
 import { cashToCoins, formatCoins, formatPrice } from '@/lib/products'
 import { MiniMap, MAP_CENTER } from './MiniMap'
 
@@ -29,7 +29,13 @@ export function CheckoutView() {
 
   // Pago: efectivo, transferencia bancaria (CUP) o monedas internas
   const [method, setMethod] = useState<'cash' | 'coins' | 'transfer'>('cash')
+  // Entrega: normal (repartidor de la tienda) o turbo (público al
+  // primer mensajero que lo coge). La tarifa del mensajero la
+  // definen el dueño de la mini tienda o el dueño de la web.
+  const [deliveryMode, setDeliveryMode] = useState<'normal' | 'turbo'>('normal')
   const [rate, setRate] = useState(100)
+  const [feeSetting, setFeeSetting] = useState(200)
+  const [stores, setStores] = useState<MiniStore[]>([])
   const [wallet, setWallet] = useState<Wallet | null>(null)
   // Cuentas del administrador para recibir la transferencia + su ID
   const [methods, setMethods] = useState<PaymentMethod[]>([])
@@ -37,7 +43,14 @@ export function CheckoutView() {
 
   useEffect(() => {
     api<Settings>('/api/settings')
-      .then((st) => setRate(st.coinRate || 100))
+      .then((st) => {
+        setRate(st.coinRate || 100)
+        setFeeSetting(st.courierFee ?? 200)
+      })
+      .catch(() => {})
+    // Tarifas de las mini tiendas (para mostrar lo que gana el mensajero)
+    api<MiniStore[]>('/api/ministores')
+      .then(setStores)
       .catch(() => {})
   }, [])
 
@@ -85,6 +98,28 @@ export function CheckoutView() {
   const count = items.reduce((acc, i) => acc + i.qty, 0)
   const balance = wallet?.coins ?? 0
   const canPayWithCoins = wallet !== null && wallet.guest !== true && balance >= totalCoins
+
+  // Tarifa que ganará el mensajero con este pedido: se suma la
+  // tarifa de cada tienda involucrada (la web usa la tarifa
+  // global del administrador). El servidor la recalcula al crear
+  // el pedido: aquí es solo la vista previa.
+  const courierFeePreview = useMemo(() => {
+    const buckets = new Set<string>()
+    let fee = 0
+    for (const i of items) {
+      const isWeb = i.kind === 'web'
+      const bucket = isWeb ? 'web' : i.store || 'tienda'
+      if (buckets.has(bucket)) continue
+      buckets.add(bucket)
+      if (isWeb) {
+        fee += feeSetting
+      } else {
+        const st = stores.find((s) => s.name === i.store)
+        fee += st?.courierFee ?? 200
+      }
+    }
+    return fee
+  }, [items, stores, feeSetting])
 
   // Tiempo estimado: distancia del pin al centro del mapa
   const eta = pin
@@ -153,6 +188,7 @@ export function CheckoutView() {
           paymentMethod: method,
           totalCoins: method === 'coins' ? totalCoins : undefined,
           transferId: method === 'transfer' ? transferId.trim() : undefined,
+          deliveryMode,
         }),
       })
       clearCart()
@@ -372,6 +408,44 @@ export function CheckoutView() {
                   ) : (
                     <> tu saldo: {formatCoins(balance)} monedas</>
                   )}
+                </span>
+              </button>
+            </div>
+
+            {/* Modo de entrega: normal por tienda o turbo público */}
+            <h3 className="text-[15px] font-bold text-[#0F1111] mt-4 mb-2">Modo de entrega</h3>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => setDeliveryMode('normal')}
+                className={`text-left border-2 rounded-lg p-3 cursor-pointer transition-colors ${
+                  deliveryMode === 'normal'
+                    ? 'border-[#007600] bg-[#f0faf0]'
+                    : 'border-[#d5d9d9] hover:border-[#888c8c]'
+                }`}
+              >
+                <span className="flex items-center gap-2 text-[14px] font-bold text-[#0F1111]">
+                  <Package className="w-4.5 h-4.5 text-[#007600]" /> Entrega por la tienda
+                </span>
+                <span className="block text-[13px] text-[#565959] mt-0.5">
+                  Lo lleva el repartidor contratado por la tienda. El mensajero gana{' '}
+                  {formatPrice(courierFeePreview)} por esta entrega.
+                </span>
+              </button>
+              <button
+                onClick={() => setDeliveryMode('turbo')}
+                className={`text-left border-2 rounded-lg p-3 cursor-pointer transition-colors ${
+                  deliveryMode === 'turbo'
+                    ? 'border-[#5B21B6] bg-[#f6f1fd]'
+                    : 'border-[#d5d9d9] hover:border-[#888c8c]'
+                }`}
+              >
+                <span className="flex items-center gap-2 text-[14px] font-bold text-[#0F1111]">
+                  <Zap className="w-4.5 h-4.5 text-[#5B21B6]" /> Modo turbo
+                </span>
+                <span className="block text-[13px] text-[#565959] mt-0.5">
+                  Tu pedido sale al tablero público: cualquier mensajero puede cogerlo y el
+                  primero que lo tome lo lleva. Ganará {formatPrice(courierFeePreview)} por
+                  entregarte esta compra.
                 </span>
               </button>
             </div>

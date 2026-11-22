@@ -33,3 +33,31 @@ export async function DELETE(
   await db.miniStore.delete({ where: { id } })
   return NextResponse.json({ ok: true })
 }
+
+// PATCH /api/ministores/[id] — el dueño edita su tienda
+// (por ahora: la tarifa que gana el mensajero por entrega)
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const body = await req.json().catch(() => ({}) as Record<string, unknown>)
+  const store = await db.miniStore.findUnique({ where: { id } })
+  if (!store) return NextResponse.json({ error: 'Mini tienda no encontrada' }, { status: 404 })
+  if (store.ownerName !== String(body.ownerName || '')) {
+    return NextResponse.json(
+      { error: 'Solo el dueño puede editar la tienda' },
+      { status: 403 }
+    )
+  }
+  const data: { courierFee?: number } = {}
+  if (body.courierFee !== undefined) {
+    const f = Math.round(Number(body.courierFee) || 0)
+    if (f < 0) {
+      return NextResponse.json({ error: 'La tarifa no puede ser negativa' }, { status: 400 })
+    }
+    data.courierFee = f
+  }
+  const updated = await db.miniStore.update({ where: { id }, data })
+  return NextResponse.json(updated)
+}
