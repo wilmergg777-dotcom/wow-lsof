@@ -79,12 +79,18 @@ export function OrdersView() {
                     </p>
                     <p
                       className={`text-[13px] font-bold mt-1 ${
-                        o.paymentMethod === 'coins' ? 'text-[#5B21B6]' : 'text-[#007600]'
+                        o.paymentMethod === 'coins'
+                          ? 'text-[#5B21B6]'
+                          : o.paymentMethod === 'transfer'
+                            ? 'text-[#C7511F]'
+                            : 'text-[#007600]'
                       }`}
                     >
                       {o.paymentMethod === 'coins'
                         ? `Pagado con ${formatCoins(o.totalCoins ?? 0)} monedas`
-                        : 'Pago en efectivo al recibir'}
+                        : o.paymentMethod === 'transfer'
+                          ? `Pago por transferencia · ID: ${o.transferId ?? '—'} · pendiente de confirmar`
+                          : 'Pago en efectivo al recibir'}
                     </p>
                     <p className="text-[13px] text-[#565959] mt-1">
                       Entrega en: <b>{o.address}</b>

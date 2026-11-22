@@ -99,12 +99,18 @@ export function DeliveriesView() {
                       </p>
                       <p
                         className={`text-[13px] font-bold mt-1 flex items-center gap-1 ${
-                          o.paymentMethod === 'coins' ? 'text-[#5B21B6]' : 'text-[#B45309]'
+                          o.paymentMethod === 'coins'
+                            ? 'text-[#5B21B6]'
+                            : o.paymentMethod === 'transfer'
+                              ? 'text-[#007600]'
+                              : 'text-[#B45309]'
                         }`}
                       >
                         {o.paymentMethod === 'coins'
                           ? `Ya pagado con monedas: no cobrar dinero`
-                          : `Cobrar ${formatPrice(o.total)} en efectivo al entregar`}
+                          : o.paymentMethod === 'transfer'
+                            ? `Ya pagado por transferencia (ID: ${o.transferId ?? '—'}): no cobrar dinero`
+                            : `Cobrar ${formatPrice(o.total)} en efectivo al entregar`}
                       </p>
                       <p className="text-[13px] text-[#0F1111] mt-1 flex items-start gap-1.5">
                         <MapPin className="w-4 h-4 text-[#C7511F] shrink-0 mt-0.5" />
@@ -158,12 +164,18 @@ export function DeliveriesView() {
                 </p>
                 <p
                   className={`text-[13px] font-bold mt-0.5 ${
-                    o.paymentMethod === 'coins' ? 'text-[#5B21B6]' : 'text-[#B45309]'
+                    o.paymentMethod === 'coins'
+                      ? 'text-[#5B21B6]'
+                      : o.paymentMethod === 'transfer'
+                        ? 'text-[#007600]'
+                        : 'text-[#B45309]'
                   }`}
                 >
                   {o.paymentMethod === 'coins'
                     ? 'Ya pagado con monedas'
-                    : `Cobrar ${formatPrice(o.total)} en efectivo al entregar`}
+                    : o.paymentMethod === 'transfer'
+                      ? 'Ya pagado por transferencia'
+                      : `Cobrar ${formatPrice(o.total)} en efectivo al entregar`}
                 </p>
                 <p className="text-[13px] text-[#565959] mt-1">
                   Para <b>{o.buyerName}</b> · {o.address}

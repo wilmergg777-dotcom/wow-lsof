@@ -91,7 +91,7 @@ export function Footer() {
               Español
             </span>
             <span className="border border-[#485769] rounded px-3 py-1.5 text-[12px] text-[#DDD]">
-              USD - Dólar estadounidense
+              CUP - Peso cubano
             </span>
             <span className="border border-[#485769] rounded px-3 py-1.5 text-[12px] text-[#DDD]">
               Cuba

@@ -4,6 +4,7 @@
 // ============================================================
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { formatPrice } from '@/lib/products'
 
 async function getWallet(name: string) {
   let wallet = await db.wallet.findUnique({ where: { ownerName: name } })
@@ -58,7 +59,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       data: {
         toName: request.userName,
         title: 'Recarga rechazada',
-        body: `El administrador no encontró la transferencia con ID ${request.transferId} por $${request.amountCash.toFixed(2)}.${adminNote ? ` Nota: ${adminNote}` : ' Revisa el ID e inténtalo de nuevo.'}`,
+        body: `El administrador no encontró la transferencia con ID ${request.transferId} por ${formatPrice(request.amountCash)}.${adminNote ? ` Nota: ${adminNote}` : ' Revisa el ID e inténtalo de nuevo.'}`,
         kind: 'recarga',
       },
     })

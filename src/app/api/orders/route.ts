@@ -3,6 +3,7 @@
 // ============================================================
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { formatPrice } from '@/lib/products'
 
 // Tiempo estimado según la distancia en el mini mapa (0-100, centro = 50,50)
 function calcEta(mapX: number, mapY: number) {
@@ -30,16 +31,24 @@ export async function GET(req: Request) {
 
 // POST /api/orders — crear pedido desde el carrito
 // paymentMethod: "cash" (efectivo al recibir) | "coins" (monedas internas)
+//                | "transfer" (transferencia bancaria en CUP con su ID)
 export async function POST(req: Request) {
   const body = await req.json()
-  const { buyerName, address, notes, mapX, mapY, items, total, paymentMethod, totalCoins } = body
+  const { buyerName, address, notes, mapX, mapY, items, total, paymentMethod, totalCoins, transferId } = body
   if (!buyerName || !address || !Array.isArray(items) || items.length === 0) {
     return NextResponse.json(
       { error: 'Faltan datos del pedido (comprador, dirección o artículos)' },
       { status: 400 }
     )
   }
-  const method = paymentMethod === 'coins' ? 'coins' : 'cash'
+  const method = ['coins', 'transfer'].includes(paymentMethod) ? paymentMethod : 'cash'
+  const transferRef = String(transferId || '').trim()
+  if (method === 'transfer' && !transferRef) {
+    return NextResponse.json(
+      { error: 'Falta el ID de la transferencia: escribe el número que te dio el banco' },
+      { status: 400 }
+    )
+  }
   const buyer = String(buyerName).trim()
   const x = Number(mapX) || 50
   const y = Number(mapY) || 50
@@ -80,6 +89,7 @@ export async function POST(req: Request) {
       total: Number(total),
       totalCoins: method === 'coins' ? coinsToPay : null,
       paymentMethod: method,
+      transferId: method === 'transfer' ? transferRef : null,
       etaMinutes,
     },
   })
@@ -88,7 +98,9 @@ export async function POST(req: Request) {
   const payText =
     method === 'coins'
       ? `Pagaste ${coinsToPay} monedas (saldo restante: ${newBalance}).`
-      : `Pagas $${Number(total).toFixed(2)} en efectivo al recibir el pedido.`
+      : method === 'transfer'
+        ? `Pagas ${formatPrice(Number(total))} por transferencia bancaria. Registraste el ID ${transferRef}: el vendedor confirmará el pago.`
+        : `Pagas ${formatPrice(Number(total))} en efectivo al recibir el pedido.`
   await db.notification.create({
     data: {
       toName: order.buyerName,
@@ -98,6 +110,20 @@ export async function POST(req: Request) {
       orderId: order.id,
     },
   })
+
+  // Si pagó por transferencia: aviso automático al vendedor (administrador)
+  // con los datos de la transferencia para que la verifique.
+  if (method === 'transfer') {
+    await db.notification.create({
+      data: {
+        toName: 'Administrador',
+        title: `Pago por transferencia en el pedido ${code}`,
+        body: `${buyer} registró una transferencia de ${formatPrice(Number(total))} para el pedido ${code}. ID de la transferencia: ${transferRef}. Verifícala en tu banco y confirma el pago con el comprador.`,
+        kind: 'pedido',
+        orderId: order.id,
+      },
+    })
+  }
 
   return NextResponse.json(order, { status: 201 })
 }

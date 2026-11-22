@@ -133,7 +133,7 @@ export function WalletView() {
               <span className="text-[16px] font-bold text-white/80">monedas</span>
             </p>
             <p className="text-[13px] text-white/80 mt-1">
-              Cambio actual: 1 $ = {rate} monedas · También puedes pagar en efectivo al recibir
+              Cambio actual: 1 CUP = {rate} monedas · También puedes pagar en efectivo o por transferencia al comprar
             </p>
           </div>
           <div className="bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-[13px]">
@@ -221,6 +221,9 @@ export function WalletView() {
                       {m.details}
                     </span>
                     <span className="block text-[#565959]">Titular: {m.holder}</span>
+                    {m.phone && (
+                      <span className="block text-[#565959]">Teléfono: {m.phone}</span>
+                    )}
                     {m.instructions && (
                       <span className="block text-[#565959] mt-0.5">{m.instructions}</span>
                     )}
@@ -247,7 +250,7 @@ export function WalletView() {
             2. Registra tu transferencia:
           </h3>
           <label className="block text-[12px] font-bold text-[#0F1111] mb-1">
-            ¿Cuánto dinero enviaste? ($)
+            ¿Cuánto dinero enviaste? (CUP)
           </label>
           <input
             value={amount}
@@ -255,7 +258,7 @@ export function WalletView() {
             type="number"
             min="0.01"
             step="0.01"
-            placeholder="Ej: 10.00"
+            placeholder="Ej: 500"
             disabled={isGuest}
             className="w-full border border-[#888c8c] rounded px-3 py-2 text-[14px] outline-none focus:border-[#e77600] mb-2 disabled:bg-[#f0f2f2]"
           />
@@ -263,7 +266,7 @@ export function WalletView() {
             <Coins className="w-4 h-4" />
             {coinsPreview > 0
               ? `Recibirás ${formatCoins(coinsPreview)} monedas`
-              : `Equivale a monedas con el cambio 1 $ = ${rate}`}
+              : `Equivale a monedas con el cambio 1 CUP = ${rate}`}
           </p>
           <label className="block text-[12px] font-bold text-[#0F1111] mb-1">
             ID de la transferencia

@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   const priceNum = Number(price)
   if (!priceNum || priceNum <= 0) {
     return NextResponse.json(
-      { error: 'Pon el precio en dinero ($) mayor que 0' },
+      { error: 'Pon el precio en dinero (CUP) mayor que 0' },
       { status: 400 }
     )
   }

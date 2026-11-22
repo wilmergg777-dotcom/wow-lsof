@@ -250,7 +250,7 @@ function OffersSection({ onChanged }: { onChanged: () => void }) {
   const publish = async () => {
     const priceNum = parseFloat(price)
     if (!title.trim() || !priceNum || priceNum <= 0) {
-      toast.error('La oferta necesita un nombre y un precio en $ mayor que 0')
+      toast.error('La oferta necesita un nombre y un precio en CUP mayor que 0')
       return
     }
     const oldNum = oldPrice.trim() ? parseFloat(oldPrice) : null
@@ -395,7 +395,7 @@ function OffersSection({ onChanged }: { onChanged: () => void }) {
             </div>
 
             <p className="text-[12px] text-[#565959] mb-3 flex items-center gap-1">
-              <Coins className="w-3.5 h-3.5 text-[#5B21B6]" /> Cambio actual: 1 $ = {rate} monedas.
+              <Coins className="w-3.5 h-3.5 text-[#5B21B6]" /> Cambio actual: 1 CUP = {rate} monedas.
               Si dejas el precio en monedas vacío se calcula solo.
             </p>
           </div>
@@ -684,6 +684,7 @@ function PaymentMethodsSection({
   const [label, setLabel] = useState('')
   const [details, setDetails] = useState('')
   const [holder, setHolder] = useState('')
+  const [phone, setPhone] = useState('')
   const [instructions, setInstructions] = useState('')
 
   const load = useCallback(() => {
@@ -702,18 +703,19 @@ function PaymentMethodsSection({
   }, [rate])
 
   const addMethod = async () => {
-    if (!label.trim() || !details.trim() || !holder.trim()) {
-      toast.error('Completa el nombre de la cuenta, el número y el titular')
+    if (!label.trim() || !details.trim() || !holder.trim() || !phone.trim()) {
+      toast.error('Completa el nombre de la cuenta, el número, el titular y el teléfono')
       return
     }
     try {
       await api('/api/payment-methods', {
         method: 'POST',
-        body: JSON.stringify({ label, details, holder, instructions }),
+        body: JSON.stringify({ label, details, holder, phone, instructions }),
       })
       setLabel('')
       setDetails('')
       setHolder('')
+      setPhone('')
       setInstructions('')
       load()
       toast.success('Cuenta de cobro agregada: ya aparece en Mi Billetera')
@@ -757,7 +759,7 @@ function PaymentMethodsSection({
         body: JSON.stringify({ coinRate: r }),
       })
       onRateChange(r)
-      toast.success(`Tasa actualizada: 1 $ = ${r} monedas`)
+      toast.success(`Tasa actualizada: 1 CUP = ${r} monedas`)
     } catch (e) {
       toast.error((e as Error).message)
     } finally {
@@ -775,18 +777,18 @@ function PaymentMethodsSection({
           <Banknote className="w-5 h-5 text-[#5B21B6]" /> Tasa de cambio de las monedas
         </h2>
         <p className="text-[13px] text-[#565959] mt-1 mb-4">
-          Cuántas monedas de la tienda vale 1 $ de dinero real. Se usa para convertir las
+          Cuántas monedas de la tienda vale 1 CUP de dinero real. Se usa para convertir las
           transferencias y los productos que no tienen precio en monedas.
         </p>
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-[14px] text-[#0F1111] font-bold">1 $ =</span>
+          <span className="text-[14px] text-[#0F1111] font-bold">1 CUP =</span>
           <input
             value={rateDraft}
             onChange={(e) => setRateDraft(e.target.value)}
             type="number"
             min="1"
             className="w-32 border border-[#888c8c] rounded px-3 py-2 text-[14px] outline-none focus:border-[#e77600]"
-            aria-label="Monedas por dólar"
+            aria-label="Monedas por CUP"
           />
           <span className="text-[14px] text-[#0F1111] font-bold flex items-center gap-1">
             <Coins className="w-4 h-4 text-[#5B21B6]" /> monedas
@@ -828,6 +830,7 @@ function PaymentMethodsSection({
                   <p className="font-bold text-[#0F1111]">{m.label}</p>
                   <p className="font-mono text-[#0F1111]">{m.details}</p>
                   <p className="text-[#565959]">Titular: {m.holder}</p>
+                  {m.phone && <p className="text-[#565959]">Teléfono: {m.phone}</p>}
                   {m.instructions && <p className="text-[#565959]">{m.instructions}</p>}
                 </div>
                 <button
@@ -872,6 +875,12 @@ function PaymentMethodsSection({
             value={holder}
             onChange={(e) => setHolder(e.target.value)}
             placeholder="Titular de la cuenta"
+            className="border border-[#888c8c] rounded px-3 py-2 text-[14px] outline-none focus:border-[#e77600]"
+          />
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Teléfono del titular (Transfermóvil/enZona)"
             className="border border-[#888c8c] rounded px-3 py-2 text-[14px] outline-none focus:border-[#e77600]"
           />
           <input

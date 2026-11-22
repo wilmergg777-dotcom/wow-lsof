@@ -6,6 +6,7 @@
 // ============================================================
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { formatPrice } from '@/lib/products'
 
 async function getSettings() {
   let settings = await db.siteSettings.findUnique({ where: { id: 'main' } })
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
     data: {
       toName: 'Administrador',
       title: 'Nueva solicitud de recarga',
-      body: `${request.userName} envió $${amount.toFixed(2)} por "${request.methodName}". ID de transferencia: ${request.transferId}. Revisa y acredita ${coins} monedas desde el panel de administración.`,
+      body: `${request.userName} envió ${formatPrice(amount)} por "${request.methodName}". ID de transferencia: ${request.transferId}. Revisa y acredita ${coins} monedas desde el panel de administración.`,
       kind: 'recarga',
     },
   })

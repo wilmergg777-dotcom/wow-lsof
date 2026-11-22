@@ -18,6 +18,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       label: body.label !== undefined ? String(body.label).trim() : existing.label,
       details: body.details !== undefined ? String(body.details).trim() : existing.details,
       holder: body.holder !== undefined ? String(body.holder).trim() : existing.holder,
+      phone: body.phone !== undefined ? String(body.phone).trim() : existing.phone,
       instructions:
         body.instructions !== undefined ? String(body.instructions).trim() : existing.instructions,
       active: typeof body.active === 'boolean' ? body.active : existing.active,

@@ -22,6 +22,7 @@ export async function GET(req: Request) {
         label: 'Tarjeta monetaria (ejemplo)',
         details: '0000 0000 0000 0000',
         holder: 'Administrador de Violetero',
+        phone: '+53 5 000 0000',
         instructions: 'Edita esta tarjeta en el panel del administrador con tu cuenta real.',
         active: true,
       },
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
 // POST /api/payment-methods — agregar un método de cobro
 export async function POST(req: Request) {
   const body = await req.json()
-  const { label, details, holder, instructions } = body
+  const { label, details, holder, phone, instructions } = body
   if (!label || !details || !holder) {
     return NextResponse.json(
       { error: 'Faltan datos: nombre de la cuenta, número y titular' },
@@ -46,6 +47,7 @@ export async function POST(req: Request) {
       label: String(label).trim(),
       details: String(details).trim(),
       holder: String(holder).trim(),
+      phone: String(phone || '').trim(),
       instructions: String(instructions || '').trim(),
       active: body.active !== false,
     },

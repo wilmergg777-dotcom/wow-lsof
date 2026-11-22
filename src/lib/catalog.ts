@@ -15,7 +15,7 @@ export type CatalogItem = {
   name: string
   description: string
   category: string
-  price: number // dinero real ($)
+  price: number // dinero real (CUP)
   priceCoins: number // monedas internas (0 = se calcula con la tasa)
   oldPrice: number | null // precio anterior (para el descuento)
   photo: string | null

@@ -102,7 +102,8 @@ model Order {
   items         String // JSON: [{name, price, qty, store}]
   total         Float
   totalCoins    Int? // total en monedas si el pago fue con billetera
-  paymentMethod String   @default("cash") // cash | coins
+  paymentMethod String   @default("cash") // cash | coins | transfer
+  transferId    String? // ID de la transferencia si el pago fue por transferencia
   etaMinutes    Int
   status        String   @default("placed") // placed | in_delivery | delivered
   workerName    String?
@@ -149,6 +150,7 @@ model PaymentMethod {
   label        String // ej: "Tarjeta monetaria BPA"
   details      String // número de tarjeta o cuenta
   holder       String // titular de la cuenta
+  phone        String  @default("") // teléfono del titular para las transferencias
   instructions String  @default("")
   active       Boolean @default(true)
 }

@@ -1,15 +1,16 @@
 'use client'
 // ============================================================
 // FINALIZAR COMPRA: dirección + MINI MAPA + pago + confirmación
-// El comprador coloca el pin donde quiere recibir el pedido,
-// elige pagar en EFECTIVO al recibir o con MONEDAS de la
-// billetera interna, y el sistema crea el pedido en la base.
+// El comprador coloca el pin donde quiere recibir el pedido y
+// elige pagar en EFECTIVO al recibir, con TRANSFERENCIA (CUP:
+// las tarjetas del administrador se muestran solo en este paso)
+// o con MONEDAS de la billetera interna.
 // ============================================================
 import { useEffect, useMemo, useState } from 'react'
-import { Banknote, Check, Coins, MapPin } from 'lucide-react'
+import { Banknote, Check, Coins, Copy, CreditCard, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 import { useStore } from '@/lib/store'
-import { api, type Order, type Settings, type Wallet } from '@/lib/api'
+import { api, type Order, type PaymentMethod, type Settings, type Wallet } from '@/lib/api'
 import { cashToCoins, formatCoins, formatPrice } from '@/lib/products'
 import { MiniMap, MAP_CENTER } from './MiniMap'
 
@@ -26,14 +27,25 @@ export function CheckoutView() {
   const [sending, setSending] = useState(false)
   const [done, setDone] = useState<Order | null>(null)
 
-  // Pago: efectivo o monedas internas + datos de tasa y saldo
-  const [method, setMethod] = useState<'cash' | 'coins'>('cash')
+  // Pago: efectivo, transferencia bancaria (CUP) o monedas internas
+  const [method, setMethod] = useState<'cash' | 'coins' | 'transfer'>('cash')
   const [rate, setRate] = useState(100)
   const [wallet, setWallet] = useState<Wallet | null>(null)
+  // Cuentas del administrador para recibir la transferencia + su ID
+  const [methods, setMethods] = useState<PaymentMethod[]>([])
+  const [transferId, setTransferId] = useState('')
 
   useEffect(() => {
     api<Settings>('/api/settings')
       .then((st) => setRate(st.coinRate || 100))
+      .catch(() => {})
+  }, [])
+
+  // Cuentas/tarjetas donde se puede transferir: solo se usan
+  // cuando el comprador elige pagar por transferencia.
+  useEffect(() => {
+    api<PaymentMethod[]>('/api/payment-methods')
+      .then(setMethods)
       .catch(() => {})
   }, [])
 
@@ -97,6 +109,16 @@ export function CheckoutView() {
         return
       }
     }
+    if (method === 'transfer') {
+      if (methods.length === 0) {
+        toast.error('El administrador todavía no configuró cuentas para recibir transferencias')
+        return
+      }
+      if (!transferId.trim()) {
+        toast.error('Escribe el ID de la transferencia (aparece en tu app del banco)')
+        return
+      }
+    }
     setSending(true)
     try {
       const order = await api<Order>('/api/orders', {
@@ -111,6 +133,7 @@ export function CheckoutView() {
           total,
           paymentMethod: method,
           totalCoins: method === 'coins' ? totalCoins : undefined,
+          transferId: method === 'transfer' ? transferId.trim() : undefined,
         }),
       })
       clearCart()
@@ -139,7 +162,9 @@ export function CheckoutView() {
           <p className="text-[14px] text-[#0F1111] font-bold mt-2">
             {done.paymentMethod === 'coins'
               ? `Pagado con ${formatCoins(done.totalCoins ?? 0)} monedas de tu billetera`
-              : `Pagarás ${formatPrice(done.total)} en efectivo al recibir`}
+              : done.paymentMethod === 'transfer'
+                ? `Transferencia registrada (ID: ${done.transferId}). El vendedor confirmará tu pago`
+                : `Pagarás ${formatPrice(done.total)} en efectivo al recibir`}
           </p>
           <p className="text-[13px] text-[#565959] mt-1">
             Enviamos el resumen completo a tu mini correo interno.
@@ -278,6 +303,19 @@ export function CheckoutView() {
                 </span>
               </button>
               <button
+                onClick={() => setMethod('transfer')}
+                className={`text-left border-2 rounded-lg p-3 cursor-pointer transition-colors ${
+                  method === 'transfer' ? 'border-[#C7511F] bg-[#FDF3EE]' : 'border-[#d5d9d9] hover:border-[#888c8c]'
+                }`}
+              >
+                <span className="flex items-center gap-2 text-[14px] font-bold text-[#0F1111]">
+                  <CreditCard className="w-4.5 h-4.5 text-[#C7511F]" /> Transferencia bancaria (CUP)
+                </span>
+                <span className="block text-[13px] text-[#565959] mt-0.5">
+                  Transfiere {formatPrice(total)} a la cuenta de la tienda y registra el ID
+                </span>
+              </button>
+              <button
                 onClick={() => setMethod('coins')}
                 className={`text-left border-2 rounded-lg p-3 cursor-pointer transition-colors ${
                   method === 'coins' ? 'border-[#5B21B6] bg-[#f6f1fd]' : 'border-[#d5d9d9] hover:border-[#888c8c]'
@@ -296,6 +334,59 @@ export function CheckoutView() {
                 </span>
               </button>
             </div>
+
+            {/* Datos de la transferencia: SOLO se muestran al elegir este pago */}
+            {method === 'transfer' && (
+              <div className="bg-[#FDF3EE] border border-[#C7511F]/30 rounded-lg p-3 mt-3 text-[13px]">
+                <p className="font-bold text-[#0F1111] flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-[#C7511F]" /> 1. Transfiere a una de estas
+                  cuentas:
+                </p>
+                {methods.length === 0 ? (
+                  <p className="text-[#C7511F] mt-2">
+                    El administrador todavía no configuró sus cuentas de cobro.
+                  </p>
+                ) : (
+                  <ul className="flex flex-col gap-2 mt-2">
+                    {methods.map((m) => (
+                      <li key={m.id} className="bg-white border border-[#e3e6e6] rounded-lg p-3">
+                        <p className="font-bold text-[#0F1111]">{m.label}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-mono text-[#0F1111] select-all">{m.details}</p>
+                          <button
+                            onClick={() =>
+                              navigator.clipboard
+                                ?.writeText(m.details)
+                                .then(() => toast.success('Número copiado'))
+                                .catch(() => {})
+                            }
+                            aria-label={`Copiar número de ${m.label}`}
+                            className="text-[#565959] hover:text-[#0F1111] cursor-pointer shrink-0"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <p className="text-[#565959]">Titular: {m.holder}</p>
+                        {m.phone && <p className="text-[#565959]">Teléfono: {m.phone}</p>}
+                        {m.instructions && (
+                          <p className="text-[#565959] mt-0.5">{m.instructions}</p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="font-bold text-[#0F1111] mt-3">
+                  2. Registra el ID de tu transferencia:
+                </p>
+                <input
+                  value={transferId}
+                  onChange={(e) => setTransferId(e.target.value)}
+                  placeholder="Ej: TRF-20241231-00982"
+                  className="w-full border border-[#888c8c] rounded px-3 py-2 text-[14px] outline-none focus:border-[#e77600] mt-1 bg-white"
+                />
+              </div>
+            )}
+
             {method === 'coins' && !canPayWithCoins && (
               <div className="bg-[#FEF3C7] border border-[#B45309]/30 rounded-lg p-3 mt-3 text-[13px]">
                 {!wallet || wallet.guest ? (

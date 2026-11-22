@@ -32,7 +32,7 @@ export type MiniProduct = {
   storeId: string
   name: string
   description: string
-  price: number // dinero real ($)
+  price: number // dinero real (CUP)
   priceCoins: number // monedas internas
   emoji: string
   photo: string | null
@@ -87,7 +87,8 @@ export type Order = {
   items: string // JSON de OrderItem[]
   total: number
   totalCoins: number | null // monedas pagadas si el pago fue con billetera
-  paymentMethod: 'cash' | 'coins'
+  paymentMethod: 'cash' | 'coins' | 'transfer'
+  transferId: string | null // ID de la transferencia si el pago fue por transferencia
   etaMinutes: number
   status: 'placed' | 'in_delivery' | 'delivered'
   workerName: string | null
@@ -108,7 +109,7 @@ export type Notification = {
 export type Settings = {
   id: string
   miniStoresEnabled: boolean
-  coinRate: number // monedas que valen $1 real
+  coinRate: number // monedas que valen 1 CUP real
   updatedAt: string
 }
 
@@ -137,6 +138,7 @@ export type PaymentMethod = {
   label: string
   details: string
   holder: string
+  phone: string
   instructions: string
   active: boolean
 }
@@ -147,7 +149,7 @@ export type Offer = {
   title: string
   description: string
   category: string
-  price: number // dinero real ($)
+  price: number // dinero real (CUP)
   priceCoins: number // monedas internas (0 = se calcula con la tasa)
   oldPrice: number | null // precio anterior para mostrar descuento
   photo: string | null // foto subida o elegida de la galería
