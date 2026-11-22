@@ -1098,7 +1098,20 @@ body#menu #leftmenu {
 	body.astroio-menu-open #leftmenu {
 		display: block !important;
 	}
-	
+
+	/* ─── ASTROIO MOBILE FIX v3.3: paneles con ancho fijo ───
+	   Las páginas nuevas (alianza, wallet, war, lotería, PvE, cueva,
+	   bugreport…) definen contenedores .astro*_panel / _wrap con
+	   width de 600–900px. En móvil van al 100% del ancho disponible. */
+	[class*="astro"] {
+		max-width: 100% !important;
+		box-sizing: border-box !important;
+	}
+	[class*="astro"] img {
+		max-width: 100% !important;
+		height: auto !important;
+	}
+
 }
 /* Oculto en escritorio */
 #astroio-mobile-toggle {

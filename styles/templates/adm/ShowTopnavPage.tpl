@@ -214,13 +214,26 @@
 	}
 }
 
-/* ====== Responsive ====== */
+/* ====== Responsive ======
+   v3.3: la barra superior vive en un iframe con alto automático
+   (ShowIndexPage), así que puede envolver sin cortarse. Botones
+   táctiles legibles en vez de los 10px anteriores. */
 @media (max-width: 900px) {
+	.astroadmtn_wrap { padding: 8px 10px 10px 10px; }
 	.astroadmtn_title { font-size: 16px; letter-spacing: 1px; padding-bottom: 8px; }
-	.astroadmtn_row { justify-content: center; }
+	.astroadmtn_row { justify-content: center; gap: 6px; }
 	.topn, .out, .reset-universe-btn {
-		padding: 5px 10px !important;
-		font-size: 10px !important;
+		padding: 9px 12px !important;
+		font-size: 12px !important;
+		min-height: 38px !important;
+		display: inline-flex !important;
+		align-items: center !important;
+		white-space: normal !important;
+		text-align: center !important;
+	}
+	#universe {
+		font-size: 13px !important;
+		min-height: 38px !important;
 	}
 }
 </style>

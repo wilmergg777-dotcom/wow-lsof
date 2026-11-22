@@ -6336,3 +6336,25 @@ legend {
         margin-top: 80px;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   ASTROIO MOBILE FIX v3.3 — Paneles con ancho fijo en páginas de
+   login/portal (banList, battleHall, rules…): .astro*_wrap/_panel
+   con width 600–900px pasan a ocupar el 100% en móvil.
+   ═══════════════════════════════════════════════════════════════ */
+@media screen and (max-width: 768px) {
+    [class*="astro"] {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    [class*="astro"] img {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+    table {
+        max-width: 100% !important;
+        display: block !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+}

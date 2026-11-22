@@ -343,20 +343,51 @@
 		background: linear-gradient(135deg, rgba(0, 102, 204, 0.98), rgba(0, 153, 255, 0.98)) !important;
 	}
 
-	/* ====== Responsive admin ====== */
-	@media (max-width: 720px) {
+	/* ====== Responsive admin (v3.3) ======
+	   Antes: solo radios y botones a 10px (inutilizables en móvil).
+	   Ahora: tablas desplazables, inputs a 16px (evita el zoom de iOS),
+	   botones táctiles de 40px y diálogos que caben en pantalla. */
+	@media (max-width: 768px) {
 		table.table,
 		table.tablebg,
 		table.admin_table,
 		table.list {
 			border-radius: 8px;
 		}
+		#content, .content, #page, .page {
+			width: 100% !important;
+			padding: 6px !important;
+			box-sizing: border-box !important;
+		}
+		table.table, table.tablebg, table.admin_table, table.list {
+			display: block !important;
+			width: 100% !important;
+			overflow-x: auto !important;
+			-webkit-overflow-scrolling: touch !important;
+		}
+		input[type="text"], input[type="password"], input[type="number"],
+		input[type="email"], input[type="date"], input[type="time"], input[type="url"] {
+			width: 100% !important;
+			max-width: 100% !important;
+			box-sizing: border-box !important;
+			font-size: 16px !important;
+			min-height: 38px !important;
+		}
+		select, textarea {
+			max-width: 100% !important;
+			font-size: 16px !important;
+		}
 		input[type="submit"],
 		input[type="button"],
 		button {
-			padding: 6px 12px !important;
-			font-size: 10px !important;
+			padding: 9px 14px !important;
+			font-size: 13px !important;
+			min-height: 40px !important;
 		}
+		.ui-dialog {
+			max-width: 94vw !important;
+		}
+		.astroadmtn_title { font-size: 15px !important; letter-spacing: 1px !important; }
 	}
 
 	/* ====== Fix responsive móvil (no pisar el original) ====== */

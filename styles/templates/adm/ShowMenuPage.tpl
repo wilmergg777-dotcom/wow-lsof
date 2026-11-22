@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Menú de Administración</title>
 </head>
 <body id="menu">
@@ -189,6 +190,28 @@ body#menu {
 #leftmenu::-webkit-scrollbar-thumb:hover {
 	background: linear-gradient(180deg, rgba(0, 224, 255, 0.9), rgba(0, 224, 255, 1));
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   ASTROIO MOBILE FIX v3.3 — Menú táctil cuando vive en el drawer
+   (mismo estilo glassmorphism, solo se agrandan los toques)
+   ═══════════════════════════════════════════════════════════════ */
+@media screen and (max-width: 768px) {
+	#leftmenu ul#menu li > a[href="javascript:void(0);"] {
+		font-size: 12px !important;
+		padding: 9px 10px !important;
+		min-height: 40px !important;
+		box-sizing: border-box !important;
+	}
+	#leftmenu ul#menu li > a:not([href="javascript:void(0);"]) {
+		font-size: 12px !important;
+		padding: 10px 12px !important;
+		min-height: 40px !important;
+		line-height: 1.35 !important;
+	}
+	#leftmenu ul#menu {
+		padding-bottom: 24px !important;
+	}
+}
 </style>
 
 <div id="leftmenu">
@@ -251,5 +274,22 @@ body#menu {
 		<li style="background-image: url('./styles/theme/gow/img/menu-foot.png');height:30px;"></li>
 	</ul>
 </div>
+
+<script type="text/javascript">
+/* ═══════════════════════════════════════════════════════════════
+   ASTROIO ADMIN SHELL v3.3 — Cierre automático del drawer móvil
+   Al pulsar un enlace real (no categoría), avisamos al shell padre
+   para que cierre el drawer y se vea el contenido cargado.
+   No modifica ningún href, target ni allowedTo.
+   ═══════════════════════════════════════════════════════════════ */
+document.addEventListener('click', function (e) {
+	var a = e.target.closest ? e.target.closest('a') : null;
+	if (a && a.getAttribute('href') && a.getAttribute('href') !== 'javascript:void(0);') {
+		if (window.parent && typeof window.parent.astroioCloseMenu === 'function') {
+			window.parent.astroioCloseMenu();
+		}
+	}
+});
+</script>
 </body>
 </html>
