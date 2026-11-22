@@ -26,6 +26,8 @@ const (
 	TipoCapa     = "capa"
 	TipoBolsa    = "bolsa"
 	TipoRefuerzo = "refuerzo" // parches/mejoras de armadura
+	// Tipos de Sastrería
+	TipoCamisa = "camisa" // prendas decorativas
 )
 
 // Calidades.
@@ -268,6 +270,87 @@ func itemsPredefinidos() map[string]DefItem {
 		{"coraza_cuero_boreal_pesado", "Coraza de cuero boreal pesado", TipoArmadura, CalidadEpico},
 	}
 	for _, c := range craftedPeleteria {
+		m[c.id] = def(c.id, c.nombre, c.tipo, c.calidad)
+	}
+
+	// ─── Materiales de Sastrería (Classic) ───
+	for id, n := range map[string]string{
+		"paño_lino":     "Paño de lino",
+		"paño_lana":     "Paño de lana",
+		"paño_seda":     "Paño de seda",
+		"paño_mágico":   "Tela de paño mágico",
+		"paño_rúnico":   "Paño rúnico",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+	// ─── Materiales de Sastrería (TBC) ───
+	// madeja_tejido_abisal y su imbuido son también productos crafteados
+	// (recetas intermedias), pero se registran como material.
+	for id, n := range map[string]string{
+		"paño_tejido_abisal":            "Paño de tejido abisal",
+		"polvo_arcano":                  "Polvo Arcano",
+		"madeja_tejido_abisal":          "Madeja de tejido abisal",
+		"madeja_tejido_abisal_imbuido":  "Madeja de tejido abisal imbuido",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+	// ─── Materiales de Sastrería (WotLK) ───
+	// madeja_escarcha y su imbuido son también productos crafteados.
+	for id, n := range map[string]string{
+		"tela_escarcha":                "Tela de tejido de Escarcha",
+		"polvo_infinito":               "Polvo infinito",
+		"madeja_escarcha":              "Madeja de tejido de Escarcha",
+		"madeja_escarcha_imbuido":      "Madeja de tejido de Escarcha imbuido",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+	// ─── Materiales de especialización de Sastrería ───
+	for id, n := range map[string]string{
+		"tela_lunar_primigenia":        "Tela lunar primigenia",
+		"esencia_anima_abisal":         "Esencia de ánima abisal",
+		"cristal_sombras_profundas":    "Cristal de sombras profundas",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadRaro)
+	}
+
+	// ─── Productos crafteados de Sastrería (1-450) ───
+	// Las descargas/madejas intermedias son materiales registrados arriba;
+	// aquí van las prendas, capas, camisas y bolsas finales.
+	craftedSastreria := []struct {
+		id, nombre, tipo, calidad string
+	}{
+		// Classic 1-300
+		{"camisa_lino_roja", "Camisa de lino roja", TipoCamisa, CalidadComun},
+		{"manteo_lino_reforzado", "Manteo de lino reforzado", TipoCapa, CalidadComun},
+		{"camisa_lana_gris", "Camisa de lana gris", TipoCamisa, CalidadComun},
+		{"hombreras_lana_doble_pespunte", "Hombreras de lana con doble pespunte", TipoArmadura, CalidadComun},
+		{"caperuza_seda_azur", "Caperuza de seda azur", TipoArmadura, CalidadComun},
+		{"cinta_seda", "Cinta de seda", TipoArmadura, CalidadComun},
+		{"camisa_blanca_formal", "Camisa blanca formal", TipoCamisa, CalidadComun},
+		{"jubon_seda_carmesi", "Jubón de seda carmesí", TipoArmadura, CalidadRaro},
+		{"pantalones_bombacho_seda_carmesi", "Pantalones bombacho de seda carmesí", TipoArmadura, CalidadRaro},
+		{"leotardos_paño_mágico_negro", "Leotardos de paño mágico negro", TipoArmadura, CalidadRaro},
+		{"guantes_paño_mágico_negro", "Guantes de paño mágico negro", TipoArmadura, CalidadRaro},
+		{"cinta_negra_paño_mágico", "Cinta negra paño mágico", TipoArmadura, CalidadRaro},
+		{"cinturon_paño_rúnico", "Cinturón de paño rúnico", TipoArmadura, CalidadRaro},
+		{"guantes_paño_rúnico", "Guantes de paño rúnico", TipoArmadura, CalidadRaro},
+		{"bolsa_paño_rúnico", "Bolsa de paño rúnico", TipoBolsa, CalidadRaro},
+		// TBC 300-350
+		{"toga_tejido_abisal", "Toga de tejido abisal", TipoArmadura, CalidadRaro},
+		// WotLK 350-450
+		{"cinturon_tejido_escarcha", "Cinturón tejido con Escarcha", TipoArmadura, CalidadRaro},
+		{"botas_tejidas_escarcha", "Botas tejidas con Escarcha", TipoArmadura, CalidadRaro},
+		{"capucha_tejida_escarcha", "Capucha tejida con Escarcha", TipoArmadura, CalidadRaro},
+		{"cinturon_tejido_alba", "Cinturón de tejido del alba", TipoArmadura, CalidadRaro},
+		{"cubremuñecas_tejido_alba", "Cubremuñecas de tejido del alba", TipoArmadura, CalidadRaro},
+		{"guantes_tejido_alba", "Guantes de tejido del alba", TipoArmadura, CalidadRaro},
+		{"botas_tejido_alba", "Botas de tejido del alba", TipoArmadura, CalidadRaro},
+		{"bolsa_tejido_escarcha", "Bolsa de tejido de Escarcha", TipoBolsa, CalidadRaro},
+		{"toga_tejido_hechizos", "Toga de tejido de hechizos", TipoArmadura, CalidadEpico},
+		{"guantes_velo_lunar", "Guantes de velo lunar", TipoArmadura, CalidadEpico},
+		{"guantes_tejido_ebano", "Guantes de tejido de ébano", TipoArmadura, CalidadEpico},
+	}
+	for _, c := range craftedSastreria {
 		m[c.id] = def(c.id, c.nombre, c.tipo, c.calidad)
 	}
 	return m

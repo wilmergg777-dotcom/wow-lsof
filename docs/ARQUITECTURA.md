@@ -233,6 +233,13 @@ profesión nueva es solo añadir otra `DefProfesion` al registro.
   (dragontina, elemental, tribal) que se aprenden a partir de 225
   consumiendo los materiales de la misión de la guía; solo se puede elegir
   una por profesión. Las recetas pueden requerir una especialización concreta.
+- **Sastrería** (WoW 3.3.5): 6 rangos y 36 recetas (Classic 1-300, TBC
+  300-350, WotLK 350-450) con los materiales de la guía (paños de lino,
+  lana, seda, mágico, rúnico; tejido abisal + polvo arcano; tejido de
+  Escarcha + polvo infinito). Las descargas/madejas son recetas intermedias
+  que producen el material que consumen las recetas posteriores. Además
+  tiene **3 especializaciones** (tela lunar, fuego de hechizo, tejido de
+  sombra) que se aprenden a partir de 350.
 - **Especializaciones**: `DefEspecializacion` (id, nombre, skill_req,
   descripción, materiales para aprenderla). `AprenderEspecializacion()`
   valida skill >= req, que no haya ya una elegida, y consume los materiales.
