@@ -81,6 +81,10 @@ class ShowRacefactionPage extends AbstractGamePage
                     $USER['race_id']    = $raceId;
                     $USER['faction_id'] = $factionId;
 
+                    // ✅ v4.0 — Onboarding completo: tras elegir raza+facción
+                    // el jugador va DIRECTO a la vista principal (overview).
+                    HTTP::redirectTo('game.php?page=overview');
+
                     $message = isset($LNG['ra_success']) ? $LNG['ra_success'] : 'Elección confirmada.';
                     $msgType = 'success';
                 } else {

@@ -216,10 +216,13 @@ function gamesAdminRifasDoCrear()
 
     if (isset($_POST['premio_tipo']) && is_array($_POST['premio_tipo'])) {
         foreach ($_POST['premio_tipo'] as $i => $tipo) {
+            // ✅ v4.0 — cada premio trae su LUGAR: varios premios con el
+            // mismo lugar se los lleva el mismo ganador (0 = auto/secuencial)
             $data['premios'][] = [
                 'tipo'     => $tipo,
                 'subtipo'  => null,
                 'cantidad' => isset($_POST['premio_cantidad'][$i]) ? (int)$_POST['premio_cantidad'][$i] : 1,
+                'lugar'    => isset($_POST['premio_lugar'][$i]) ? (int)$_POST['premio_lugar'][$i] : 0,
             ];
         }
     }

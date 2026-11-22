@@ -40,7 +40,55 @@
 
 class ShowRegisterPage extends AbstractLoginPage
 {
-	function __construct() 
+	/**
+	 * ✅ v6.0 — PAÍS OBLIGATORIO EN EL REGISTRO
+	 * Lista ISO 3166-1 alpha-2 con nombres en español. El código elegido
+	 * se guarda en users_valid.country y, al activar la cuenta, ShowVertifyPage
+	 * lo propaga a users.country para que la tabla de puntuación muestre la
+	 * bandera del país del jugador.
+	 */
+	public static function getCountries()
+	{
+		return array(
+			'AR' => 'Argentina', 'BO' => 'Bolivia', 'BR' => 'Brasil', 'CL' => 'Chile',
+			'CO' => 'Colombia', 'CR' => 'Costa Rica', 'CU' => 'Cuba', 'DO' => 'República Dominicana',
+			'EC' => 'Ecuador', 'SV' => 'El Salvador', 'GT' => 'Guatemala', 'HN' => 'Honduras',
+			'MX' => 'México', 'NI' => 'Nicaragua', 'PA' => 'Panamá', 'PY' => 'Paraguay',
+			'PE' => 'Perú', 'PR' => 'Puerto Rico', 'UY' => 'Uruguay', 'VE' => 'Venezuela',
+			'ES' => 'España', 'PT' => 'Portugal', 'AD' => 'Andorra',
+			'US' => 'Estados Unidos', 'CA' => 'Canadá',
+			'DE' => 'Alemania', 'AT' => 'Austria', 'BE' => 'Bélgica', 'BG' => 'Bulgaria',
+			'HR' => 'Croacia', 'DK' => 'Dinamarca', 'SK' => 'Eslovaquia', 'SI' => 'Eslovenia',
+			'EE' => 'Estonia', 'FI' => 'Finlandia', 'FR' => 'Francia', 'GR' => 'Grecia',
+			'HU' => 'Hungría', 'IE' => 'Irlanda', 'IS' => 'Islandia', 'IT' => 'Italia',
+			'LV' => 'Letonia', 'LT' => 'Lituania', 'LU' => 'Luxemburgo', 'MT' => 'Malta',
+			'NO' => 'Noruega', 'NL' => 'Países Bajos', 'PL' => 'Polonia', 'CZ' => 'República Checa',
+			'RO' => 'Rumania', 'SE' => 'Suecia', 'CH' => 'Suiza', 'GB' => 'Reino Unido',
+			'RU' => 'Rusia', 'UA' => 'Ucrania', 'BY' => 'Bielorrusia', 'MD' => 'Moldavia',
+			'AL' => 'Albania', 'BA' => 'Bosnia', 'MK' => 'Macedonia del Norte', 'RS' => 'Serbia', 'ME' => 'Montenegro',
+			'TR' => 'Turquía', 'CY' => 'Chipre', 'GE' => 'Georgia', 'AM' => 'Armenia',
+			'CN' => 'China', 'JP' => 'Japón', 'KR' => 'Corea del Sur', 'IN' => 'India',
+			'ID' => 'Indonesia', 'PH' => 'Filipinas', 'MY' => 'Malasia', 'SG' => 'Singapur',
+			'TH' => 'Tailandia', 'VN' => 'Vietnam', 'PK' => 'Pakistán', 'BD' => 'Bangladés',
+			'AU' => 'Australia', 'NZ' => 'Nueva Zelanda',
+			'ZA' => 'Sudáfrica', 'NG' => 'Nigeria', 'KE' => 'Kenia', 'GH' => 'Ghana',
+			'MA' => 'Marruecos', 'DZ' => 'Argelia', 'TN' => 'Túnez', 'EG' => 'Egipto',
+			'SA' => 'Arabia Saudita', 'AE' => 'Emiratos Árabes Unidos', 'QA' => 'Catar',
+			'KW' => 'Kuwait', 'IL' => 'Israel', 'IQ' => 'Irak', 'IR' => 'Irán', 'LB' => 'Líbano',
+			'JO' => 'Jordania', 'SY' => 'Siria', 'YE' => 'Yemen', 'OM' => 'Omán',
+		);
+	}
+
+	public static function getCountriesSelect()
+	{
+		$out = array('' => '— Elegí tu país —');
+		foreach (self::getCountries() as $code => $name) {
+			$out[$code] = $name;
+		}
+		return $out;
+	}
+
+	function __construct()
 	{
 		parent::__construct();
         $this->setWindow('light');
@@ -102,6 +150,9 @@ class ShowRegisterPage extends AbstractLoginPage
 			'accountName'		=> $accountName,
 			'externalAuth'		=> $externalAuth,
 			'universeSelect'	=> $universeSelect,
+			// ✅ v6.0 — Lista de países para el select obligatorio
+			'countries'			=> self::getCountriesSelect(),
+			'selectedCountry'	=> '',
 			'registerRulesDesc'	=> sprintf($LNG['registerRulesDesc'], '<a href="index.php?page=rules">'.$LNG['menu_rules'].'</a>')
 		));
 		
@@ -206,6 +257,16 @@ class ShowRegisterPage extends AbstractLoginPage
 		
 		if($rulesChecked != 1) {
 			$errors[]	= $LNG['registerErrorRules'];
+		}
+
+		// ═══════════════════════════════════════════════════════════
+		// ✅ v6.0 — PAÍS OBLIGATORIO: se guarda en users_valid.country y
+		// al activar la cuenta ShowVertifyPage lo propaga a users.country
+		// para que la tabla de puntuación muestre la bandera del jugador.
+		// ═══════════════════════════════════════════════════════════
+		$country = strtoupper(trim(HTTP::_GP('country', '')));
+		if(empty($country) || !array_key_exists($country, self::getCountries())) {
+			$errors[] = 'Debes elegir tu país de la lista.';
 		}
 		
 		// ═══════════════════════════════════════════════════════════
@@ -350,7 +411,8 @@ class ShowRegisterPage extends AbstractLoginPage
 				`universe` = :universe,
 				`referralID` = :referralID,
 				`externalAuthUID` = :externalAuthUID,
-				`externalAuthMethod` = :externalAuthMethod;";
+				`externalAuthMethod` = :externalAuthMethod,
+				`country` = :country;";
 
 		// ✅ FIX v2.3: Capturar errores del INSERT para que no falle en silencio
 		try {
@@ -365,7 +427,8 @@ class ShowRegisterPage extends AbstractLoginPage
 				':universe'				=> Universe::current(),
 				':referralID'			=> $referralID,
 				':externalAuthUID'		=> $externalAuthUID,
-				':externalAuthMethod'	=> $externalAuthMethod
+				':externalAuthMethod'	=> $externalAuthMethod,
+				':country'				=> $country
 			));
 		} catch (Exception $e) {
 			$this->printMessage(

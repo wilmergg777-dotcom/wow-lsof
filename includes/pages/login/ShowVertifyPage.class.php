@@ -70,6 +70,29 @@ class ShowVertifyPage extends AbstractLoginPage
 
 		list($userID, $planetID) = PlayerUtil::createPlayer($userData['universe'], $userData['userName'], $userData['password'], $userData['email'], $userData['language']);
 
+		// ═══════════════════════════════════════════════════════════
+		// ✅ v6.0 — PAÍS: propagar de users_valid.country → users.country
+		// (patrón blindado igual que el de referidos: try/catch, no rompe
+		// el flujo de activación si falla). El ranking lee users.country
+		// para mostrar la bandera junto al nombre.
+		// ═══════════════════════════════════════════════════════════
+		if(isset($userData['country']) && preg_match('/^[A-Z]{2}$/', (string)$userData['country']))
+		{
+			try {
+				$sql = "UPDATE %%USERS%% SET `country` = :country WHERE `id` = :userID;";
+				$db->update($sql, array(
+					':country'	=> $userData['country'],
+					':userID'	=> (int)$userID,
+				));
+			} catch (Exception $e) {
+				@file_put_contents(
+					ROOT_PATH.'cache/country_debug.log',
+					date('[Y-m-d H:i:s] ') . "UPDATE country falló: " . $e->getMessage() . " | user=" . (int)$userID . "\n",
+					FILE_APPEND
+				);
+			}
+		}
+
 		if($config->mail_active == 1)
 		{
 			require('includes/classes/Mail.class.php');

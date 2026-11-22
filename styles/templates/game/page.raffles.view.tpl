@@ -411,14 +411,16 @@
         <div class="astroraffle_title">Premios ({$raffle.cantidad_lugares} lugares)</div>
 
         <div class="astroraffle_prizes_list">
-            {foreach $raffle_premios as $p}
-            <div class="astroraffle_prize_item {if $p.orden == 1}first{/if} {if $p.ganador_id}winner{/if}">
-                <div class="astroraffle_prize_lugar">LUGAR {$p.orden}</div>
-                <div class="astroraffle_prize_texto">{$p.texto}</div>
-                {if $p.ganador_id}
+            {foreach $raffle_premios_por_lugar as $grupo}
+            <div class="astroraffle_prize_item {if $grupo.lugar == 1}first{/if} {if $grupo.ganador_id}winner{/if}">
+                <div class="astroraffle_prize_lugar">LUGAR {$grupo.lugar}{if $grupo.cantidad_premios > 1} ({$grupo.cantidad_premios} premios){/if}</div>
+                {foreach $grupo.textos as $texto}
+                <div class="astroraffle_prize_texto">{$texto}</div>
+                {/foreach}
+                {if $grupo.ganador_id}
                 <div class="astroraffle_prize_winner">
-                    {if $p.ganador_username}<span class="winner_name">{$p.ganador_username}</span>{/if}
-                    Boleto #{$p.boleto_ganador}
+                    {if $grupo.ganador_username}<span class="winner_name">{$grupo.ganador_username}</span>{/if}
+                    Boleto #{$grupo.boleto_ganador}
                 </div>
                 {/if}
             </div>
@@ -499,13 +501,15 @@
     {if $hay_ganadores}
     <div class="astroraffle_panel">
         <div class="astroraffle_title">Ganadores</div>
-        {foreach $raffle_ganadores as $p}
+        {foreach $raffle_ganadores_por_lugar as $grupo}
         <div class="astroraffle_prize_item winner">
-            <div class="astroraffle_prize_lugar">LUGAR {$p.orden}</div>
-            <div class="astroraffle_prize_texto">{$p.texto}</div>
+            <div class="astroraffle_prize_lugar">LUGAR {$grupo.lugar}{if $grupo.cantidad_premios > 1} ({$grupo.cantidad_premios} premios){/if}</div>
+            {foreach $grupo.textos as $texto}
+            <div class="astroraffle_prize_texto">{$texto}</div>
+            {/foreach}
             <div class="astroraffle_prize_winner">
-                {if $p.ganador_username}<span class="winner_name">{$p.ganador_username}</span>{/if}
-                Boleto #{$p.boleto_ganador}
+                {if $grupo.ganador_username}<span class="winner_name">{$grupo.ganador_username}</span>{/if}
+                Boleto #{$grupo.boleto_ganador}
             </div>
         </div>
         {/foreach}

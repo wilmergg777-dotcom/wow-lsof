@@ -22,7 +22,15 @@
 			{* Nombre del jugador con Letras (F) y (D) *}
 			<td>
 				<a href="#" onclick="return Dialog.Playercard({$RangeInfo.id}, '{$RangeInfo.name}');" class="rel_{$RangeInfo.relation|default:'default'}">{$RangeInfo.name}</a>
-				
+
+				{* ✅ v6.0 — Bandera del país (users.country, ISO 3166-1 alpha-2).
+				   Elige el país en el registro; sin país no se muestra nada. *}
+				{if !empty($RangeInfo.country)}
+					<img src="https://flagcdn.com/w20/{$RangeInfo.country|lower}.png" alt="{$RangeInfo.country}"
+						 title="{$RangeInfo.country}" class="astrostat_flag"
+						 style="width:20px;height:13px;vertical-align:middle;margin-left:4px;border-radius:2px;box-shadow:0 0 0 1px rgba(255,255,255,.15);">
+				{/if}
+
 				{* 🔥 NUEVO: Añadir (F) si es Fuerte y (D) si es Débil *}
 				{if $RangeInfo.relation == 'fuerte'}
 					<span style="color: #ff4444; font-weight: bold; font-size: 11px; margin-left: 2px;">(F)</span>

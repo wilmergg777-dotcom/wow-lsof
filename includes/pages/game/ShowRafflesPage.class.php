@@ -135,9 +135,43 @@ class ShowRafflesPage extends AbstractGamePage
             }
         }
 
+        // ✅ v4.0 — Agrupar premios por LUGAR: varios premios del mismo
+        // lugar se muestran juntos (todos pertenecen al mismo ganador).
+        $porLugar = [];
+        if (is_array($raffle['premios'])) {
+            foreach ($raffle['premios'] as $premio) {
+                $lugar = ((int)$premio['lugar'] > 0) ? (int)$premio['lugar'] : (int)$premio['orden'];
+                $porLugar[$lugar][] = $premio;
+            }
+        }
+        ksort($porLugar);
+        $premiosPorLugar = [];
+        $ganadoresPorLugar = [];
+        foreach ($porLugar as $lugar => $premiosLugar) {
+            $first = $premiosLugar[0];
+            $textos = [];
+            foreach ($premiosLugar as $pl) {
+                $textos[] = $pl['texto'];
+            }
+            $grupo = [
+                'lugar'            => $lugar,
+                'cantidad_premios' => count($premiosLugar),
+                'textos'           => $textos,
+                'ganador_id'       => isset($first['ganador_id']) ? $first['ganador_id'] : 0,
+                'ganador_username' => isset($first['ganador_username']) ? $first['ganador_username'] : '',
+                'boleto_ganador'   => isset($first['boleto_ganador']) ? $first['boleto_ganador'] : 0,
+            ];
+            $premiosPorLugar[] = $grupo;
+            if ($grupo['ganador_id']) {
+                $ganadoresPorLugar[] = $grupo;
+            }
+        }
+
         $assign = array_merge([
             'raffle'            => $raffle,
             'raffle_premios'    => $raffle['premios'],
+            'raffle_premios_por_lugar' => $premiosPorLugar,   // ✅ v4.0
+            'raffle_ganadores_por_lugar' => $ganadoresPorLugar, // ✅ v4.0
             'raffle_ganadores'  => $ganadores,
             'raffle_tickets'    => $tickets,
             'hay_ganadores'     => count($ganadores) > 0,

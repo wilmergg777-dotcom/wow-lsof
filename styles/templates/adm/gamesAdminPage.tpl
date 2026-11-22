@@ -602,16 +602,17 @@
             </div>
 
             <div class="astrogames_form_group">
-                <label>Premios (uno por lugar)</label>
+                <label>Premios (con su lugar)</label>
                 <div id="astrogames_premios_wrap">
                     <div class="astrogames_premio_row">
-                        <span class="astrogames_premio_orden">LUGAR 1</span>
+                        <span class="astrogames_premio_orden">PREMIO 1</span>
                         <select name="premio_tipo[]">
                             {foreach $ga_tipos_premio as $tp}
                             <option value="{$tp.id}">{$tp.nombre}</option>
                             {/foreach}
                         </select>
                         <input type="number" name="premio_cantidad[]" min="1" value="100" placeholder="Cantidad">
+                        <input type="number" name="premio_lugar[]" min="1" max="20" value="1" placeholder="Lugar" title="Lugar del premio: varios premios con el mismo lugar se los lleva el mismo ganador">
                         <button type="button" class="astrogames_premio_del" title="Eliminar">X</button>
                     </div>
                 </div>
@@ -619,7 +620,8 @@
                     <button type="button" class="astrogames_btn green" id="astrogames_add_premio">+ Agregar Premio</button>
                 </div>
                 <small style="color:#8899aa;font-size:10px;display:block;margin-top:8px;">
-                    Cada premio se asigna a un lugar distinto (1º, 2º, 3º...). Se sortea un ganador por lugar.
+                    ✅ v4.0 — Cada premio lleva su número de LUGAR. Puedes poner VARIOS premios con el MISMO lugar:
+                    todos se los lleva el mismo ganador de ese lugar. Se sortea un boleto ganador por lugar.
                 </small>
             </div>
 
@@ -648,10 +650,20 @@
             var rows = wrap.querySelectorAll('.astrogames_premio_row');
             for (var i = 0; i < rows.length; i++) {
                 var span = rows[i].querySelector('.astrogames_premio_orden');
-                if (span) span.textContent = 'LUGAR ' + (i + 1);
+                if (span) span.textContent = 'PREMIO ' + (i + 1);
+                var lug = rows[i].querySelector('input[name="premio_lugar[]"]');
+                if (lug && (parseInt(lug.value, 10) < 1 || isNaN(parseInt(lug.value, 10)))) lug.value = 1;
+            }
+            // ✅ v4.0 — Cantidad de lugares = cantidad de lugares DISTINTOS
+            // (varios premios pueden compartir el mismo lugar)
+            var lugaresSet = {};
+            var allLug = wrap.querySelectorAll('input[name="premio_lugar[]"]');
+            for (var j = 0; j < allLug.length; j++) {
+                var v = parseInt(allLug[j].value, 10);
+                if (v >= 1) lugaresSet[v] = true;
             }
             var inputLugares = document.getElementById('astrogames_lugares');
-            if (inputLugares) inputLugares.value = rows.length;
+            if (inputLugares) inputLugares.value = Object.keys(lugaresSet).length || rows.length;
         }
 
         function bindDelete(btn) {
@@ -679,9 +691,10 @@
             }
 
             var html = '<div class="astrogames_premio_row">';
-            html += '<span class="astrogames_premio_orden">LUGAR ' + (rows.length + 1) + '</span>';
+            html += '<span class="astrogames_premio_orden">PREMIO ' + (rows.length + 1) + '</span>';
             html += '<select name="premio_tipo[]">' + tiposOptions + '</select>';
             html += '<input type="number" name="premio_cantidad[]" min="1" value="100" placeholder="Cantidad">';
+            html += '<input type="number" name="premio_lugar[]" min="1" max="20" value="' + (rows.length + 1) + '" placeholder="Lugar">';
             html += '<button type="button" class="astrogames_premio_del" title="Eliminar">X</button>';
             html += '</div>';
 

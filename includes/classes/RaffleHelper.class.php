@@ -563,19 +563,48 @@ class RaffleHelper
         if (!empty($data['premios']) && is_array($data['premios'])) {
             $orden = 1;
             foreach ($data['premios'] as $p) {
+                // ✅ v4.0 — Lugar explícito por premio: VARIOS premios pueden
+                // compartir el MISMO lugar (todos se los lleva el mismo
+                // boleto ganador). 0 = auto → sigue la secuencia 1,2,3...
+                $lugar = isset($p['lugar']) ? (int)$p['lugar'] : 0;
+                if ($lugar < 0 || $lugar > 20) {
+                    $lugar = 0;
+                }
+                if ($lugar === 0) {
+                    $lugar = $orden;
+                }
+
                 $db->insert(
-                    "INSERT INTO `" . $prefix . "raffle_prizes` 
-                     (raffle_id, orden, tipo, subtipo, cantidad) 
-                     VALUES (:rid, :orden, :tipo, :subtipo, :cantidad)",
+                    "INSERT INTO `" . $prefix . "raffle_prizes`
+                     (raffle_id, orden, lugar, tipo, subtipo, cantidad)
+                     VALUES (:rid, :orden, :lugar, :tipo, :subtipo, :cantidad)",
                     [
                         ':rid'      => $raffleId,
                         ':orden'    => $orden,
+                        ':lugar'    => $lugar,
                         ':tipo'     => $p['tipo'],
                         ':subtipo'  => isset($p['subtipo']) ? (int)$p['subtipo'] : 0,
                         ':cantidad' => (int)$p['cantidad'],
                     ]
                 );
                 $orden++;
+            }
+
+            // ✅ v4.0 — Sincronizar cantidad_lugares con los lugares REALES
+            // (si el admin puso 3 lugares pero definió premios en 1,1,1,2 la
+            // rifa tiene 2 lugares ganadores, no 3).
+            $rowLugares = $db->selectSingle(
+                "SELECT COUNT(DISTINCT lugar) AS l FROM `"
+                . $prefix . "raffle_prizes` WHERE raffle_id = :rid",
+                [':rid' => $raffleId]
+            );
+            $lugaresReales = ($rowLugares && !empty($rowLugares['l']))
+                ? max(1, (int)$rowLugares['l']) : 1;
+            if ($lugaresReales !== (int)$data['cantidad_lugares']) {
+                $db->update(
+                    "UPDATE `" . $prefix . "raffles` SET cantidad_lugares = :l WHERE id = :rid",
+                    [':l' => $lugaresReales, ':rid' => $raffleId]
+                );
             }
         }
 
@@ -801,12 +830,24 @@ class RaffleHelper
                 return ['ok' => true, 'msg' => 'Sin boletos'];
             }
 
+            // ✅ v4.0 — Agrupar premios por LUGAR: todos los premios del
+            // mismo lugar se los lleva el MISMO boleto ganador (antes 1 fila
+            // = 1 lugar, así que dar varios premios al 1er lugar era
+            // imposible). Premios legacy con lugar=0 caen a su orden.
             $prizes = $db->select(
-                "SELECT * FROM `" . $prefix . "raffle_prizes` 
-                 WHERE raffle_id = :rid 
-                 ORDER BY orden ASC",
+                "SELECT * FROM `" . $prefix . "raffle_prizes`
+                 WHERE raffle_id = :rid
+                 ORDER BY lugar ASC, orden ASC, id ASC",
                 [':rid' => (int)$raffleId]
             );
+
+            $porLugar = [];
+            foreach ($prizes as $p) {
+                $lugar = ((int)$p['lugar'] > 0) ? (int)$p['lugar'] : (int)$p['orden'];
+                $porLugar[$lugar][] = $p;
+            }
+            $lugaresOrdenados = array_keys($porLugar);
+            sort($lugaresOrdenados);
 
             $semilla = random_int(1, 999999999);
             mt_srand($semilla);
@@ -815,28 +856,32 @@ class RaffleHelper
             shuffle($indices);
 
             $ganadores = [];
-            $lugares = min(count($prizes), count($tickets));
+            $cantidadLugares = min(count($lugaresOrdenados), count($tickets));
 
-            for ($i = 0; $i < $lugares; $i++) {
+            for ($i = 0; $i < $cantidadLugares; $i++) {
                 $ticket = $tickets[$indices[$i]];
-                $prize = $prizes[$i];
+                $premiosLugar = $porLugar[$lugaresOrdenados[$i]];
 
-                $db->update(
-                    "UPDATE `" . $prefix . "raffle_prizes` SET 
-                     ganador_id = :gid, boleto_ganador = :bnum, fecha_entrega = :fecha 
-                     WHERE id = :pid",
-                    [
-                        ':gid'   => (int)$ticket['user_id'],
-                        ':bnum'  => (int)$ticket['boleto_numero'],
-                        ':fecha' => time(),
-                        ':pid'   => (int)$prize['id'],
-                    ]
-                );
+                foreach ($premiosLugar as $prize) {
+                    $db->update(
+                        "UPDATE `" . $prefix . "raffle_prizes` SET
+                         ganador_id = :gid, boleto_ganador = :bnum, fecha_entrega = :fecha
+                         WHERE id = :pid",
+                        [
+                            ':gid'   => (int)$ticket['user_id'],
+                            ':bnum'  => (int)$ticket['boleto_numero'],
+                            ':fecha' => time(),
+                            ':pid'   => (int)$prize['id'],
+                        ]
+                    );
+                }
 
                 $ganadores[] = [
                     'user_id' => (int)$ticket['user_id'],
                     'boleto'  => (int)$ticket['boleto_numero'],
-                    'premio'  => $prize,
+                    'lugar'   => $lugaresOrdenados[$i],
+                    'premio'  => $premiosLugar[0],
+                    'premios' => $premiosLugar,
                 ];
             }
 
@@ -864,24 +909,33 @@ class RaffleHelper
 
             // ==========================================================
             //  ENTREGA DE PREMIOS DENTRO DE LA TRANSACCION
+            //  ✅ v4.0 — todos los premios del lugar de cada ganador
             // ==========================================================
             foreach ($ganadores as $g) {
-                $ok = self::deliverPrize($g['user_id'], $g['premio'], $raffleId, $g['boleto']);
-                if (!$ok) {
-                    throw new Exception(
-                        'Fallo al entregar premio tipo ' . $g['premio']['tipo'] .
-                        ' a user_id ' . $g['user_id']
-                    );
+                foreach ($g['premios'] as $prize) {
+                    $ok = self::deliverPrize($g['user_id'], $prize, $raffleId, $g['boleto']);
+                    if (!$ok) {
+                        throw new Exception(
+                            'Fallo al entregar premio tipo ' . $prize['tipo'] .
+                            ' a user_id ' . $g['user_id']
+                        );
+                    }
                 }
             }
 
-            self::log($raffleId, 0, 'finalizado', 
-                      'Sorteados ' . count($ganadores) . ' premios. Semilla: ' . $semilla);
+            self::log($raffleId, 0, 'finalizado',
+                      'Sorteados ' . count($lugaresOrdenados) . ' lugares / '
+                      . count($prizes) . ' premios. Semilla: ' . $semilla);
 
             $pdo->commit();
 
             foreach ($ganadores as $g) {
-                self::notifyWinner($g['user_id'], $raffle, $g['premio'], $g['boleto']);
+                // ✅ v4.0 — un SOLO mensaje por ganador, con TODOS los
+                // premios de su lugar listados
+                self::notifyWinner(
+                    $g['user_id'], $raffle, $g['premio'], $g['boleto'],
+                    array_slice($g['premios'], 1)
+                );
             }
 
             return ['ok' => true, 'ganadores' => $ganadores];
@@ -1053,13 +1107,23 @@ class RaffleHelper
         return false;
     }
 
-    public static function notifyWinner($userId, $raffle, $prize, $boleto)
+    public static function notifyWinner($userId, $raffle, $prize, $boleto, $premiosExtra = [])
     {
         $db = self::db();
         $prefix = self::prefix();
 
         // 🆕 v3.0 — Texto del premio con moneda del riel
         $premioTexto = self::getPremioTexto($prize, $userId);
+
+        // ✅ v4.0 — si el lugar tenía VARIOS premios, se listan todos
+        if (!empty($premiosExtra) && is_array($premiosExtra)) {
+            $lineas = ['  · ' . $premioTexto];
+            foreach ($premiosExtra as $p2) {
+                $lineas[] = '  · ' . self::getPremioTexto($p2, $userId);
+            }
+            $premioTexto = "Varios premios por tu lugar:\n" . implode("\n", $lineas);
+        }
+
         $asunto = 'Ganaste en la rifa: ' . $raffle['titulo'];
         $mensaje = "Felicitaciones!\n\n"
                  . "Rifa: " . $raffle['titulo'] . "\n"

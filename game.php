@@ -107,6 +107,28 @@ if ($reqModule > 0 && !isModuleAvailable($reqModule)) {
 }
 // ═══════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════
+// 🆕 v4.0 ASTROIO: ONBOARDING — GATE DE RAZA + FACCIÓN
+// Un jugador recién registrado NO puede navegar por el juego hasta que
+// elija raza y facción (game.php?page=racefaction). Solo después de
+// elegir es redirigido a la vista principal (overview).
+// Reglas:
+//   - Solo jugadores normales (admins/moderadores no se bloquean).
+//   - Solo si los módulos RACES y FACTIONS están activos (si no, el
+//     jugador quedaría atrapado sin poder elegir).
+//   - Se excluyen: la propia racefaction y logout.
+// ═══════════════════════════════════════════════════════════════════════
+$onboardingPages = array('racefaction', 'logout');
+if (!in_array($page, $onboardingPages)
+    && isset($GLOBALS['USER']) && !empty($GLOBALS['USER']['id'])
+    && (int)$GLOBALS['USER']['authlevel'] === AUTH_USR
+    && ((int)$GLOBALS['USER']['race_id'] === 0 || (int)$GLOBALS['USER']['faction_id'] === 0)
+    && isModuleAvailable(MODULE_RACES)
+    && isModuleAvailable(MODULE_FACTIONS)) {
+    HTTP::redirectTo('game.php?page=racefaction');
+}
+// ═══════════════════════════════════════════════════════════════════════
+
 $pageObj	= new $pageClass;
 
 if(!is_callable(array($pageObj, $mode))) {	

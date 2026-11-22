@@ -320,6 +320,15 @@
                             {if !empty($error.emailReplay)}<span class="error errorEmailReplay astroreg_error"></span>{/if}
                             <span class="inputDesc astroreg_inputdesc"><small>{$LNG.registerEmailReplayDesc}</small></span>
                         </div>
+                        {* ✅ v6.0 — PAÍS OBLIGATORIO: su código viaja a users.country
+                           y la tabla de puntuación muestra la bandera del jugador *}
+                        <div class="form-group astroreg_group">
+                            <label for="country">País *</label>
+                            <select name="country" id="country" class="form-control" required>{html_options options=$countries selected=$selectedCountry}</select>
+                            <span class="inputDesc astroreg_inputdesc">
+                                <small>Elegí tu país: la bandera aparecerá junto a tu nombre en la tabla de puntuación.</small>
+                            </span>
+                        </div>
                         {if count($languages) > 1}
                             <div class="form-group astroreg_group">
                                 <label for="language">{$LNG.registerLanguage}</label>
