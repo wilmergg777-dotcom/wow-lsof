@@ -18,6 +18,7 @@ import { OrdersView } from './Orders'
 import { DeliveriesView } from './Deliveries'
 import { InboxView } from './Inbox'
 import { WalletView } from './Wallet'
+import { SettingsView } from './Settings'
 import { AdminView } from './AdminPanel'
 import { AuthView } from './Auth'
 import { Footer } from './Footer'
@@ -57,6 +58,7 @@ export default function StoreApp() {
         {view === 'deliveries' && <DeliveriesView />}
         {view === 'inbox' && <InboxView />}
         {view === 'wallet' && <WalletView />}
+        {view === 'settings' && <SettingsView />}
         {view === 'admin' && <AdminView />}
       </main>
 

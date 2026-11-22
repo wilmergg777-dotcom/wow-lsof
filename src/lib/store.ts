@@ -25,6 +25,7 @@ export type View =
   | 'deliveries' // entregas (repartidor)
   | 'inbox' // mini correo interno
   | 'wallet' // billetera de monedas + recargas
+  | 'settings' // ajustes de cuenta: contacto, contraseña, sesiones
   | 'admin' // panel del administrador
 
 export type Role = 'comprador' | 'vendedor' | 'repartidor' | 'administrador'

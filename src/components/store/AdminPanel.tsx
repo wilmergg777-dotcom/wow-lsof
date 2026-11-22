@@ -10,16 +10,22 @@
 //               rechazar) — el sistema de saldo interno
 // - Cobros:     cuentas/tarjetas donde llegan las
 //               transferencias + tasa de cambio
+// - Seguridad:  bot de Telegram (plan B de los códigos SMS),
+//               registro de eventos de seguridad, bandeja de
+//               salida de mensajes y cuentas bloqueadas
 // ============================================================
 import { useCallback, useEffect, useState } from 'react'
 import {
   Banknote,
+  Bot,
   Check,
   Coins,
   CreditCard,
   Megaphone,
   Package,
   Plus,
+  ScrollText,
+  ShieldAlert,
   ShieldCheck,
   ShoppingCart,
   Store,
@@ -41,7 +47,7 @@ import {
 import { formatCoins, formatPrice, CATEGORIES } from '@/lib/products'
 import { PhotoInput } from './PhotoInput'
 
-type Tab = 'general' | 'inventario' | 'ofertas' | 'recargas' | 'cobros'
+type Tab = 'general' | 'inventario' | 'ofertas' | 'recargas' | 'cobros' | 'seguridad'
 
 export function AdminView() {
   const user = useStore((s) => s.user)
@@ -79,6 +85,32 @@ export function AdminView() {
       toast.error((e as Error).message)
     } finally {
       setSavingFee(false)
+    }
+  }
+
+  // Efectivo de pedidos de la web pendientes de liquidación
+  const [settlingId, setSettlingId] = useState<string | null>(null)
+  const webPendingCash = orders.filter(
+    (o) =>
+      o.status === 'delivered' &&
+      o.paymentMethod === 'cash' &&
+      !o.settled &&
+      !o.storeIds.split(',').filter(Boolean).length
+  )
+
+  const settleWebOrder = async (o: Order) => {
+    setSettlingId(o.id)
+    try {
+      await api(`/api/orders/${o.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'settle', ownerName: user.name }),
+      })
+      setOrders((prev) => prev.map((x) => (x.id === o.id ? { ...x, settled: true } : x)))
+      toast.success(`Liquidación del pedido ${o.code} confirmada`)
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSettlingId(null)
     }
   }
 
@@ -167,6 +199,7 @@ export function AdminView() {
               ['ofertas', 'Ofertas de la web'],
               ['recargas', 'Recargas de saldo'],
               ['cobros', 'Cobros y tasa de cambio'],
+              ['seguridad', 'Seguridad del sistema'],
             ] as [Tab, string][]
           ).map(([id, label]) => (
             <button
@@ -257,6 +290,43 @@ export function AdminView() {
             </div>
           </div>
 
+          {/* Efectivo de la web pendiente de liquidación */}
+          {webPendingCash.length > 0 && (
+            <div className="bg-[#FEF3C7] border border-[#B45309]/40 rounded-lg p-4 mt-4">
+              <h2 className="text-[16px] font-bold text-[#B45309]">
+                Cobros en efectivo pendientes de liquidación ({webPendingCash.length})
+              </h2>
+              <p className="text-[13px] text-[#B45309] mt-1 mb-3">
+                Pedidos de las ofertas de la web cobrados en efectivo por el mensajero. El
+                mensajero te debe entregar el total menos su tarifa.
+              </p>
+              <ul className="flex flex-col gap-2">
+                {webPendingCash.map((o) => (
+                  <li
+                    key={o.id}
+                    className="bg-white border border-[#B45309]/30 rounded-lg p-3 text-[13px] flex flex-col sm:flex-row sm:items-center gap-2"
+                  >
+                    <span className="font-bold text-[#0F1111]">Pedido {o.code}</span>
+                    <span className="text-[#565959] flex-1">
+                      Cobrado: {formatPrice(o.total)} · Mensajero ({o.workerName ?? '—'}):{' '}
+                      {formatPrice(o.courierFee)} · Te deben:{' '}
+                      <b className="text-[#B45309]">
+                        {formatPrice(Math.max(0, o.total - o.courierFee))}
+                      </b>
+                    </span>
+                    <button
+                      onClick={() => settleWebOrder(o)}
+                      disabled={settlingId === o.id}
+                      className="bg-[#007600] hover:bg-[#005e00] text-white text-[12px] font-bold rounded-full px-4 py-1.5 cursor-pointer disabled:opacity-60 shrink-0"
+                    >
+                      {settlingId === o.id ? 'Confirmando…' : 'Liquidar'}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Resumen de actividad */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-lg border border-[#e3e6e6] p-5 text-center">
@@ -292,6 +362,7 @@ export function AdminView() {
       {tab === 'recargas' && <TopUpsSection />}
 
       {tab === 'cobros' && <PaymentMethodsSection rate={settings?.coinRate || 100} onRateChange={(r) => setSettings((s) => (s ? { ...s, coinRate: r } : s))} />}
+      {tab === 'seguridad' && <SecuritySection />}
     </div>
   )
 }
@@ -1273,6 +1344,317 @@ function PaymentMethodsSection({
           </div>
         )}
       </div>
+    </>
+  )
+}
+
+// ============================================================
+// SEGURIDAD DEL SISTEMA
+// - Token del bot de Telegram (plan B de los códigos SMS):
+//   se guarda SOLO tras revisarlo y confirmar
+// - Estado de los canales de envío (correo / SMS / Telegram)
+// - Registro de eventos de seguridad (ataques, bloqueos…)
+// - Bandeja de salida de mensajes con su estado
+// ============================================================
+type AdminSecurity = {
+  telegram: { configured: boolean; maskedToken: string | null; botUsername: string | null }
+  channels: { email: boolean; sms: boolean; telegram: boolean }
+  events: { id: string; userName: string; type: string; detail: string; ip: string; createdAt: string }[]
+  outbox: { id: string; channel: string; target: string; subject: string; body: string; status: string; error: string | null; createdAt: string }[]
+  lockedUsers: { name: string; lockedUntil: string }[]
+}
+
+const EVENT_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  login_ok: { label: 'Inicio de sesión', color: '#007600', bg: '#E7F7E7' },
+  login_failed: { label: 'Contraseña fallida', color: '#B45309', bg: '#FEF3C7' },
+  login_blocked: { label: 'Entrada con cuenta bloqueada', color: '#C7511F', bg: '#FDE8E0' },
+  account_locked: { label: 'Cuenta bloqueada', color: '#C7511F', bg: '#FDE8E0' },
+  account_created: { label: 'Cuenta creada', color: '#5B21B6', bg: '#f6f1fd' },
+  attack_blocked: { label: 'Ataque bloqueado', color: '#FFFFFF', bg: '#B91C1C' },
+  reset_code_sent: { label: 'Código de restablecimiento', color: '#5B21B6', bg: '#f6f1fd' },
+  reset_code_ok: { label: 'Código validado', color: '#007600', bg: '#E7F7E7' },
+  reset_code_failed: { label: 'Código incorrecto', color: '#B45309', bg: '#FEF3C7' },
+  password_reset: { label: 'Contraseña restablecida', color: '#007600', bg: '#E7F7E7' },
+  password_changed: { label: 'Contraseña cambiada', color: '#007600', bg: '#E7F7E7' },
+  password_change_failed: { label: 'Cambio de contraseña fallido', color: '#B45309', bg: '#FEF3C7' },
+  session_created: { label: 'Nueva sesión', color: '#0F1111', bg: '#f0f2f2' },
+  session_revoked: { label: 'Sesión cerrada', color: '#0F1111', bg: '#f0f2f2' },
+  contact_updated: { label: 'Contacto actualizado', color: '#5B21B6', bg: '#f6f1fd' },
+  contact_verified: { label: 'Contacto verificado', color: '#007600', bg: '#E7F7E7' },
+  verify_code_sent: { label: 'Código de verificación', color: '#5B21B6', bg: '#f6f1fd' },
+  telegram_link_started: { label: 'Enlace Telegram iniciado', color: '#5B21B6', bg: '#f6f1fd' },
+  telegram_linked: { label: 'Telegram enlazado', color: '#007600', bg: '#E7F7E7' },
+  telegram_unlinked: { label: 'Telegram desconectado', color: '#0F1111', bg: '#f0f2f2' },
+  security_config: { label: 'Configuración de seguridad', color: '#5B21B6', bg: '#f6f1fd' },
+  reset_requested_unknown: { label: 'Restablecimiento (cuenta inexistente)', color: '#565959', bg: '#f0f2f2' },
+}
+
+const OUTBOX_STATUS: Record<string, { label: string; color: string; bg: string }> = {
+  sent: { label: 'Enviado', color: '#007600', bg: '#E7F7E7' },
+  simulated: { label: 'Simulado (sin canal real)', color: '#B45309', bg: '#FEF3C7' },
+  failed: { label: 'Falló', color: '#C7511F', bg: '#FDE8E0' },
+  queued: { label: 'En cola', color: '#565959', bg: '#f0f2f2' },
+}
+
+const CHANNEL_NAMES: Record<string, string> = {
+  email: 'Correo',
+  sms: 'SMS',
+  telegram: 'Telegram',
+}
+
+function SecuritySection() {
+  const [data, setData] = useState<AdminSecurity | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [tokenDraft, setTokenDraft] = useState('')
+  const [confirming, setConfirming] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    try {
+      const r = await api<AdminSecurity>('/api/admin/security')
+      setData(r)
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // Guardar el token: SIEMPRE pide revisión y confirmación
+  const saveToken = async () => {
+    if (tokenDraft.trim().length < 20) {
+      toast.error('Pega el token completo que te dio @BotFather (empieza por "1…" o "2…" y es largo)')
+      return
+    }
+    setConfirming(true)
+  }
+
+  const confirmSave = async () => {
+    setSaving(true)
+    try {
+      const r = await api<{ ok: boolean; message: string }>('/api/admin/security', {
+        method: 'POST',
+        body: JSON.stringify({ botToken: tokenDraft.trim() }),
+      })
+      toast.success(r.message)
+      setTokenDraft('')
+      setConfirming(false)
+      await load()
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const disconnectBot = async () => {
+    setSaving(true)
+    try {
+      const r = await api<{ ok: boolean; message: string }>('/api/admin/security', {
+        method: 'POST',
+        body: JSON.stringify({ botToken: '' }),
+      })
+      toast.success(r.message)
+      setConfirming(false)
+      await load()
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return <p className="text-center py-10 text-[#565959]">Cargando seguridad…</p>
+  if (!data) return null
+
+  const when = (iso: string) =>
+    new Date(iso).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+
+  return (
+    <>
+      {/* Estado de los canales */}
+      <section className="bg-white rounded-lg border border-[#e3e6e6] p-6">
+        <h2 className="text-[18px] font-bold text-[#0F1111] flex items-center gap-2">
+          <ShieldAlert className="w-5 h-5 text-[#5B21B6]" /> Canales de envío de códigos
+        </h2>
+        <p className="text-[13px] text-[#565959] mt-1 mb-4">
+          Los códigos de seguridad llegan al teléfono por SMS; si el SMS no llega, los envía el
+          bot de Telegram; el correo es el tercer canal. Hasta que no haya ningún canal real
+          configurado, los códigos se muestran en pantalla como MODO DEMOSTRACIÓN.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <span className={`text-[13px] font-bold rounded-full px-4 py-1.5 ${data.channels.email ? 'bg-[#E7F7E7] text-[#007600]' : 'bg-[#f0f2f2] text-[#565959]'}`}>
+            Correo electrónico: {data.channels.email ? 'activo (RESEND_API_KEY)' : 'no configurado'}
+          </span>
+          <span className={`text-[13px] font-bold rounded-full px-4 py-1.5 ${data.channels.sms ? 'bg-[#E7F7E7] text-[#007600]' : 'bg-[#f0f2f2] text-[#565959]'}`}>
+            SMS: {data.channels.sms ? 'activo (SMS_API_URL)' : 'no configurado'}
+          </span>
+          <span className={`text-[13px] font-bold rounded-full px-4 py-1.5 ${data.channels.telegram ? 'bg-[#E7F7E7] text-[#007600]' : 'bg-[#FFF8EE] text-[#B45309]'}`}>
+            Bot de Telegram: {data.telegram.configured ? `conectado${data.telegram.botUsername ? ` (@${data.telegram.botUsername})` : ''}` : 'no configurado'}
+          </span>
+        </div>
+        {!data.channels.email && !data.channels.sms && !data.channels.telegram && (
+          <p className="text-[13px] text-[#B45309] mt-3 flex items-start gap-1.5">
+            <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+            Guarda abajo el token del bot de Telegram para que los códigos lleguen de verdad.
+          </p>
+        )}
+        {data.lockedUsers.length > 0 && (
+          <p className="text-[13px] text-[#C7511F] mt-3">
+            Cuentas bloqueadas ahora mismo: {data.lockedUsers.map((u) => `${u.name} (hasta ${when(u.lockedUntil)})`).join(', ')}
+          </p>
+        )}
+      </section>
+
+      {/* Token del bot de Telegram */}
+      <section className="bg-white rounded-lg border border-[#e3e6e6] p-6">
+        <h2 className="text-[18px] font-bold text-[#0F1111] flex items-center gap-2">
+          <Bot className="w-5 h-5 text-[#5B21B6]" /> Bot de Telegram
+        </h2>
+        <p className="text-[13px] text-[#565959] mt-1 mb-4">
+          Crea un bot con <b>@BotFather</b> en Telegram, copia el token y guárdalo aquí (con
+          confirmación). El bot enviará los códigos cuando el SMS no llegue y permitirá a los
+          usuarios enlazar su cuenta.
+        </p>
+        {data.telegram.configured && (
+          <p className="text-[13px] text-[#007600] font-bold mb-3">
+            Token guardado: <span className="font-mono">{data.telegram.maskedToken}</span>
+            {data.telegram.botUsername ? ` · bot @${data.telegram.botUsername}` : ''}
+          </p>
+        )}
+        <label className="block text-[13px] font-bold text-[#0F1111] mb-1">
+          {data.telegram.configured ? 'Token nuevo (reemplaza al actual)' : 'Token del bot'}
+        </label>
+        <input
+          value={tokenDraft}
+          onChange={(e) => setTokenDraft(e.target.value)}
+          placeholder="1234567890:AAE…"
+          aria-label="Token del bot de Telegram"
+          className="w-full border border-[#888c8c] rounded px-3 py-2 text-[14px] font-mono outline-none focus:border-[#e77600] mb-3"
+        />
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={saveToken}
+            disabled={saving || confirming}
+            className="bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer disabled:opacity-60"
+          >
+            Revisar y guardar
+          </button>
+          {data.telegram.configured && (
+            <button
+              onClick={disconnectBot}
+              disabled={saving}
+              className="border border-[#C7511F] text-[#C7511F] hover:bg-[#FDE8E0] text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer disabled:opacity-60"
+            >
+              Desconectar el bot
+            </button>
+          )}
+        </div>
+
+        {/* Confirmación antes de guardar el token */}
+        {confirming && (
+          <div className="mt-4 border-2 border-[#007600]/40 bg-[#f0faf0] rounded-lg p-4">
+            <p className="text-[15px] font-bold text-[#0F1111] flex items-center gap-1.5">
+              <Check className="w-5 h-5 text-[#007600]" /> Revisa el token antes de confirmar
+            </p>
+            <p className="text-[13px] text-[#565959] mt-1">
+              Vamos a guardar este token en el sistema de seguridad. Todos los administradores
+              deben dejarlo configurado para que los códigos lleguen por Telegram.
+            </p>
+            <p className="mt-3 bg-white border border-[#e3e6e6] rounded-lg p-3 text-[13px] font-mono break-all select-all">
+              {tokenDraft.trim()}
+            </p>
+            <div className="flex gap-2 mt-3 flex-wrap">
+              <button
+                onClick={confirmSave}
+                disabled={saving}
+                className="bg-[#007600] hover:bg-[#005e00] text-white text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer disabled:opacity-60"
+              >
+                {saving ? 'Guardando…' : 'Confirmar y guardar'}
+              </button>
+              <button
+                onClick={() => setConfirming(false)}
+                disabled={saving}
+                className="border border-[#d5d9d9] rounded-full px-6 py-2 text-[13px] hover:bg-[#f7fafa] cursor-pointer disabled:opacity-60"
+              >
+                Editar el token
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Registro de eventos de seguridad */}
+      <section className="bg-white rounded-lg border border-[#e3e6e6] p-6">
+        <h2 className="text-[18px] font-bold text-[#0F1111] flex items-center gap-2">
+          <ScrollText className="w-5 h-5 text-[#5B21B6]" /> Registro de seguridad (últimos 40)
+        </h2>
+        <p className="text-[13px] text-[#565959] mt-1 mb-4">
+          Inicios de sesión, contraseñas fallidas, bloqueos y ataques bloqueados. Si ves muchos
+          eventos rojos seguidos, alguien puede estar intentando entrar a la fuerza.
+        </p>
+        <div className="max-h-96 overflow-y-auto flex flex-col gap-2 vio-scroll">
+          {data.events.length === 0 && (
+            <p className="text-[13px] text-[#565959]">Todavía no hay eventos registrados.</p>
+          )}
+          {data.events.map((ev) => {
+            const info = EVENT_LABELS[ev.type] || { label: ev.type, color: '#565959', bg: '#f0f2f2' }
+            return (
+              <div key={ev.id} className="border border-[#e3e6e6] rounded-lg p-3 text-[13px]">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold rounded-full px-2.5 py-0.5 text-[12px]" style={{ color: info.color, backgroundColor: info.bg }}>
+                    {info.label}
+                  </span>
+                  <span className="text-[#0F1111] font-bold">{ev.userName || '—'}</span>
+                  <span className="text-[#565959] ml-auto">{when(ev.createdAt)}</span>
+                </div>
+                <p className="text-[#565959] mt-1">
+                  {ev.detail}
+                  {ev.ip && ev.ip !== 'local' ? ` · IP ${ev.ip}` : ''}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* Bandeja de salida */}
+      <section className="bg-white rounded-lg border border-[#e3e6e6] p-6">
+        <h2 className="text-[18px] font-bold text-[#0F1111] flex items-center gap-2">
+          <Bot className="w-5 h-5 text-[#5B21B6]" /> Bandeja de salida de mensajes (últimos 40)
+        </h2>
+        <p className="text-[13px] text-[#565959] mt-1 mb-4">
+          Cada código o aviso que el sistema intenta enviar queda aquí: canal, destinatario y si
+          se envió de verdad, se simuló o falló.
+        </p>
+        <div className="max-h-96 overflow-y-auto flex flex-col gap-2 vio-scroll">
+          {data.outbox.length === 0 && (
+            <p className="text-[13px] text-[#565959]">Todavía no se ha enviado ningún mensaje.</p>
+          )}
+          {data.outbox.map((m) => {
+            const st = OUTBOX_STATUS[m.status] || OUTBOX_STATUS.queued
+            return (
+              <div key={m.id} className="border border-[#e3e6e6] rounded-lg p-3 text-[13px]">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="bg-[#f6f1fd] text-[#5B21B6] font-bold rounded-full px-2.5 py-0.5 text-[12px]">
+                    {CHANNEL_NAMES[m.channel] || m.channel}
+                  </span>
+                  <span className="font-bold text-[#0F1111]">→ {m.target}</span>
+                  <span className="font-bold rounded-full px-2.5 py-0.5 text-[12px]" style={{ color: st.color, backgroundColor: st.bg }}>
+                    {st.label}
+                  </span>
+                  <span className="text-[#565959] ml-auto">{when(m.createdAt)}</span>
+                </div>
+                {m.error && <p className="text-[#C7511F] mt-1">Error: {m.error}</p>}
+              </div>
+            )
+          })}
+        </div>
+      </section>
     </>
   )
 }

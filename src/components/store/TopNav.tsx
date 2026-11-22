@@ -230,8 +230,22 @@ export function TopNav() {
               </p>
               <button
                 onClick={() => {
-                  setUser({ name: 'Invitado', role: 'comprador' })
                   setNameOpen(false)
+                  openView('settings')
+                }}
+                className="w-full bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full py-2 cursor-pointer mb-2"
+              >
+                Ajustes de la cuenta
+              </button>
+              <button
+                onClick={async () => {
+                  setNameOpen(false)
+                  try {
+                    await fetch('/api/auth/logout', { method: 'POST' })
+                  } catch {
+                    // aunque falle la red, la identidad del navegador se limpia
+                  }
+                  setUser({ name: 'Invitado', role: 'comprador' })
                   goHome()
                   toastIdentity()
                 }}
@@ -240,7 +254,8 @@ export function TopNav() {
                 Cerrar sesión
               </button>
               <p className="text-[11px] text-[#565959] mt-2">
-                Tu carrito se guarda aunque cierres sesión.
+                En Ajustes puedes cambiar tu contraseña, tu correo, tu teléfono y cerrar las
+                sesiones de otros dispositivos.
               </p>
             </div>
           )}
@@ -308,8 +323,10 @@ export function SubNav() {
 
   // Enlaces extra según la cuenta (el rol viene del registro/login)
   const roleLinks: { label: string; view: Parameters<typeof openView>[0] }[] = []
-  if (user.name !== 'Invitado')
+  if (user.name !== 'Invitado') {
+    roleLinks.push({ label: 'Mi Cuenta', view: 'settings' })
     roleLinks.push({ label: 'Mi Mini Tienda', view: 'manage-store' })
+  }
   if (user.role === 'repartidor') roleLinks.push({ label: 'Entregas', view: 'deliveries' })
   if (user.role === 'administrador') roleLinks.push({ label: 'Administración', view: 'admin' })
 

@@ -100,7 +100,11 @@ export function OrdersView() {
                         ? `Pagado con ${formatCoins(o.totalCoins ?? 0)} monedas`
                         : o.paymentMethod === 'transfer'
                           ? `Pago por transferencia · ID: ${o.transferId ?? '—'} · pendiente de confirmar`
-                          : 'Pago en efectivo al recibir'}
+                          : o.status === 'delivered'
+                            ? o.settled
+                              ? 'Pagado en efectivo · liquidado con la tienda'
+                              : 'Pagado en efectivo · pendiente de pago al dueño de la tienda'
+                            : 'Pago en efectivo al recibir'}
                     </p>
                     <p className="text-[13px] text-[#565959] mt-1">
                       Entrega en: <b>{o.address}</b>

@@ -56,14 +56,23 @@ export function DeliveriesView() {
   // Pedidos de las tiendas que me contrataron (modo normal)
   useEffect(() => {
     if (myStores.length === 0) {
-      setStoreOrders([])
-      return
+      // Limpieza diferida para no llamar a setState de forma sincrónica en el efecto
+      const id = setTimeout(() => setStoreOrders([]), 0)
+      return () => clearTimeout(id)
     }
+    let live = true
     api<Order[]>(
       `/api/orders?status=placed&mode=normal&stores=${encodeURIComponent(myStores.join(','))}`
     )
-      .then(setStoreOrders)
-      .catch(() => setStoreOrders([]))
+      .then((r) => {
+        if (live) setStoreOrders(r)
+      })
+      .catch(() => {
+        if (live) setStoreOrders([])
+      })
+    return () => {
+      live = false
+    }
   }, [myStores, turbo, mine])
 
   const takeOrder = async (o: Order) => {
@@ -128,6 +137,38 @@ export function DeliveriesView() {
           indica cuánto ganas.
         </p>
       </div>
+
+      {/* Dinero en mano pendiente de entregar al dueño (pagos en efectivo) */}
+      {mine.filter((o) => o.status === 'delivered' && o.paymentMethod === 'cash' && !o.settled)
+        .length > 0 && (
+        <section className="bg-[#FEF3C7] border border-[#B45309]/40 rounded-lg p-5">
+          <h2 className="text-[18px] font-bold text-[#B45309] mb-1">
+            Dinero en mano pendiente de entregar
+          </h2>
+          <p className="text-[13px] text-[#B45309] mb-3">
+            Cobraste estos pedidos en efectivo. Debes entregarle al dueño de la tienda su parte
+            (el total menos tu tarifa). Cuando te pague, el dueño confirma la liquidación desde
+            su panel.
+          </p>
+          <ul className="flex flex-col gap-2">
+            {mine
+              .filter((o) => o.status === 'delivered' && o.paymentMethod === 'cash' && !o.settled)
+              .map((o) => (
+                <li
+                  key={o.id}
+                  className="bg-white border border-[#B45309]/30 rounded-lg p-3 text-[13px] flex flex-wrap items-center gap-2"
+                >
+                  <span className="font-bold text-[#0F1111]">Pedido {o.code}</span>
+                  <span className="text-[#565959]">
+                    Cobraste {formatPrice(o.total)} · Tu ganancia:{' '}
+                    <b className="text-[#007600]">{formatPrice(o.courierFee)}</b> · Debes entregar:{' '}
+                    <b className="text-[#B45309]">{formatPrice(Math.max(0, o.total - o.courierFee))}</b>
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </section>
+      )}
 
       {/* Pedidos en camino (mis entregas activas) */}
       <section>

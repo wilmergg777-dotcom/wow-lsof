@@ -40,11 +40,90 @@ model SiteSettings {
 // puede mirar ofertas y mini tiendas SIN cuenta, pero para
 // comprar hay que registrarse e iniciar sesión.
 model User {
+  id                   String    @id @default(cuid())
+  name                 String    @unique
+  password             String // hash con sal (scrypt), nunca se guarda el texto plano
+  role                 String    @default("comprador") // comprador | repartidor | administrador
+  email                String? // correo electrónico del usuario (para códigos y avisos)
+  emailVerifiedAt      DateTime? // cuándo se verificó el correo con un código
+  phone                String? // número de teléfono (para códigos por SMS)
+  phoneVerifiedAt      DateTime? // cuándo se verificó el teléfono con un código
+  telegramChatId       String? // chat de Telegram enlazado (plan B si el SMS no llega)
+  telegramUsername     String?
+  telegramLinkedAt     DateTime?
+  failedLoginAttempts  Int       @default(0) // intentos fallidos seguidos (bloqueo anti-ataques)
+  lockedUntil          DateTime? // cuenta bloqueada hasta (por demasiados intentos)
+  lastPasswordChangeAt DateTime? // última vez que se cambió la contraseña
+  createdAt            DateTime  @default(now())
+  sessions             UserSession[]
+  codes                VerificationCode[]
+}
+
+// Código de verificación de 6 dígitos (restablecer contraseña,
+// verificar correo/teléfono, enlazar Telegram). Se guarda solo
+// el hash, caduca a los 10 minutos y permite 5 intentos.
+model VerificationCode {
+  id                   String    @id @default(cuid())
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose              String // reset_password | verify_email | verify_phone | link_telegram
+  codeHash             String // SHA-256 del código de 6 dígitos
+  channel              String // email | sms | telegram
+  target               String // a quién se envió (correo/teléfono/chat enmascarado)
+  attempts             Int       @default(0)
+  expiresAt            DateTime
+  usedAt               DateTime?
+  resetTokenHash       String? // token temporal tras validar el código (para fijar la nueva contraseña)
+  resetTokenExpiresAt  DateTime?
+  createdAt            DateTime  @default(now())
+}
+
+// Sesión iniciada en un dispositivo/c navegador. Permite ver
+// y cerrar sesiones activas desde los ajustes (multi-sesión).
+model UserSession {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique // SHA-256 del token de la cookie (nunca el token en claro)
+  device     String // descripción del navegador/dispositivo
+  ip         String    @default("")
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime? // si está marcada, la sesión quedó cerrada
+}
+
+// Registro de seguridad: inicios de sesión, intentos fallidos,
+// bloqueos, cambios de contraseña… para detectar ataques.
+model SecurityEvent {
   id        String   @id @default(cuid())
-  name      String   @unique
-  password  String // hash con sal (scrypt), nunca se guarda el texto plano
-  role      String   @default("comprador") // comprador | repartidor | administrador
+  userId    String?
+  userName  String   @default("") // nombre en texto (aunque se borre la cuenta)
+  type      String // login_ok | login_failed | account_locked | password_reset | password_changed | session_revoked | telegram_linked | attack_blocked | ...
+  detail    String   @default("")
+  ip        String   @default("")
   createdAt DateTime @default(now())
+}
+
+// Bandeja de salida: cada mensaje que el sistema intenta enviar
+// (correo, SMS o Telegram) queda registrado aquí para auditoría.
+model OutboxMessage {
+  id        String    @id @default(cuid())
+  channel   String // email | sms | telegram
+  target    String // destinatario (enmascarado)
+  subject   String    @default("")
+  body      String
+  status    String    @default("queued") // queued | sent | failed | simulated
+  error     String?
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+}
+
+// Configuración del sistema guardada en la base (token del bot
+// de Telegram, etc.). La controla el administrador.
+model SystemConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 // Mini tienda creada por un usuario vendedor

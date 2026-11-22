@@ -12,6 +12,7 @@
 // ============================================================
 import { useEffect, useState } from 'react'
 import {
+  Banknote,
   Briefcase,
   Building2,
   Check,
@@ -35,6 +36,7 @@ import {
   type JobOffer,
   type MiniProduct,
   type MiniStore,
+  type Order,
   type Settings,
   type Wallet,
 } from '@/lib/api'
@@ -133,8 +135,8 @@ function ProductPhoto({
 
 // Flores decorativas para los encabezados (igual que el icono de
 // Violetero: una flor de 5 pétalos) sobre el color de la tienda
-function HeroFlowers({ tall = false }: { tall?: boolean }) {
-  const Flower = ({ x, y, r, o }: { x: number; y: number; r: number; o: number }) => (
+function Flower({ x, y, r, o }: { x: number; y: number; r: number; o: number }) {
+  return (
     <g transform={`translate(${x} ${y})`} opacity={o}>
       <circle cx="0" cy={-r} r={r * 0.62} fill="#fff" />
       <circle cx={r * 0.95} cy={-r * 0.31} r={r * 0.62} fill="#fff" />
@@ -144,6 +146,9 @@ function HeroFlowers({ tall = false }: { tall?: boolean }) {
       <circle cx="0" cy="0" r={r * 0.5} fill="#fff" opacity="0.9" />
     </g>
   )
+}
+
+function HeroFlowers({ tall = false }: { tall?: boolean }) {
   return (
     <svg
       className="absolute inset-0 w-full h-full"
@@ -744,6 +749,7 @@ export function ManageStoreView() {
         setApplications(apps.filter((a) => myJobIds.includes(a.jobId)))
       })
       .catch((e) => toast.error(e.message))
+    loadSettle(store.id)
   }
 
   useEffect(() => {
@@ -794,6 +800,44 @@ export function ManageStoreView() {
     api<MiniStore>(`/api/ministores/${store.id}`)
       .then(setStore)
       .catch(() => {})
+  }
+
+  // Pedidos entregados en efectivo pendientes de liquidación + ya liquidados
+  const [pendingSettle, setPendingSettle] = useState<Order[]>([])
+  const [settledOrders, setSettledOrders] = useState<Order[]>([])
+  const [settling, setSettling] = useState<string | null>(null)
+
+  const loadSettle = (storeId: string) => {
+    api<Order[]>('/api/orders')
+      .then((all) => {
+        const mine = all.filter(
+          (o) =>
+            o.storeIds.split(',').filter(Boolean).includes(storeId) &&
+            o.status === 'delivered' &&
+            o.paymentMethod === 'cash'
+        )
+        setPendingSettle(mine.filter((o) => !o.settled))
+        setSettledOrders(mine.filter((o) => o.settled))
+      })
+      .catch(() => {})
+  }
+
+  const settleOrder = async (o: Order) => {
+    setSettling(o.id)
+    try {
+      await api(`/api/orders/${o.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'settle', ownerName: user.name }),
+      })
+      toast.success(
+        `Liquidación del pedido ${o.code} confirmada: el mensajero entregó el dinero y ya cobró su tarifa`
+      )
+      if (store) loadSettle(store.id)
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSettling(null)
+    }
   }
 
   useEffect(() => {
@@ -1468,6 +1512,81 @@ export function ManageStoreView() {
           )}
         </section>
       </div>
+
+      {/* Cobros en efectivo pendientes de liquidación (mensajería) */}
+      {pendingSettle.length > 0 && (
+        <div className="bg-[#FEF3C7] border border-[#B45309]/40 rounded-lg p-6">
+          <h2 className="text-[18px] font-bold text-[#B45309] flex items-center gap-2 mb-1">
+            <Banknote className="w-5 h-5" /> Cobros pendientes de liquidación
+          </h2>
+          <p className="text-[13px] text-[#B45309] mb-4">
+            Estos pedidos se pagaron en efectivo al mensajero. El mensajero te debe entregar tu
+            parte (el total menos su tarifa). Cuando te pague, confirma aquí la liquidación.
+          </p>
+          <ul className="flex flex-col gap-3">
+            {pendingSettle.map((o) => {
+              const mine = Math.max(0, o.total - o.courierFee)
+              return (
+                <li
+                  key={o.id}
+                  className="bg-white border border-[#B45309]/30 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-3 text-[13px]"
+                >
+                  <div className="flex-1">
+                    <p className="font-bold text-[#0F1111]">
+                      Pedido {o.code}
+                      {o.deliveryMode === 'turbo' && (
+                        <span className="ml-2 bg-[#5B21B6] text-white text-[11px] font-bold rounded-full px-2 py-0.5">
+                          TURBO
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-[#565959] mt-0.5">
+                      Cobrado en efectivo: <b>{formatPrice(o.total)}</b> · Tarifa del mensajero (
+                      {o.workerName ?? '—'}): <b>{formatPrice(o.courierFee)}</b> · Te deben
+                      entregar: <b className="text-[#B45309]">{formatPrice(mine)}</b>
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => settleOrder(o)}
+                    disabled={settling === o.id}
+                    className="bg-[#007600] hover:bg-[#005e00] text-white text-[13px] font-bold rounded-full px-5 py-2 cursor-pointer disabled:opacity-60 shrink-0"
+                  >
+                    {settling === o.id
+                      ? 'Confirmando…'
+                      : 'Liquidar: el mensajero entregó el dinero'}
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
+
+      {/* Historial de liquidaciones de efectivo */}
+      {settledOrders.length > 0 && (
+        <div className="bg-white rounded-lg border border-[#e3e6e6] p-6">
+          <h2 className="text-[16px] font-bold text-[#0F1111] flex items-center gap-2 mb-3">
+            <Check className="w-5 h-5 text-[#007600]" /> Efectivo liquidado ({settledOrders.length})
+          </h2>
+          <ul className="flex flex-col gap-2 text-[13px]">
+            {settledOrders.slice(0, 5).map((o) => (
+              <li key={o.id} className="flex flex-wrap items-center gap-2 text-[#565959]">
+                <Check className="w-4 h-4 text-[#007600]" />
+                <span className="font-bold text-[#0F1111]">Pedido {o.code}</span>
+                <span>
+                  · Recibiste {formatPrice(Math.max(0, o.total - o.courierFee))} · Mensajero:{' '}
+                  {o.workerName ?? '—'}
+                </span>
+                {o.settledAt && (
+                  <span className="text-[12px]">
+                    · {new Date(o.settledAt).toLocaleDateString('es')}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Equipo contratado */}
       {applications.filter((a) => a.status === 'accepted').length > 0 && (
