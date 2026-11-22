@@ -16,7 +16,8 @@
  *
  * AstroIO v3.1:
  *  - DM Extras (701-707) se pagan con NTX-20 ($USER['ntx20'])
- *  - Oficiales (601-615) se pagan con Materia Oscura ($USER[$resource[921]])
+ *  - Oficiales (601-619) se pagan con Materia Oscura ($USER[$resource[921]])
+ *    (615 Emperador, 616 Astrónomo, 617 Comerciante, 618 Navegante, 619 Supervisor)
  *  - El UPDATE guarda ntx20 y darkmatter en la BD para persistir
  *
  * AstroIO v3.2 (FIX):

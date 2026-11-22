@@ -454,6 +454,23 @@ class BuildFunctions
         }
         // ============================================
 
+        // ============================================
+        // 🆕 ASTROIO v3.3 - Oficial SUPERVISOR (ID 619)
+        // Naves de élite (225 Corbeta de Asalto, 226 Acorazado de Asedio,
+        // 227 Súper Carguero): -4% por nivel al tiempo de astillero
+        // (nivel máx. 5 = -20%). El desbloqueo por niveles 1/3/5 lo
+        // valida la BD (uni1_vars_require) vía isTechnologieAccessible().
+        // No aplica al demoler (forDestroy).
+        // ============================================
+        if (!$forDestroy && $time > 0
+            && in_array($Element, array(SHIP_ASSAULT_CORVETTE, SHIP_SIEGE_BATTLESHIP, SHIP_SUPER_CARGO))) {
+            $supNivel	= isset($USER['rpg_supervisor']) ? min(5, max(0, (int) $USER['rpg_supervisor'])) : 0;
+            if ($supNivel > 0) {
+                $time	= $time * (1 - ($supNivel * 0.04));
+            }
+        }
+        // ============================================
+
         if($forDestroy) {
             $time	= floor($time * 1300);
         } else {

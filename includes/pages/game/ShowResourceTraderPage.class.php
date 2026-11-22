@@ -118,6 +118,10 @@ class ShowResourceTraderPage extends AbstractGamePage
         $costeMO = ResourceTraderHelper::getCosteMO((int) $USER['id']);
         $descVip = ResourceTraderHelper::getVipDiscount((int) $USER['id']);
 
+        // 🆕 v2.5 — Oficial Comerciante (ID 617): bonus visible y aplicado
+        $comercianteNivel = ResourceTraderHelper::getComercianteNivel((int) $USER['id']);
+        $comercianteMulti = ResourceTraderHelper::getComercianteMulti((int) $USER['id']);
+
         // 🆕 v2.4 — Costo base y costo final ajustado al doble riel
         $costeBase   = (int) ResourceTraderHelper::COSTE_NTX20;
         $costeFinal  = $isInternational ? ($costeBase * 2) : $costeBase;
@@ -195,6 +199,11 @@ class ShowResourceTraderPage extends AbstractGamePage
             'mensaje'          => $mensaje,
             'mensaje_tipo'     => $tipo,
             'preseleccion_dar' => $preseleccionDar,
+
+            // 🆕 v2.5 — Oficial Comerciante (ID 617)
+            'comerciante_nivel' => $comercianteNivel,
+            'comerciante_multi' => $comercianteMulti,
+            'comerciante_pct'   => (int) round(($comercianteMulti - 1.0) * 100),
             'tasas_json'       => json_encode(ResourceTraderHelper::getTodasLasTasas()),
             'recursos_json'    => json_encode([
                 'metal'     => $recursos['metal'],

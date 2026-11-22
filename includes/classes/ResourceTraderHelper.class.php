@@ -175,6 +175,45 @@ class ResourceTraderHelper
     }
 
     // =====================================================
+    //  🆕 v2.5 — OFICIAL COMERCIANTE (ID 617)
+    // =====================================================
+
+    /**
+     * 🆕 v2.5 — Nivel del Oficial Comerciante del jugador.
+     * Columna rpg_comerciante (tope 5, igual que uni1_vars.maxLevel).
+     */
+    public static function getComercianteNivel(int $userId): int
+    {
+        if ($userId <= 0) {
+            return 0;
+        }
+
+        global $db;
+        $prefix = self::prefix();
+
+        try {
+            $row = $db->selectSingle(
+                "SELECT `rpg_comerciante` AS lvl FROM `".$prefix."users` WHERE `id` = :uid LIMIT 1",
+                [':uid' => $userId]
+            );
+            return ($row && isset($row['lvl'])) ? min(5, max(0, (int) $row['lvl'])) : 0;
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * 🆕 v2.5 — Multiplicador de lo RECIBIDO por el Oficial Comerciante.
+     * +2% por nivel (nivel 5 = +10% de recursos extra en cada cambio).
+     * La vista previa de la página del trader aplica el mismo
+     * multiplicador: lo que ves es lo que recibes.
+     */
+    public static function getComercianteMulti(int $userId): float
+    {
+        return 1.0 + (self::getComercianteNivel($userId) * 0.02);
+    }
+
+    // =====================================================
     //  DOBLE RIEL — MÉTODOS AUXILIARES
     // =====================================================
 
@@ -283,6 +322,12 @@ class ResourceTraderHelper
 
         $tasa            = self::getTasa($dar, $recibir);
         $cantidadRecibir = self::calcularRecibir($cantidadDar, $tasa);
+
+        // 🆕 v2.5 — Oficial Comerciante (ID 617): +2% por nivel al recibir
+        // (nivel máx. 5 = +10%). La vista previa del trader usa el mismo
+        // multiplicador, así que la ganancia mostrada coincide con esta.
+        $multiComerciante = self::getComercianteMulti($userId);
+        $cantidadRecibir  = (int) floor($cantidadRecibir * $multiComerciante);
 
         if ($cantidadRecibir <= 0) {
             $minimo = (int) ceil(1 / $tasa);

@@ -65,6 +65,9 @@
  *       0.5% → cofre climático mayor  (box_climate_major)
  *       1.5% → cofre climático menor  (box_climate_minor)
  *       Total 2.0% de drop, con 0.5% para el mayor.
+ *   🔵 AstroIO v3.3 - Oficial NAVEGANTE (618): +5% por nivel a estas
+ *       probabilidades (nivel 5 → total 3.0%, mayor 0.625%) y a los
+ *       hallazgos de recursos y MO de la expedición.
  *   - Roll único jerárquico de 0.01 a 100.00:
  *       roll ≤ 0.5     → mayor
  *       0.5 < roll ≤ 2 → menor
@@ -242,6 +245,21 @@ class MissionCaseExpedition extends MissionFunctions implements Mission
 		$totalExpDarkmatter		= $boosterExpDarkmatter + $raceExpDarkmatter + $misticExpDarkmatter;
 		// ============================================
 
+		// ============================================
+		// 🔵 ASTROIO v3.3 - Oficial NAVEGANTE (ID 618)
+		// +5% por nivel a los hallazgos (recursos y MO) y a la
+		// probabilidad de cofres climáticos (nivel máx. 5 = +25%).
+		// ============================================
+		$navNivel	= 0;
+		try {
+			$sqlNav		= "SELECT rpg_navegante FROM %%USERS%% WHERE id = :userId LIMIT 1;";
+			$navNivel	= min(5, max(0, (int) Database::get()->selectSingle($sqlNav, array(':userId' => $this->_fleet['fleet_owner']), 'rpg_navegante')));
+		} catch (Exception $e) {
+			$navNivel	= 0;
+		}
+		$totalExpeNavegante	= $navNivel * 0.05;
+		// ============================================
+
         $expeditionPoints       = array();
 
 		foreach($reslist['fleet'] as $shipId)
@@ -344,6 +362,15 @@ class MissionCaseExpedition extends MissionFunctions implements Mission
 				}
 				// ============================================
 
+				// ============================================
+				// 🔵 ASTROIO v3.3 - Aplicar bonus del Oficial Navegante
+				// (+5% por nivel a los recursos hallados)
+				// ============================================
+				if ($totalExpeNavegante > 0) {
+					$founded		= round($founded * (1 + $totalExpeNavegante));
+				}
+				// ============================================
+
 				$fleetColName	= 'fleet_resource_'.$resource[$resourceId];
 				$this->UpdateFleet($fleetColName, $this->_fleet[$fleetColName] + $founded);
 			break;
@@ -368,6 +395,15 @@ class MissionCaseExpedition extends MissionFunctions implements Mission
 				// ============================================
 				if ($totalExpDarkmatter > 0) {
 					$Size		= round($Size * (1 + $totalExpDarkmatter));
+				}
+				// ============================================
+
+				// ============================================
+				// 🔵 ASTROIO v3.3 - Aplicar bonus del Oficial Navegante
+				// (+5% por nivel a la MO hallada)
+				// ============================================
+				if ($totalExpeNavegante > 0 && $Size > 0) {
+					$Size		= round($Size * (1 + $totalExpeNavegante));
 				}
 				// ============================================
 
@@ -837,8 +873,15 @@ HTML;
 		$climateDrop = null;
 		$climateRoll = mt_rand(1, 10000) / 100; // 0.01 a 100.00
 
-		if ($climateRoll <= 2.0) {
-			if ($climateRoll <= 0.5) {
+		// 🔵 ASTROIO v3.3 - Oficial Navegante (618): +5% por nivel a la
+		// probabilidad de cofre (base 2.0% → 3.0% con nivel 5; el mayor
+		// escala igual: 0.5% → 0.625%).
+		$navChestBonus		= (1 + $totalExpeNavegante);
+		$chestTotalPct		= 2.0 * $navChestBonus;
+		$chestMajorPct		= 0.5 * $navChestBonus;
+
+		if ($climateRoll <= $chestTotalPct) {
+			if ($climateRoll <= $chestMajorPct) {
 				$climateDrop = 'major';
 				$climateCol  = 'box_climate_major';
 				$climateName = 'Cofre Climático Mayor';

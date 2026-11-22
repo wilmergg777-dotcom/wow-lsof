@@ -310,13 +310,14 @@ $GLOBALS['SHIP_COLUMN_MAP'] = array(
 	SHIP_SUPER_CARGO      => 'super_cargo',
 );
 
-// Requisito de Oficial Supervisor por nave (validado en PHP, no en BD)
-// Opción B — Niveles 1, 3, 5 (cada hito desbloquea 1 nave nueva)
-$GLOBALS['SHIP_SUPERVISOR_REQ'] = array(
-	SHIP_SUPER_CARGO      => 1,   // Nivel 1 → Súper Carguero
-	SHIP_ASSAULT_CORVETTE => 3,   // Nivel 3 → Corbeta de Asalto
-	SHIP_SIEGE_BATTLESHIP => 5,   // Nivel 5 → Acorazado de Asedio
-);
+// Requisito de Oficial Supervisor por nave (Opción B — Niveles 1, 3, 5)
+// ✅ v3.3: el requisito se valida DESDE LA BD (uni1_vars_require:
+//   227 → Supervisor nivel 1 (Súper Carguero)
+//   225 → Supervisor nivel 3 (Corbeta de Asalto)
+//   226 → Supervisor nivel 5 (Acorazado de Asedio)
+// ) vía BuildFunctions::isTechnologieAccessible(), tanto al mostrar el
+// astillero como al encolar. El array $GLOBALS['SHIP_SUPERVISOR_REQ']
+// anterior era código muerto (nadie lo leía) y se eliminó.
 
 // 🆕 ============================================================
 // 🆕 FIN — Naves nuevas v1.0

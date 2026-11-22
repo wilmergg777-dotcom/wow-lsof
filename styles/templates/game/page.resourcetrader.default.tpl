@@ -343,6 +343,10 @@
                 Coste: <b>{$coste_mo} MO</b>{if $descuento_vip > 0} (VIP -{$descuento_vip}%){/if} &middot; Fallback: <b>{$coste_ntx20} {$moneda}</b>
             </div>
 
+            {if $comerciante_nivel > 0}
+            <div class="rt_charge">💼 Oficial Comerciante nivel <b>{$comerciante_nivel}</b>: <b>+{$comerciante_pct}%</b> de recursos en cada intercambio</div>
+            {/if}
+
         </div>
     </form>
 </div>
@@ -357,6 +361,7 @@ var ResourceTrader = (function () {
     var COSTE_MO   = {$coste_mo};
     var COSTE_NTX  = {$coste_ntx20};
     var MONEDA     = '{$moneda}';
+    var COMERCIANTE_MULTI = {$comerciante_multi}; {* 🆕 v2.5 — Oficial Comerciante (ID 617) *}
 
     var selectedDar = null;
     var selectedRec = null;
@@ -419,7 +424,7 @@ var ResourceTrader = (function () {
         if (!selectedDar || !selectedRec || cant <= 0) return;
 
         var tasa = (TASAS[selectedDar] && TASAS[selectedDar][selectedRec]) || 0;
-        var ganancia = Math.floor(cant * tasa);
+        var ganancia = Math.floor(cant * tasa * COMERCIANTE_MULTI); {* 🆕 v2.5 — bonus Oficial Comerciante, igual que en ejecutarIntercambio *}
         if (ganancia <= 0) return;
 
         q('tot_dar').textContent = '-' + cant.toLocaleString() + ' ' + NOMBRES[selectedDar];
