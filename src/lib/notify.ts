@@ -31,11 +31,38 @@ export async function getBotUsername(): Promise<string | null> {
   return row?.value || null
 }
 
+// ---------- Configuración del correo y el SMS (solo el dueño) ----------
+// Cada canal busca su configuración en la base de datos (guardada por
+// el dueño desde el panel de seguridad) y, si no está, usa las
+// variables de entorno del servidor.
+export async function getEmailConfig(): Promise<{ key: string | null; from: string }> {
+  const [k, f] = await Promise.all([
+    db.systemConfig.findUnique({ where: { key: 'resend_api_key' } }),
+    db.systemConfig.findUnique({ where: { key: 'email_from' } }),
+  ])
+  return {
+    key: k?.value || process.env.RESEND_API_KEY || null,
+    from: f?.value || process.env.EMAIL_FROM || 'Violetero <onboarding@resend.dev>',
+  }
+}
+
+export async function getSmsConfig(): Promise<{ url: string | null; key: string | null }> {
+  const [u, k] = await Promise.all([
+    db.systemConfig.findUnique({ where: { key: 'sms_api_url' } }),
+    db.systemConfig.findUnique({ where: { key: 'sms_api_key' } }),
+  ])
+  return {
+    url: u?.value || process.env.SMS_API_URL || null,
+    key: k?.value || process.env.SMS_API_KEY || null,
+  }
+}
+
 // ¿Hay algún canal REAL configurado? (decide si se muestra el código en pantalla)
 export async function hasRealChannel(): Promise<boolean> {
+  const [email, sms] = await Promise.all([getEmailConfig(), getSmsConfig()])
+  if (email.key) return true
+  if (sms.url) return true
   if (process.env.TELEGRAM_BOT_TOKEN) return true
-  if (process.env.SMS_API_URL) return true
-  if (process.env.RESEND_API_KEY) return true
   const bot = await db.systemConfig.findUnique({ where: { key: 'telegram_bot_token' } })
   return Boolean(bot?.value)
 }
@@ -102,7 +129,7 @@ export async function sendTelegram(chatId: string, text: string, maskedTarget: s
 
 // ---------- SMS al número de teléfono ----------
 export async function sendSms(phone: string, text: string, maskedTarget: string) {
-  const url = process.env.SMS_API_URL
+  const { url, key } = await getSmsConfig()
   if (!url) {
     await logOutbox({ channel: 'sms', target: maskedTarget, body: text, status: 'simulated' })
     return { ok: false, simulated: true }
@@ -112,7 +139,7 @@ export async function sendSms(phone: string, text: string, maskedTarget: string)
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(process.env.SMS_API_KEY ? { Authorization: `Bearer ${process.env.SMS_API_KEY}` } : {}),
+        ...(key ? { Authorization: `Bearer ${key}` } : {}),
       },
       body: JSON.stringify({ to: phone, text }),
     })
@@ -142,7 +169,7 @@ export async function sendSms(phone: string, text: string, maskedTarget: string)
 
 // ---------- Correo electrónico ----------
 export async function sendEmail(to: string, subject: string, body: string, maskedTarget: string) {
-  const key = process.env.RESEND_API_KEY
+  const { key, from } = await getEmailConfig()
   if (!key) {
     await logOutbox({ channel: 'email', target: maskedTarget, subject, body, status: 'simulated' })
     return { ok: false, simulated: true }
@@ -152,7 +179,7 @@ export async function sendEmail(to: string, subject: string, body: string, maske
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || 'Violetero <onboarding@resend.dev>',
+        from,
         to: [to],
         subject,
         text: body,

@@ -21,7 +21,9 @@ import {
   Check,
   Coins,
   CreditCard,
+  Mail,
   Megaphone,
+  MessageSquareText,
   Package,
   Plus,
   ScrollText,
@@ -62,6 +64,24 @@ export function AdminView() {
   // Tarifa del mensajero para las ofertas de la web
   const [feeDraft, setFeeDraft] = useState('200')
   const [savingFee, setSavingFee] = useState(false)
+  // Parche de seguridad: el panel solo se muestra si el SERVIDOR
+  // confirma que esta sesión es la del dueño (súper admin).
+  const [verified, setVerified] = useState<'checking' | 'ok' | 'no'>('checking')
+
+  useEffect(() => {
+    let live = true
+    fetch('/api/auth/me')
+      .then((r) => (r.ok ? r.json() : { user: null }))
+      .then((d: { user?: { role: string } | null }) => {
+        if (live) setVerified(d.user?.role === 'administrador' ? 'ok' : 'no')
+      })
+      .catch(() => {
+        if (live) setVerified('no')
+      })
+    return () => {
+      live = false
+    }
+  }, [])
 
   useEffect(() => {
     if (settings) setFeeDraft(String(settings.courierFee ?? 200))
@@ -155,8 +175,12 @@ export function AdminView() {
     }
   }
 
-  // Solo la cuenta del administrador puede entrar al panel
-  if (user.role !== 'administrador') {
+  // Solo la cuenta del administrador puede entrar al panel —
+  // y solo si el servidor confirma el rol (no basta el navegador).
+  if (verified !== 'ok' || user.role !== 'administrador') {
+    if (verified === 'checking') {
+      return <p className="text-center py-16 text-[#565959]">Comprobando tu cuenta…</p>
+    }
     return (
       <div className="p-6 max-w-2xl mx-auto">
         <div className="bg-white rounded-lg border border-[#e3e6e6] p-10 text-center">
@@ -1357,7 +1381,9 @@ function PaymentMethodsSection({
 // - Bandeja de salida de mensajes con su estado
 // ============================================================
 type AdminSecurity = {
-  telegram: { configured: boolean; maskedToken: string | null; botUsername: string | null }
+  telegram: { configured: boolean; maskedToken: string | null; botUsername: string | null; source: 'panel' | 'servidor' | null }
+  email: { configured: boolean; maskedKey: string | null; from: string | null; source: 'panel' | 'servidor' | null }
+  sms: { configured: boolean; maskedUrl: string | null; maskedKey: string | null; source: 'panel' | 'servidor' | null }
   channels: { email: boolean; sms: boolean; telegram: boolean }
   events: { id: string; userName: string; type: string; detail: string; ip: string; createdAt: string }[]
   outbox: { id: string; channel: string; target: string; subject: string; body: string; status: string; error: string | null; createdAt: string }[]
@@ -1406,13 +1432,24 @@ function SecuritySection() {
   const [data, setData] = useState<AdminSecurity | null>(null)
   const [loading, setLoading] = useState(true)
   const [tokenDraft, setTokenDraft] = useState('')
-  const [confirming, setConfirming] = useState(false)
+  const [confirming, setConfirming] = useState<null | 'bot' | 'email' | 'sms'>(null)
   const [saving, setSaving] = useState(false)
+  // Formularios de correo y SMS (solo el dueño de la web)
+  const [emailKeyDraft, setEmailKeyDraft] = useState('')
+  const [emailFromDraft, setEmailFromDraft] = useState('')
+  const [smsUrlDraft, setSmsUrlDraft] = useState('')
+  const [smsKeyDraft, setSmsKeyDraft] = useState('')
 
   const load = useCallback(async () => {
     try {
       const r = await api<AdminSecurity>('/api/admin/security')
       setData(r)
+      if (r.email.configured && r.email.source === 'panel' && r.email.from) {
+        setEmailFromDraft((cur) => cur || r.email.from || '')
+      }
+      if (r.sms.configured && r.sms.source === 'panel' && r.sms.maskedUrl) {
+        setSmsUrlDraft((cur) => cur || r.sms.maskedUrl || '')
+      }
     } catch (e) {
       toast.error((e as Error).message)
     } finally {
@@ -1430,19 +1467,44 @@ function SecuritySection() {
       toast.error('Pega el token completo que te dio @BotFather (empieza por "1…" o "2…" y es largo)')
       return
     }
-    setConfirming(true)
+    setConfirming('bot')
   }
 
+  const saveEmail = async () => {
+    if (emailKeyDraft.trim().length < 10) {
+      toast.error('Pega la clave de API de Resend (empieza por "re_" y es larga)')
+      return
+    }
+    setConfirming('email')
+  }
+
+  const saveSms = async () => {
+    if (!/^https?:\/\/.+/i.test(smsUrlDraft.trim())) {
+      toast.error('La dirección del servicio SMS debe empezar por http:// o https://')
+      return
+    }
+    setConfirming('sms')
+  }
+
+  // Envía al servidor la configuración que se confirmó
   const confirmSave = async () => {
     setSaving(true)
     try {
+      let payload: Record<string, unknown> = {}
+      if (confirming === 'bot') payload = { botToken: tokenDraft.trim() }
+      if (confirming === 'email')
+        payload = { resendApiKey: emailKeyDraft.trim(), emailFrom: emailFromDraft.trim() }
+      if (confirming === 'sms')
+        payload = { smsApiUrl: smsUrlDraft.trim(), smsApiKey: smsKeyDraft.trim() }
       const r = await api<{ ok: boolean; message: string }>('/api/admin/security', {
         method: 'POST',
-        body: JSON.stringify({ botToken: tokenDraft.trim() }),
+        body: JSON.stringify(payload),
       })
       toast.success(r.message)
       setTokenDraft('')
-      setConfirming(false)
+      setEmailKeyDraft('')
+      setSmsKeyDraft('')
+      setConfirming(null)
       await load()
     } catch (e) {
       toast.error((e as Error).message)
@@ -1451,15 +1513,17 @@ function SecuritySection() {
     }
   }
 
-  const disconnectBot = async () => {
+  const clearChannel = async (action: 'clear_bot' | 'clear_email' | 'clear_sms') => {
+    const what = action === 'clear_bot' ? 'desconectar el bot de Telegram' : action === 'clear_email' ? 'desconectar el correo' : 'desconectar el SMS'
+    if (!window.confirm(`¿Seguro que quieres ${what}? Los códigos dejarán de llegar por ese canal.`)) return
     setSaving(true)
     try {
       const r = await api<{ ok: boolean; message: string }>('/api/admin/security', {
         method: 'POST',
-        body: JSON.stringify({ botToken: '' }),
+        body: JSON.stringify({ action }),
       })
       toast.success(r.message)
-      setConfirming(false)
+      setConfirming(null)
       await load()
     } catch (e) {
       toast.error((e as Error).message)
@@ -1488,13 +1552,13 @@ function SecuritySection() {
         </p>
         <div className="flex gap-2 flex-wrap">
           <span className={`text-[13px] font-bold rounded-full px-4 py-1.5 ${data.channels.email ? 'bg-[#E7F7E7] text-[#007600]' : 'bg-[#f0f2f2] text-[#565959]'}`}>
-            Correo electrónico: {data.channels.email ? 'activo (RESEND_API_KEY)' : 'no configurado'}
+            Correo electrónico: {data.channels.email ? `activo (${data.email.source === 'panel' ? 'configurado por ti' : 'variables del servidor'})` : 'no configurado'}
           </span>
           <span className={`text-[13px] font-bold rounded-full px-4 py-1.5 ${data.channels.sms ? 'bg-[#E7F7E7] text-[#007600]' : 'bg-[#f0f2f2] text-[#565959]'}`}>
-            SMS: {data.channels.sms ? 'activo (SMS_API_URL)' : 'no configurado'}
+            SMS: {data.channels.sms ? `activo (${data.sms.source === 'panel' ? 'configurado por ti' : 'variables del servidor'})` : 'no configurado'}
           </span>
           <span className={`text-[13px] font-bold rounded-full px-4 py-1.5 ${data.channels.telegram ? 'bg-[#E7F7E7] text-[#007600]' : 'bg-[#FFF8EE] text-[#B45309]'}`}>
-            Bot de Telegram: {data.telegram.configured ? `conectado${data.telegram.botUsername ? ` (@${data.telegram.botUsername})` : ''}` : 'no configurado'}
+            Bot de Telegram: {data.telegram.configured ? `conectado${data.telegram.botUsername ? ` (@${data.telegram.botUsername})` : ''}${data.telegram.source === 'panel' ? ' · tuyo' : ' · del servidor'}` : 'no configurado'}
           </span>
         </div>
         {!data.channels.email && !data.channels.sms && !data.channels.telegram && (
@@ -1518,7 +1582,7 @@ function SecuritySection() {
         <p className="text-[13px] text-[#565959] mt-1 mb-4">
           Crea un bot con <b>@BotFather</b> en Telegram, copia el token y guárdalo aquí (con
           confirmación). El bot enviará los códigos cuando el SMS no llegue y permitirá a los
-          usuarios enlazar su cuenta.
+          usuarios enlazar su cuenta. <b>Esta configuración solo la ve el dueño de la web.</b>
         </p>
         {data.telegram.configured && (
           <p className="text-[13px] text-[#007600] font-bold mb-3">
@@ -1539,15 +1603,15 @@ function SecuritySection() {
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={saveToken}
-            disabled={saving || confirming}
+            disabled={saving || confirming !== null}
             className="bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer disabled:opacity-60"
           >
             Revisar y guardar
           </button>
           {data.telegram.configured && (
             <button
-              onClick={disconnectBot}
-              disabled={saving}
+              onClick={() => clearChannel('clear_bot')}
+              disabled={saving || confirming !== null}
               className="border border-[#C7511F] text-[#C7511F] hover:bg-[#FDE8E0] text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer disabled:opacity-60"
             >
               Desconectar el bot
@@ -1556,14 +1620,14 @@ function SecuritySection() {
         </div>
 
         {/* Confirmación antes de guardar el token */}
-        {confirming && (
+        {confirming === 'bot' && (
           <div className="mt-4 border-2 border-[#007600]/40 bg-[#f0faf0] rounded-lg p-4">
             <p className="text-[15px] font-bold text-[#0F1111] flex items-center gap-1.5">
               <Check className="w-5 h-5 text-[#007600]" /> Revisa el token antes de confirmar
             </p>
             <p className="text-[13px] text-[#565959] mt-1">
-              Vamos a guardar este token en el sistema de seguridad. Todos los administradores
-              deben dejarlo configurado para que los códigos lleguen por Telegram.
+              Vamos a guardar este token en el sistema de seguridad. Los códigos de las cuentas
+              empezarán a llegar por Telegram cuando el SMS no llegue.
             </p>
             <p className="mt-3 bg-white border border-[#e3e6e6] rounded-lg p-3 text-[13px] font-mono break-all select-all">
               {tokenDraft.trim()}
@@ -1577,11 +1641,186 @@ function SecuritySection() {
                 {saving ? 'Guardando…' : 'Confirmar y guardar'}
               </button>
               <button
-                onClick={() => setConfirming(false)}
+                onClick={() => setConfirming(null)}
                 disabled={saving}
                 className="border border-[#d5d9d9] rounded-full px-6 py-2 text-[13px] hover:bg-[#f7fafa] cursor-pointer disabled:opacity-60"
               >
                 Editar el token
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Correo electrónico (Resend) — solo el dueño */}
+      <section className="bg-white rounded-lg border border-[#e3e6e6] p-6">
+        <h2 className="text-[18px] font-bold text-[#0F1111] flex items-center gap-2">
+          <Mail className="w-5 h-5 text-[#5B21B6]" /> Correo electrónico (Resend)
+        </h2>
+        <p className="text-[13px] text-[#565959] mt-1 mb-4">
+          Crea una cuenta en <b>resend.com</b>, copia tu clave de API y guárdala aquí para que los
+          códigos lleguen por correo. La clave se guarda en el sistema, nunca se devuelve completa
+          y solo se muestra enmascarada. <b>Esta configuración solo la ve el dueño de la web.</b>
+        </p>
+        {data.email.configured && (
+          <p className="text-[13px] text-[#007600] font-bold mb-3">
+            Clave guardada: <span className="font-mono">{data.email.maskedKey}</span>
+            {data.email.from ? ` · remitente: ${data.email.from}` : ''}
+          </p>
+        )}
+        <label className="block text-[13px] font-bold text-[#0F1111] mb-1">
+          {data.email.configured ? 'Clave nueva (reemplaza a la actual)' : 'Clave de API de Resend'}
+        </label>
+        <input
+          value={emailKeyDraft}
+          onChange={(e) => setEmailKeyDraft(e.target.value)}
+          placeholder="re_123456789…"
+          aria-label="Clave de API de Resend"
+          className="w-full border border-[#888c8c] rounded px-3 py-2 text-[14px] font-mono outline-none focus:border-[#e77600] mb-3"
+        />
+        <label className="block text-[13px] font-bold text-[#0F1111] mb-1">
+          Remitente (opcional)
+        </label>
+        <input
+          value={emailFromDraft}
+          onChange={(e) => setEmailFromDraft(e.target.value)}
+          placeholder="Violetero <tienda@violetero.cu>"
+          aria-label="Remitente del correo"
+          className="w-full border border-[#888c8c] rounded px-3 py-2 text-[14px] outline-none focus:border-[#e77600] mb-3"
+        />
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={saveEmail}
+            disabled={saving || confirming !== null}
+            className="bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer disabled:opacity-60"
+          >
+            Revisar y guardar
+          </button>
+          {data.email.configured && data.email.source === 'panel' && (
+            <button
+              onClick={() => clearChannel('clear_email')}
+              disabled={saving || confirming !== null}
+              className="border border-[#C7511F] text-[#C7511F] hover:bg-[#FDE8E0] text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer disabled:opacity-60"
+            >
+              Desconectar el correo
+            </button>
+          )}
+        </div>
+
+        {/* Confirmación antes de guardar la clave del correo */}
+        {confirming === 'email' && (
+          <div className="mt-4 border-2 border-[#007600]/40 bg-[#f0faf0] rounded-lg p-4">
+            <p className="text-[15px] font-bold text-[#0F1111] flex items-center gap-1.5">
+              <Check className="w-5 h-5 text-[#007600]" /> Revisa la clave antes de confirmar
+            </p>
+            <p className="text-[13px] text-[#565959] mt-1">
+              Guardaremos esta clave de API para el envío de correos de seguridad.
+              {emailFromDraft.trim() ? ` Remitente: ${emailFromDraft.trim()}.` : ''}
+            </p>
+            <p className="mt-3 bg-white border border-[#e3e6e6] rounded-lg p-3 text-[13px] font-mono break-all select-all">
+              {emailKeyDraft.trim()}
+            </p>
+            <div className="flex gap-2 mt-3 flex-wrap">
+              <button
+                onClick={confirmSave}
+                disabled={saving}
+                className="bg-[#007600] hover:bg-[#005e00] text-white text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer disabled:opacity-60"
+              >
+                {saving ? 'Guardando…' : 'Confirmar y guardar'}
+              </button>
+              <button
+                onClick={() => setConfirming(null)}
+                disabled={saving}
+                className="border border-[#d5d9d9] rounded-full px-6 py-2 text-[13px] hover:bg-[#f7fafa] cursor-pointer disabled:opacity-60"
+              >
+                Editar la clave
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Pasarela SMS — solo el dueño */}
+      <section className="bg-white rounded-lg border border-[#e3e6e6] p-6">
+        <h2 className="text-[18px] font-bold text-[#0F1111] flex items-center gap-2">
+          <MessageSquareText className="w-5 h-5 text-[#5B21B6]" /> Pasarela SMS
+        </h2>
+        <p className="text-[13px] text-[#565959] mt-1 mb-4">
+          Dirección del servicio que envía los mensajes de texto (el sistema llama a esa dirección
+          con {'{ to, text }'} en JSON; si pones una clave, se envía como Bearer token). El SMS es
+          el primer canal de los códigos. <b>Esta configuración solo la ve el dueño de la web.</b>
+        </p>
+        {data.sms.configured && (
+          <p className="text-[13px] text-[#007600] font-bold mb-3">
+            Servicio guardado: <span className="font-mono break-all">{data.sms.maskedUrl}</span>
+            {data.sms.maskedKey ? ` · clave ${data.sms.maskedKey}` : ' · sin clave'}
+          </p>
+        )}
+        <label className="block text-[13px] font-bold text-[#0F1111] mb-1">
+          {data.sms.configured && data.sms.source === 'panel' ? 'Dirección nueva (reemplaza la actual)' : 'Dirección del servicio SMS (URL)'}
+        </label>
+        <input
+          value={smsUrlDraft}
+          onChange={(e) => setSmsUrlDraft(e.target.value)}
+          placeholder="https://tu-servicio.cu/sms"
+          aria-label="Dirección del servicio SMS"
+          className="w-full border border-[#888c8c] rounded px-3 py-2 text-[14px] font-mono outline-none focus:border-[#e77600] mb-3"
+        />
+        <label className="block text-[13px] font-bold text-[#0F1111] mb-1">
+          Clave de API del servicio (opcional)
+        </label>
+        <input
+          value={smsKeyDraft}
+          onChange={(e) => setSmsKeyDraft(e.target.value)}
+          placeholder="clave que te dio tu proveedor SMS"
+          aria-label="Clave de API del servicio SMS"
+          className="w-full border border-[#888c8c] rounded px-3 py-2 text-[14px] font-mono outline-none focus:border-[#e77600] mb-3"
+        />
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={saveSms}
+            disabled={saving || confirming !== null}
+            className="bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer disabled:opacity-60"
+          >
+            Revisar y guardar
+          </button>
+          {data.sms.configured && data.sms.source === 'panel' && (
+            <button
+              onClick={() => clearChannel('clear_sms')}
+              disabled={saving || confirming !== null}
+              className="border border-[#C7511F] text-[#C7511F] hover:bg-[#FDE8E0] text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer disabled:opacity-60"
+            >
+              Desconectar el SMS
+            </button>
+          )}
+        </div>
+
+        {/* Confirmación antes de guardar la pasarela SMS */}
+        {confirming === 'sms' && (
+          <div className="mt-4 border-2 border-[#007600]/40 bg-[#f0faf0] rounded-lg p-4">
+            <p className="text-[15px] font-bold text-[#0F1111] flex items-center gap-1.5">
+              <Check className="w-5 h-5 text-[#007600]" /> Revisa la configuración antes de confirmar
+            </p>
+            <p className="text-[13px] text-[#565959] mt-1">
+              Guardaremos esta dirección como pasarela de SMS para los códigos de seguridad.
+            </p>
+            <p className="mt-3 bg-white border border-[#e3e6e6] rounded-lg p-3 text-[13px] font-mono break-all select-all">
+              {smsUrlDraft.trim()}
+            </p>
+            <div className="flex gap-2 mt-3 flex-wrap">
+              <button
+                onClick={confirmSave}
+                disabled={saving}
+                className="bg-[#007600] hover:bg-[#005e00] text-white text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer disabled:opacity-60"
+              >
+                {saving ? 'Guardando…' : 'Confirmar y guardar'}
+              </button>
+              <button
+                onClick={() => setConfirming(null)}
+                disabled={saving}
+                className="border border-[#d5d9d9] rounded-full px-6 py-2 text-[13px] hover:bg-[#f7fafa] cursor-pointer disabled:opacity-60"
+              >
+                Editar la dirección
               </button>
             </div>
           </div>
