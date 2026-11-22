@@ -9,7 +9,8 @@ datasource db {
 
 // Oferta publicada por el dueño de la web (administrador).
 // Junto con los productos de las mini tiendas forma el catálogo.
-// La web empieza vacía: no hay ofertas hasta que alguien publique.
+// La web arranca con ofertas de bienvenida sembradas
+// automáticamente (ver src/lib/seed.ts) para que nunca se vea vacía.
 model Offer {
   id          String   @id @default(cuid())
   title       String // nombre del producto o servicio
@@ -30,6 +31,7 @@ model SiteSettings {
   id                String   @id @default("main")
   miniStoresEnabled Boolean  @default(true)
   coinRate          Int      @default(100) // cuántas monedas vale $1 real
+  catalogSeeded     Boolean  @default(false) // ya se publicaron las ofertas iniciales de bienvenida
   updatedAt         DateTime @updatedAt
 }
 

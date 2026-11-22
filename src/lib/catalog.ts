@@ -2,8 +2,9 @@
 // ============================================================
 // CATÁLOGO UNIFICADO DE VIOLETERO (lado cliente)
 // Reúne las ofertas del dueño de la web (administrador) y los
-// productos de las mini tiendas. La web empieza VACÍA: solo
-// se ve lo que alguien publique de verdad.
+// productos de las mini tiendas. La web nunca arranca vacía:
+// si es una instalación nueva, se publican solas las ofertas
+// de bienvenida con fotos (ver src/lib/seed.ts).
 // ============================================================
 import { useCallback, useEffect, useState } from 'react'
 import { api } from './api'

@@ -1,12 +1,14 @@
 // ============================================================
 // CATÁLOGO UNIFICADO DE VIOLETERO
 // Une las ofertas del dueño de la web y los productos de las
-// mini tiendas en una sola lista. Si nadie ha publicado nada,
-// devuelve una lista vacía: la web empieza sin ofertas.
+// mini tiendas en una sola lista. La web NUNCA arranca vacía:
+// la primera vez se publican automáticamente ofertas de
+// bienvenida con fotos de la galería (ver src/lib/seed.ts).
 // GET /api/catalog
 // ============================================================
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { ensureCatalogSeed } from '@/lib/seed'
 
 export type CatalogItem = {
   id: string // "web-<id>" | "mini-<id>"
@@ -24,6 +26,10 @@ export type CatalogItem = {
 }
 
 export async function GET() {
+  // Si la instalación es recién hecha, publica las ofertas de
+  // bienvenida antes de leer (solo pasa una vez)
+  await ensureCatalogSeed().catch(() => {})
+
   const [offers, settings] = await Promise.all([
     db.offer.findMany({ where: { active: true }, orderBy: { createdAt: 'desc' } }),
     db.siteSettings.findUnique({ where: { id: 'main' } }),

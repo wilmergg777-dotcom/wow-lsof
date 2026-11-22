@@ -3,11 +3,15 @@
 // GET  /api/offers       — ofertas activas (público)
 // GET  /api/offers?all=1 — todas, incluso desactivadas (panel)
 // POST /api/offers       — publicar una nueva oferta
+// La primera vez que se leen, si la web es una instalación
+// nueva, se publican las ofertas de bienvenida (src/lib/seed.ts)
 // ============================================================
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { ensureCatalogSeed } from '@/lib/seed'
 
 export async function GET(req: Request) {
+  await ensureCatalogSeed().catch(() => {})
   const url = new URL(req.url)
   const all = url.searchParams.get('all') === '1'
   const offers = await db.offer.findMany({
