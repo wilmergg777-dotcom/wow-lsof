@@ -29,10 +29,10 @@ func nuevoMundoTest(t *testing.T) *Mundo {
 	return NuevoMundo(ConfigMundo{Persist: persist, Auth: authG, Hz: 20})
 }
 
-// crearJugadorTest crea un Jugador con clase/faccion dados y lo agrega al mundo.
-func crearJugadorTest(t *testing.T, m *Mundo, nombre, clase, faccion string) *Jugador {
+// crearJugadorTest crea un Jugador con clase/faccion/raza dados y lo agrega al mundo.
+func crearJugadorTest(t *testing.T, m *Mundo, nombre, clase, faccion, raza string) *Jugador {
 	t.Helper()
-	j := NuevoJugadorCreado(nombre, clase, faccion, "cuenta_test", m)
+	j := NuevoJugadorCreado(nombre, clase, faccion, raza, "cuenta_test", m)
 	m.AgregarJugador(j)
 	return j
 }
@@ -40,20 +40,24 @@ func crearJugadorTest(t *testing.T, m *Mundo, nombre, clase, faccion string) *Ju
 func TestBuscadorPvEMatchCrossFaction(t *testing.T) {
 	m := nuevoMundoTest(t)
 
-	// Tres jugadores de facciones Y roles distintos: guerrero/forjasol
-	// (tanque), sacerdote/lunagris (soporte), mago/forjasol (dps).
-	tanque := crearJugadorTest(t, m, "Tanque", "guerrero", FaccionForjasol)
-	soporte := crearJugadorTest(t, m, "Curandero", "sacerdote", FaccionLunagris)
-	dps := crearJugadorTest(t, m, "Dannador", "mago", FaccionForjasol)
+	// Tres jugadores de facciones Y roles distintos: guerrero/alianza/humano
+	// (tanque), sacerdote/horda/no_muerto (soporte), mago/alianza/gnomo (dps).
+	// Nivel 6 para cumplir NivelMin=5 de hollow_crypt (masmora lvl 7-10).
+	tanque := crearJugadorTest(t, m, "Tanque", "guerrero", FaccionAlianza, "humano")
+	soporte := crearJugadorTest(t, m, "Curandero", "sacerdote", FaccionHorda, "no_muerto")
+	dps := crearJugadorTest(t, m, "Dannador", "mago", FaccionAlianza, "gnomo")
+	for _, j := range []*Jugador{tanque, soporte, dps} {
+		j.nivel = 6
+	}
 
 	// Los tres a la cola de la misma masmora (cross-faction).
-	if err := m.Buscador().EntrarColaPvE(tanque, "cripta_pinargos"); err != nil {
+	if err := m.Buscador().EntrarColaPvE(tanque, "hollow_crypt"); err != nil {
 		t.Fatalf("entrar tanque: %v", err)
 	}
-	if err := m.Buscador().EntrarColaPvE(soporte, "cripta_pinargos"); err != nil {
+	if err := m.Buscador().EntrarColaPvE(soporte, "hollow_crypt"); err != nil {
 		t.Fatalf("entrar soporte: %v", err)
 	}
-	if err := m.Buscador().EntrarColaPvE(dps, "cripta_pinargos"); err != nil {
+	if err := m.Buscador().EntrarColaPvE(dps, "hollow_crypt"); err != nil {
 		t.Fatalf("entrar dps: %v", err)
 	}
 
@@ -76,7 +80,7 @@ func TestBuscadorPvEMatchCrossFaction(t *testing.T) {
 		if j.equipo != -1 {
 			t.Errorf("jugador %s debería tener equipo -1 (PvE), tiene %d", j.nombre, j.equipo)
 		}
-		t.Logf("%s (%s, %s) en instancia %s", j.nombre, j.faccion, j.rol, j.instanciaID)
+		t.Logf("%s (%s/%s, %s) en instancia %s", j.nombre, j.faccion, j.raza, j.rol, j.instanciaID)
 	}
 
 	// Validar que facciones distintas coexisten (cross-faction real).
@@ -113,20 +117,21 @@ func TestBuscadorPvEMatchCrossFaction(t *testing.T) {
 	if boss == nil {
 		t.Fatalf("boss no encontrado")
 	}
-	if boss.hpMax < 100 {
-		t.Errorf("boss debería tener HP boosteado, tiene %d", boss.hpMax)
+	// hollow_crypt boss: Morthen, hpBase 100 + 22*10 = 320, ×3 = 960.
+	if boss.hpMax < 300 {
+		t.Errorf("boss debería tener HP boosteado (~960), tiene %d", boss.hpMax)
 	}
-	t.Logf("boss %s (HP %d) + %d mobs en la instancia", boss.nombre, boss.hpMax, mobCount)
+	t.Logf("boss %s (HP %d, danoBase %d) + %d mobs en la instancia", boss.nombre, boss.hpMax, boss.danoBase, mobCount)
 }
 
 func TestBuscadorPvPMatchCrossFaction(t *testing.T) {
 	m := nuevoMundoTest(t)
 
-	// 4 jugadores para arena 2v2 (cross-faction).
-	j1 := crearJugadorTest(t, m, "J1", "guerrero", FaccionForjasol)
-	j2 := crearJugadorTest(t, m, "J2", "mago", FaccionLunagris)
-	j3 := crearJugadorTest(t, m, "J3", "sacerdote", FaccionForjasol)
-	j4 := crearJugadorTest(t, m, "J4", "guerrero", FaccionLunagris)
+	// 4 jugadores para arena 2v2 (cross-faction: 2 alianza + 2 horda).
+	j1 := crearJugadorTest(t, m, "J1", "guerrero", FaccionAlianza, "humano")
+	j2 := crearJugadorTest(t, m, "J2", "mago", FaccionHorda, "no_muerto")
+	j3 := crearJugadorTest(t, m, "J3", "sacerdote", FaccionAlianza, "humano")
+	j4 := crearJugadorTest(t, m, "J4", "guerrero", FaccionHorda, "orco")
 
 	for _, j := range []*Jugador{j1, j2, j3, j4} {
 		if err := m.Buscador().EntrarColaPvP(j, "arena_skolm"); err != nil {
@@ -152,11 +157,58 @@ func TestBuscadorPvPMatchCrossFaction(t *testing.T) {
 		if j.equipo != 0 && j.equipo != 1 {
 			t.Errorf("jugador %s equipo inválido %d", j.nombre, j.equipo)
 		}
-		equipos[j.equipo] = append(equipos[j.equipo], j.nombre+"("+j.faccion+")")
+		equipos[j.equipo] = append(equipos[j.equipo], j.nombre+"("+j.faccion+"/"+j.raza+")")
 	}
 	if len(equipos[0]) != 2 || len(equipos[1]) != 2 {
 		t.Errorf("esperaba 2v2, equipos: %v", equipos)
 	}
 	t.Logf("equipo 0: %v", equipos[0])
 	t.Logf("equipo 1: %v", equipos[1])
+}
+
+// TestRazaClaseMatriz valida que la matriz raza-clase de WoW 3.3.5 esté
+// bien definida: tauren solo guerrero/cazador, gnomo sin cazador, etc.
+func TestRazaClaseMatriz(t *testing.T) {
+	m := nuevoMundoTest(t)
+	razas := m.Razas()
+
+	casos := []struct {
+		raza        string
+		faccion     string
+		tieneClase  string // debe tener
+		noTieneClase string // no debe tener
+	}{
+		{"tauren", FaccionHorda, "guerrero", "picaro"},
+		{"tauren", FaccionHorda, "cazador", "mago"},
+		{"gnomo", FaccionAlianza, "mago", "cazador"},
+		{"humano", FaccionAlianza, "paladin", "cazador"},
+		{"elfo_de_sangre", FaccionHorda, "paladin", "guerrero"},
+		{"draenei", FaccionAlianza, "cazador", "picaro"},
+	}
+	for _, c := range casos {
+		r, ok := razas[c.raza]
+		if !ok {
+			t.Errorf("raza %s no existe", c.raza)
+			continue
+		}
+		if r.Faccion != c.faccion {
+			t.Errorf("raza %s facción %s, esperaba %s", c.raza, r.Faccion, c.faccion)
+		}
+		if !contiene(r.Clases, c.tieneClase) {
+			t.Errorf("raza %s debería permitir %s, clases: %v", c.raza, c.tieneClase, r.Clases)
+		}
+		if contiene(r.Clases, c.noTieneClase) {
+			t.Errorf("raza %s NO debería permitir %s, clases: %v", c.raza, c.noTieneClase, r.Clases)
+		}
+	}
+}
+
+// contiene busca un string en un slice.
+func contiene(s []string, v string) bool {
+	for _, x := range s {
+		if x == v {
+			return true
+		}
+	}
+	return false
 }

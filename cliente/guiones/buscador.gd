@@ -69,7 +69,7 @@ func _construir_ui() -> void:
 	vbox.add_child(titulo)
 
 	var sub = Label.new()
-	sub.text = "Cross-facción: tu grupo puede mezclar Forjasol y Lunagris."
+	sub.text = "Cross-facción: tu grupo puede mezclar Alianza y Horda."
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.add_theme_font_size_override("font_size", 12)
 	vbox.add_child(sub)

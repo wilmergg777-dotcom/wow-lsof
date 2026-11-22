@@ -39,7 +39,7 @@ servidor/
     ├── persistencia/     Personajes. JSON atómico (.tmp + rename).
     ├── mundo/            El corazón del Sim.
     │   ├── mundo.go      Mundo struct + Entidad interface + tick loop + zonas.
-    │   ├── defs.go       Clases, facciones, masmoras, arenas + spawns iniciales.
+    │   ├── defs.go       Facciones, razas, clases, masmoras, arenas + spawns iniciales.
     │   ├── jugador.go    Jugador (entidad + combate + snapshot + guardar).
     │   ├── enemigo.go    Enemigo (IA patrulla/aggro/ataque/respawn).
     │   ├── combate.go    Resolución de habilidades + broadcast por zona.
@@ -164,23 +164,47 @@ puro tab-target.
 
 ## Facciones, instancias y buscador
 
-### Facciones (cross-faction)
+### Facciones (WoW 3.3.5, cross-faction)
 
-Existen dos facciones: **Forjasol** y **Lunagris**. La facción se elige al
+Existen dos facciones: **Alianza** y **Horda**. La facción se elige al
 crear el personaje y se persiste. **Por diseño, la facción no restringe el
-agupamiento**: el buscador de masmorras y las arenas PvP mezclan jugadores
-de cualquier facción en el mismo grupo o equipo. La facción es
-principalmente narrativa y de identidad visual para el cliente.
+agrupamiento**: el buscador de masmorras y las arenas PvP mezclan jugadores
+de cualquier facción en el mismo grupo o equipo (cross-faction). La facción
+determina qué razas puede elegir el personaje y es narrativa/de identidad.
 
-### Roles
+### Razas
 
-Cada clase tiene un rol derivado que el buscador usa para formar grupos PvE:
+10 razas (5 por facción) con la matriz raza-clase de WoW 3.3.5a, filtrada a
+las 7 clases jugables. Cada raza tiene un **racial pasivo** que aplica
+modificadores de stats al crear el personaje (HP/maná/daño):
 
-| Clase     | Rol       | Energía | Función                       |
-|-----------|-----------|---------|-------------------------------|
-| Guerrero  | tanque    | ira     | Cuerpo a cuerpo, aguanta      |
-| Mago      | dps       | maná    | Rango, daño AoE               |
-| Sacerdote | soporte   | maná    | Curación de aliados, buffs    |
+| Facción  | Raza           | Clases permitidas (de las 7)                 | Racial               |
+|----------|----------------|----------------------------------------------|----------------------|
+| Alianza  | Humano         | guerrero, paladín, pícaro, sacerdote, mago, brujo | Voluntad Humana (+5% HP) |
+| Alianza  | Enano          | guerrero, paladín, cazador, pícaro, sacerdote | Forma de Piedra (+5% HP) |
+| Alianza  | Elfo Nocturno  | guerrero, cazador, pícaro, sacerdote         | Fusión en Sombras (+5% HP) |
+| Alianza  | Gnomo          | guerrero, pícaro, mago, brujo                | Intelecto Expansivo (+5% maná) |
+| Alianza  | Draenei        | guerrero, paladín, cazador, mago, sacerdote  | Toque Heroico (+5% daño) |
+| Horda    | Orco           | guerrero, cazador, pícaro, brujo             | Sangre de Furia (+5% daño) |
+| Horda    | Renegado       | guerrero, pícaro, sacerdote, mago, brujo     | Voluntad de los Renegados (+5% HP) |
+| Horda    | Tauren         | guerrero, cazador                             | Resistencia Total (+5% HP) |
+| Horda    | Troll          | guerrero, cazador, pícaro, sacerdote, mago   | Regeneración (+5% maná) |
+| Horda    | Elfo de Sangre | paladín, cazador, pícaro, sacerdote, mago, brujo | Torrente Arcano (+5% daño) |
+
+### Roles y clases
+
+Cada clase tiene un rol derivado que el buscador usa para formar grupos PvE.
+7 clases cubren la trinidad de WoW LK:
+
+| Clase     | Rol       | Energía  | Función                       |
+|-----------|-----------|----------|-------------------------------|
+| Guerrero  | tanque    | ira      | Cuerpo a cuerpo, aguanta      |
+| Paladín   | tanque    | maná     | Tanque sagrado, buffs         |
+| Cazador   | dps       | maná     | Rango físico                  |
+| Pícaro    | dps       | energía  | Cuerpo a cuerpo, evasión      |
+| Mago      | dps       | maná     | Rango, daño AoE de escarcha   |
+| Brujo     | dps       | maná     | Rango, sombra                 |
+| Sacerdote | soporte   | maná     | Curación de aliados, buffs    |
 
 ### Instancias
 
@@ -304,7 +328,9 @@ MessagePack o un schema custom).
   únicamente dentro de instancias de arena (equipos 2v2 cross-faction). En
   el mundo abierto no hay PvP.
 - **Mundo abierto + instancias**: el mundo abierto es un plano reducido con
-  5 mobs fijos; las masmorras (2 definidas) y la arena (1 definida) son
+  5 mobs fijos; 5 masmorras PvE (adaptadas de world-of-claudecraft: La
+  Cripta Hueca, El Bastión Hundido, El Templo Anegado, Cuenca Corazón
+  Salvaje, Santuario Gusanoso) y 1 arena PvP (Arena de Skolm) son
   instancias aisladas creadas por el buscador.
 - **Sin loot ni experiencia formal**: los mobs no dropean items ni otorgan
   XP trackeada (placeholder para futuro).

@@ -26,8 +26,10 @@ var _puerto: int = 0
 # Cache del último personaje propio recibido en sel_resp. Lo leen las escenas
 # al cargarse (mundo.gd lo usa para setear el nombre del jugador local).
 var ultimo_personaje_propio: Dictionary = {}
-# Cachés de facciones/masmoras/arenas (vienen en login_resp/sel_resp).
+# Cachés de facciones/razas/clases/masmoras/arenas (vienen en login_resp/sel_resp).
 var facciones_disponibles: Array = []
+var razas_disponibles: Array = []
+var clases_disponibles: Array = []
 var masmoras_disponibles: Array = []
 var arenas_disponibles: Array = []
 
@@ -47,11 +49,14 @@ func _on_mensaje_recibido(msg: Dictionary) -> void:
 		"login_resp":
 			if msg.has("facciones"):
 				facciones_disponibles = msg.get("facciones", [])
+			if msg.has("razas"):
+				razas_disponibles = msg.get("razas", [])
+			if msg.has("clases"):
+				clases_disponibles = msg.get("clases", [])
 		"logout":
 			ultimo_personaje_propio = {}
 			masmoras_disponibles = []
 			arenas_disponibles = []
-
 func conectar(host: String, puerto: int) -> bool:
 	if _estado == "conectado" or _estado == "conectando":
 		return false
@@ -168,8 +173,8 @@ func enviar_login(usuario: String, password: String) -> void:
 func enviar_registro(usuario: String, password: String) -> void:
 	enviar({"tipo": "registro", "usuario": usuario, "password": password})
 
-func enviar_crear_pj(nombre: String, clase: String, faccion: String) -> void:
-	enviar({"tipo": "crear_pj", "nombre": nombre, "clase": clase, "faccion": faccion})
+func enviar_crear_pj(nombre: String, clase: String, faccion: String, raza: String) -> void:
+	enviar({"tipo": "crear_pj", "nombre": nombre, "clase": clase, "faccion": faccion, "raza": raza})
 
 func enviar_sel_pj(nombre: String) -> void:
 	enviar({"tipo": "sel_pj", "nombre": nombre})

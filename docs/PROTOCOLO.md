@@ -36,12 +36,12 @@ Respuesta: `registro_resp`. Crea una cuenta nueva (bcrypt).
 
 ### `crear_pj`
 ```json
-{"tipo": "crear_pj", "nombre": "Aragorn", "clase": "guerrero", "faccion": "forjasol"}
+{"tipo": "crear_pj", "nombre": "Aragorn", "clase": "guerrero", "faccion": "alianza", "raza": "humano"}
 ```
 - `nombre`: 3–16 caracteres, sin prefijos reservados (`mob_`, `pj_`, `inst_`).
-- `clase`: `"guerrero"` (tanque), `"mago"` (dps) o `"sacerdote"` (soporte).
-- `faccion`: `"forjasol"` o `"lunagris"`. La facción es narrativa; **no
-  restringe el agrupamiento** — el buscador es cross-faction.
+- `clase`: una de 7 — `"guerrero"`/`"paladin"` (tanque), `"mago"`/`"cazador"`/`"brujo"`/`"picaro"` (dps), `"sacerdote"` (soporte).
+- `faccion`: `"alianza"` o `"horda"` (WoW 3.3.5). Narrativa; **no restringe el agrupamiento** — el buscador es cross-faction.
+- `raza`: una de 10 razas (5 por facción). Debe pertenecer a `faccion` y permitir `clase` (matriz raza-clase de 3.3.5a). El servidor valida la coherencia.
 
 Respuesta: `lista_pj` con la lista actualizada.
 
@@ -100,7 +100,7 @@ limpiamente.
 
 ### `cola_pve_entrar`
 ```json
-{"tipo": "cola_pve_entrar", "masmora_id": "cripta_pinargos"}
+{"tipo": "cola_pve_entrar", "masmora_id": "hollow_crypt"}
 ```
 Encola al jugador para el buscador de masmorras PvE. El servidor valida
 que la masmora exista y que el jugador tenga nivel suficiente. Respuesta
@@ -133,12 +133,20 @@ Saca al jugador de la cola PvP.
    {"nombre": "Aragorn", "clase": "guerrero", "nivel": 1}
  ],
  "facciones": [
-   {"id": "forjasol", "nombre": "Forjasol"},
-   {"id": "lunagris", "nombre": "Lunagris"}
+   {"id": "alianza", "nombre": "Alianza"},
+   {"id": "horda", "nombre": "Horda"}
+ ],
+ "razas": [
+   {"id":"humano","nombre":"Humano","faccion":"alianza","clases":["guerrero","paladin","picaro","sacerdote","mago","brujo"],"racial_nombre":"Voluntad Humana","racial_desc":"+5% HP"}
+ ],
+ "clases": [
+   {"id":"guerrero","nombre":"Guerrero","rol":"tanque"},
+   {"id":"sacerdote","nombre":"Sacerdote","rol":"soporte"}
  ]}
 ```
-Si `ok = false`, incluye `error`. `facciones` va siempre que el login sea
-válido, para que el cliente pueble el selector de facción al crear PJ.
+Si `ok = false`, incluye `error`. `facciones`, `razas` y `clases` van siempre
+que el login sea válido, para que el cliente pueble los selectores de
+facción → raza → clase al crear PJ (con la matriz raza-clase).
 
 ### `registro_resp`
 ```json
@@ -159,10 +167,11 @@ Lista actualizada tras crear o borrar un personaje.
    "id": "pj_Aragorn", "nombre": "Aragorn", "clase": "guerrero",
    "nivel": 1, "pos": {"x":0,"y":0,"z":0}, "rot": {"x":0,"y":0,"z":0,"w":1},
    "hp_actual": 120, "hp_max": 120, "es_jugador": true,
-   "faccion": "forjasol", "rol": "tanque"
+   "faccion": "alianza", "raza": "humano", "rol": "tanque"
  },
  "masmoras": [
-   {"id": "cripta_pinargos", "nombre": "Cripta de Pinargos",
+   {"id": "hollow_crypt", "nombre": "La Cripta Hueca",
+    "nivel_min": 5, "tamano_grupo": 3},
     "nivel_min": 1, "tamano_grupo": 3}
  ],
  "arenas": [
@@ -189,7 +198,7 @@ Mensaje principal, enviado a 20 Hz a cada jugador conectado.
    "cooldowns":{"golpe_heroico":1200},
    "buffs_activos":{"grito_guerra":28000},
    "muerto":false,
-   "faccion":"forjasol", "rol":"tanque",
+   "faccion":"alianza", "raza":"humano", "rol":"tanque",
    "instancia_id":"", "instancia_tipo":"", "equipo":-1
  }}
 ```

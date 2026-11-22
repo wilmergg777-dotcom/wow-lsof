@@ -81,6 +81,7 @@ type Mundo struct {
 	authGestor  *auth.Gestor
 	clases      map[string]DefClase
 	facciones   map[string]DefFaccion
+	razas       map[string]DefRaza
 	masmoras    map[string]DefMasmora
 	arenas      map[string]DefArena
 	tick        uint64
@@ -145,6 +146,7 @@ func NuevoMundo(cfg ConfigMundo) *Mundo {
 		authGestor:    cfg.Auth,
 		clases:        clasesPredefinidas(),
 		facciones:     faccionesPredefinidas(),
+		razas:         razasPredefinidas(),
 		masmoras:      masmorasPredefinidas(),
 		arenas:        arenasPredefinidas(),
 		tickInterval:  time.Duration(1000/hz) * time.Millisecond,
@@ -176,6 +178,25 @@ func (m *Mundo) Facciones() map[string]DefFaccion {
 		out[k] = v
 	}
 	return out
+}
+
+// Razas devuelve las razas jugables.
+func (m *Mundo) Razas() map[string]DefRaza {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := make(map[string]DefRaza, len(m.razas))
+	for k, v := range m.razas {
+		out[k] = v
+	}
+	return out
+}
+
+// Raza devuelve la definición de una raza por ID.
+func (m *Mundo) Raza(id string) (DefRaza, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	r, ok := m.razas[id]
+	return r, ok
 }
 
 // Masmoras devuelve las definiciones de masmoras disponibles.

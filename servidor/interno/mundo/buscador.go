@@ -1,7 +1,7 @@
 // buscador.go implementa el buscador de masmorras (PvE) y arenas (PvP)
 // con matchmaking cross-faction. Las facciones NUNCA restringen el
-// agrupamiento: un grupo PvE o un equipo PvP puede mezclar Forjasol y
-// Lunagris libremente.
+// agrupamiento: un grupo PvE o un equipo PvP puede mezclar Alianza y
+// Horda libremente.
 //
 // El buscador no tiene su propio lock: opera bajo el lock del mundo (m.mu).
 // Los métodos públicos (EntrarCola*/SalirCola*) lo adquieren; procesar()

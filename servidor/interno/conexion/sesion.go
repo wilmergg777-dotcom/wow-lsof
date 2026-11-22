@@ -119,6 +119,8 @@ func (s *Sesion) handleLogin(msg MensajeCliente) error {
 			OK:         true,
 			Personajes: pjs,
 			Facciones:  faccionesRes(s.mundo),
+			Razas:      razasRes(s.mundo),
+			Clases:     clasesRes(s.mundo),
 		})
 
 	case "registro":
@@ -186,6 +188,32 @@ func (s *Sesion) crearPersonaje(msg MensajeCliente) error {
 			Tipo: "sel_resp", OK: false, Error: "facción inválida",
 		})
 	}
+	// Validar raza: debe existir y pertenecer a la facción elegida.
+	razas := s.mundo.Razas()
+	razaDef, razaOK := razas[msg.Raza]
+	if !razaOK {
+		return EscribirMensaje(s.conn, MensajeServidor{
+			Tipo: "sel_resp", OK: false, Error: "raza inválida",
+		})
+	}
+	if razaDef.Faccion != msg.Faccion {
+		return EscribirMensaje(s.conn, MensajeServidor{
+			Tipo: "sel_resp", OK: false, Error: "esa raza no pertenece a tu facción",
+		})
+	}
+	// Validar matriz raza-clase: la clase debe estar permitida para la raza.
+	clasePermitida := false
+	for _, c := range razaDef.Clases {
+		if c == msg.Clase {
+			clasePermitida = true
+			break
+		}
+	}
+	if !clasePermitida {
+		return EscribirMensaje(s.conn, MensajeServidor{
+			Tipo: "sel_resp", OK: false, Error: "esa clase no está disponible para tu raza",
+		})
+	}
 	if s.persist.Existe(nombre) {
 		return EscribirMensaje(s.conn, MensajeServidor{
 			Tipo: "sel_resp", OK: false, Error: "nombre ya existe",
@@ -204,6 +232,7 @@ func (s *Sesion) crearPersonaje(msg MensajeCliente) error {
 		Cuenta:       s.cuentaActual,
 		Clase:        msg.Clase,
 		Faccion:      msg.Faccion,
+		Raza:         msg.Raza,
 		Nivel:        1,
 		PosMundo:     Vec3{},
 		Habilidad:    habilidades,
@@ -434,6 +463,7 @@ func snapshotPropio(j *mundo.Jugador) EntidadSnapshot {
 		HPMax:     j.HPMax(),
 		EsJugador: true,
 		Faccion:   j.Faccion(),
+		Raza:      j.Raza(),
 		Rol:       j.Rol(),
 	}
 }
@@ -444,6 +474,36 @@ func faccionesRes(m *mundo.Mundo) []FaccionRes {
 	out := make([]FaccionRes, 0, len(facs))
 	for _, f := range facs {
 		out = append(out, FaccionRes{ID: f.ID, Nombre: f.Nombre})
+	}
+	return out
+}
+
+// razasRes convierte las razas del mundo a la lista del protocolo.
+func razasRes(m *mundo.Mundo) []RazaRes {
+	razas := m.Razas()
+	out := make([]RazaRes, 0, len(razas))
+	for _, r := range razas {
+		// Copiar el slice de clases para no compartir la referencia interna.
+		clases := make([]string, len(r.Clases))
+		copy(clases, r.Clases)
+		out = append(out, RazaRes{
+			ID:           r.ID,
+			Nombre:       r.Nombre,
+			Faccion:      r.Faccion,
+			Clases:       clases,
+			RacialNombre: r.RacialNombre,
+			RacialDesc:   r.RacialDesc,
+		})
+	}
+	return out
+}
+
+// clasesRes convierte las clases del mundo a la lista del protocolo.
+func clasesRes(m *mundo.Mundo) []ClaseRes {
+	clases := m.Clases()
+	out := make([]ClaseRes, 0, len(clases))
+	for _, c := range clases {
+		out = append(out, ClaseRes{ID: c.ID, Nombre: c.Nombre, Rol: c.Rol})
 	}
 	return out
 }

@@ -38,7 +38,8 @@ type MensajeCliente struct {
 	Password  string          `json:"password,omitempty"`
 	Nombre    string          `json:"nombre,omitempty"`
 	Clase     string          `json:"clase,omitempty"`
-	Faccion   string          `json:"faccion,omitempty"`   // "forjasol" | "lunagris" (crear_pj)
+	Faccion   string          `json:"faccion,omitempty"`   // "alianza" | "horda" (crear_pj)
+	Raza      string          `json:"raza,omitempty"`      // "humano" | "orco" | ... (crear_pj)
 	Pos       *Vec3           `json:"pos,omitempty"`
 	Rot       *Vec4           `json:"rot,omitempty"`
 	Objetivo  string          `json:"objetivo,omitempty"`   // ID del objetivo (tab-target)
@@ -65,8 +66,10 @@ type MensajeServidor struct {
 	Critico         bool              `json:"critico,omitempty"`
 	EntidadID       string            `json:"entidad_id,omitempty"`
 	Mensaje         string            `json:"mensaje,omitempty"`
-	// Facciones / clases / masmoras / arenas (metadata enviada al cliente)
+	// Facciones / razas / clases / masmoras / arenas (metadata enviada al cliente)
 	Facciones       []FaccionRes      `json:"facciones,omitempty"`
+	Razas           []RazaRes         `json:"razas,omitempty"`
+	Clases          []ClaseRes        `json:"clases,omitempty"`
 	Masmoras        []MasmoraRes      `json:"masmoras,omitempty"`
 	Arenas          []ArenaRes        `json:"arenas,omitempty"`
 	// Buscador de masmorras / PvP
@@ -87,6 +90,23 @@ type MensajeServidor struct {
 type FaccionRes struct {
 	ID     string `json:"id"`
 	Nombre string `json:"nombre"`
+}
+
+// RazaRes es la representación de una raza jugable para el cliente.
+type RazaRes struct {
+	ID           string   `json:"id"`
+	Nombre       string   `json:"nombre"`
+	Faccion      string   `json:"faccion"`
+	Clases       []string `json:"clases"`
+	RacialNombre string   `json:"racial_nombre"`
+	RacialDesc   string   `json:"racial_desc"`
+}
+
+// ClaseRes es la representación de una clase jugable para el cliente.
+type ClaseRes struct {
+	ID       string `json:"id"`
+	Nombre   string `json:"nombre"`
+	Rol      string `json:"rol"`
 }
 
 // MasmoraRes es el resumen de una masmora para el panel del buscador.
@@ -126,7 +146,8 @@ type EntidadSnapshot struct {
 	ObjetivoID  string `json:"objetivo_id,omitempty"`
 	EnCombate   bool   `json:"en_combate,omitempty"`
 	Canalizando string `json:"canalizando,omitempty"` // ID de habilidad en cooldown
-	Faccion     string `json:"faccion,omitempty"`     // "forjasol" | "lunagris"
+	Faccion     string `json:"faccion,omitempty"`     // "alianza" | "horda"
+	Raza        string `json:"raza,omitempty"`        // "humano" | "orco" | ...
 	Rol         string `json:"rol,omitempty"`         // "tanque" | "dps" | "soporte"
 	Equipo      int    `json:"equipo,omitempty"`      // 0 | 1 en PvP; omitido en PvE/mundo
 }
@@ -146,6 +167,7 @@ type EstadoCombate struct {
 	Muerto             bool           `json:"muerto,omitempty"`
 	RespawnMs          int            `json:"respawn_ms,omitempty"` // ms hasta respawn si muerto
 	Faccion            string         `json:"faccion,omitempty"`
+	Raza               string         `json:"raza,omitempty"`
 	Rol                string         `json:"rol,omitempty"`
 	InstanciaID        string         `json:"instancia_id,omitempty"` // vacío = mundo abierto
 	InstanciaTipo      string         `json:"instancia_tipo,omitempty"`

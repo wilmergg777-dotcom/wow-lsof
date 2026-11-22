@@ -44,8 +44,12 @@ type Jugador struct {
 	nombre string
 	clase  string
 	nivel  int
-	faccion string // "forjasol" | "lunagris"
+	faccion string // "alianza" | "horda"
+	raza   string // "humano" | "orco" | ...
 	rol    string // "tanque" | "dps" | "soporte"
+
+	// Modificadores raciales pasivos (aplicados al crear)
+	modDano float64 // +0.05 = +5% daño (p. ej. orco, draenei)
 
 	// Estado espacial
 	pos proto.Vec3
@@ -90,6 +94,7 @@ func (j *Jugador) Nombre() string       { return j.nombre }
 func (j *Jugador) Clase() string        { return j.clase }
 func (j *Jugador) Nivel() int           { return j.nivel }
 func (j *Jugador) Faccion() string      { return j.faccion }
+func (j *Jugador) Raza() string         { return j.raza }
 func (j *Jugador) Rol() string          { return j.rol }
 func (j *Jugador) InstanciaID() string  { return j.instanciaID }
 func (j *Jugador) Equipo() int          { return j.equipo }
@@ -147,10 +152,22 @@ func NuevoJugadorDesdePersistencia(
 	energiaMax := def.EnergiaBase + def.EnergiaPorNivel*(p.Nivel-1)
 
 	// Facción: si el personaje persistido no trae facción (personajes
-	// viejos pre-sistema de facciones), asignar Forjasol por defecto.
+	// viejos pre-sistema de facciones), asignar Alianza por defecto.
 	fac := p.Faccion
 	if fac == "" {
-		fac = FaccionForjasol
+		fac = FaccionAlianza
+	}
+	// Raza: si no trae raza (personajes viejos), humano por defecto.
+	razaID := p.Raza
+	if razaID == "" {
+		razaID = "humano"
+	}
+	// Aplicar racial pasivo: modificar HP/energía máx y modDano.
+	var modDano float64
+	if razaDef, ok := m.razas[razaID]; ok {
+		hpMax = int(float64(hpMax) * (1 + razaDef.ModHP))
+		energiaMax = int(float64(energiaMax) * (1 + razaDef.ModMana))
+		modDano = razaDef.ModDano
 	}
 
 	j := &Jugador{
@@ -160,7 +177,9 @@ func NuevoJugadorDesdePersistencia(
 		clase:             p.Clase,
 		nivel:             p.Nivel,
 		faccion:           fac,
+		raza:              razaID,
 		rol:               def.Rol,
+		modDano:           modDano,
 		instanciaID:       "",
 		equipo:            -1,
 		pos:               p.PosMundo,
@@ -186,9 +205,10 @@ func NuevoJugadorDesdePersistencia(
 }
 
 // NuevoJugadorCreado construye un Jugador recién creado (nivel 1, spawn).
-// faccion debe ser FaccionForjasol o FaccionLunagris.
+// faccion debe ser FaccionAlianza o FaccionHorda; raza debe ser una raza
+// válida de esa facción. La coherencia raza-facción-clase la valida sesion.go.
 func NuevoJugadorCreado(
-	nombre, claseID, faccion, cuenta string,
+	nombre, claseID, faccion, razaID, cuenta string,
 	m *Mundo,
 ) *Jugador {
 	def, ok := m.clases[claseID]
@@ -196,7 +216,19 @@ func NuevoJugadorCreado(
 		def = m.clases["guerrero"]
 	}
 	if faccion == "" {
-		faccion = FaccionForjasol
+		faccion = FaccionAlianza
+	}
+	if razaID == "" {
+		razaID = "humano"
+	}
+	// Aplicar racial pasivo al HP/energía base y al modificador de daño.
+	hpMax := def.HPBase
+	energiaMax := def.EnergiaBase
+	var modDano float64
+	if razaDef, ok := m.razas[razaID]; ok {
+		hpMax = int(float64(hpMax) * (1 + razaDef.ModHP))
+		energiaMax = int(float64(energiaMax) * (1 + razaDef.ModMana))
+		modDano = razaDef.ModDano
 	}
 	j := &Jugador{
 		id:                "pj_" + nombre,
@@ -205,15 +237,17 @@ func NuevoJugadorCreado(
 		clase:             claseID,
 		nivel:             1,
 		faccion:           faccion,
+		raza:              razaID,
 		rol:               def.Rol,
+		modDano:           modDano,
 		instanciaID:       "",
 		equipo:            -1,
 		pos:               proto.Vec3{X: 0, Y: 0, Z: 0},
 		rot:               proto.Vec4{X: 0, Y: 0, Z: 0, W: 1},
-		hpActual:          def.HPBase,
-		hpMax:             def.HPBase,
-		energiaActual:     def.EnergiaBase,
-		energiaMax:        def.EnergiaBase,
+		hpActual:          hpMax,
+		hpMax:             hpMax,
+		energiaActual:     energiaMax,
+		energiaMax:        energiaMax,
 		spawnPos:          proto.Vec3{X: 0, Y: 0, Z: 0},
 		cooldowns:         make(map[string]int64),
 		buffs:             make(map[string]int64),
@@ -501,9 +535,9 @@ func (j *Jugador) postDañoAnotado(dano int, ahora int64) {
 	}
 }
 
-// calcularDaño aplica multiplicador de buffs activos al daño base.
+// calcularDaño aplica multiplicador de buffs activos y racial al daño base.
 func (j *Jugador) calcularDaño(base int) int {
-	mult := 1.0
+	mult := 1.0 + j.modDano // racial pasivo (p. ej. orco/draenei +5%)
 	if _, ok := j.buffs["grito_guerra"]; ok {
 		mult += 0.10
 	}
@@ -581,6 +615,7 @@ func (j *Jugador) enviarSnapshot(m *Mundo) {
 		BuffsActivos:     cooldownsRestantes(j.buffs, time.Now().UnixMilli()),
 		Muerto:           !j.EstaVivo(),
 		Faccion:          j.faccion,
+		Raza:             j.raza,
 		Rol:              j.rol,
 		InstanciaID:      j.instanciaID,
 		Equipo:           j.equipo,
@@ -625,6 +660,7 @@ func snapshotDeEntidad(e Entidad) proto.EntidadSnapshot {
 	if j, ok := e.(*Jugador); ok {
 		s.EnCombate = j.enCombate
 		s.Faccion = j.faccion
+		s.Raza = j.raza
 		s.Rol = j.rol
 		s.Equipo = j.equipo
 	}
@@ -665,6 +701,7 @@ func (j *Jugador) guardar(p *persistencia.Gestor) error {
 		Cuenta:      j.cuenta,
 		Clase:       j.clase,
 		Faccion:     j.faccion,
+		Raza:        j.raza,
 		Nivel:       j.nivel,
 		Experiencia: 0,
 		PosMundo:    posAGuardar,

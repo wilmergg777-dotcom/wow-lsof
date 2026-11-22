@@ -89,20 +89,24 @@ size_flags_horizontal = 3
 placeholder_text = "nombre (3-16 caracteres)"
 max_length = 16
 
+[node name="Faccion" type="OptionButton" parent="Centro/Panel/Margen/VBox/FilaCrear"]
+layout_mode = 2
+custom_minimum_size = Vector2(110, 0)
+item_count = 2
+popup/item_0/text = "Alianza"
+popup/item_1/text = "Horda"
+
+[node name="Raza" type="OptionButton" parent="Centro/Panel/Margen/VBox/FilaCrear"]
+layout_mode = 2
+custom_minimum_size = Vector2(140, 0)
+item_count = 1
+popup/item_0/text = "—"
+
 [node name="Clase" type="OptionButton" parent="Centro/Panel/Margen/VBox/FilaCrear"]
 layout_mode = 2
 custom_minimum_size = Vector2(120, 0)
-item_count = 3
-popup/item_0/text = "Guerrero"
-popup/item_1/text = "Mago"
-popup/item_2/text = "Sacerdote"
-
-[node name="Faccion" type="OptionButton" parent="Centro/Panel/Margen/VBox/FilaCrear"]
-layout_mode = 2
-custom_minimum_size = Vector2(130, 0)
-item_count = 2
-popup/item_0/text = "Forjasol"
-popup/item_1/text = "Lunagris"
+item_count = 1
+popup/item_0/text = "—"
 
 [node name="BtnCrear" type="Button" parent="Centro/Panel/Margen/VBox/FilaCrear"]
 layout_mode = 2

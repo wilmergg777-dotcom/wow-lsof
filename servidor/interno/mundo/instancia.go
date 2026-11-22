@@ -159,10 +159,11 @@ func (in *Instancia) iniciar(m *Mundo) {
 }
 
 // poblarMobs genera los mobs definidos en la masmora dentro del mundo,
-// todos con instanciaID = in.id. Marca el bossID.
+// todos con instanciaID = in.id. Usa los stats explícitos de DefSpawnMob
+// (HPBase/HPPorNivel/DanoBase, estilo wocc) y marca el bossID.
 func (in *Instancia) poblarMobs(m *Mundo) {
 	for i, sm := range in.defMasmora.Mobs {
-		e := nuevoEnemigo(sm.Nombre, sm.Tipo, sm.Nivel, sm.Pos)
+		e := nuevoEnemigoMasmora(sm)
 		e.spawnPos = sm.Pos
 		e.id = "inst_" + in.id + "_mob_" + itoaSimple(i+1)
 		e.instanciaID = in.id

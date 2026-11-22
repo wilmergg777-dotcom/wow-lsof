@@ -35,6 +35,7 @@ type Enemigo struct {
 	hpMax         int
 	spawnPos      proto.Vec3
 	instanciaID   string // "" = mundo abierto; inst.id = mob de instancia
+	danoBase      int    // 0 = usar fórmula (5 + nivel*2); >0 = explícito
 	estado        string // "patrullando" | "persiguiendo" | "atacando" | "muerto"
 	objetivoID    string
 	ultimoAtaqueMs int64
@@ -82,6 +83,21 @@ func nuevoEnemigo(nombre, tipo string, nivel int, pos proto.Vec3) *Enemigo {
 		estado:        "patrullando",
 		direccionPatrulla: proto.Vec3{X: 1, Y: 0, Z: 0},
 	}
+}
+
+// nuevoEnemigoMasmora crea un mob de instancia con stats explícitos (estilo
+// wocc: hpBase + hpPorNivel*nivel, danoBase). Si hpBase == 0, usa la
+// fórmula por defecto. Si danoBase == 0, aiAtacar usará la fórmula.
+func nuevoEnemigoMasmora(sm DefSpawnMob) *Enemigo {
+	hpMax := sm.HPBase + sm.HPPorNivel*sm.Nivel
+	if sm.HPBase == 0 {
+		hpMax = 40 + sm.Nivel*15
+	}
+	e := nuevoEnemigo(sm.Nombre, sm.Tipo, sm.Nivel, sm.Pos)
+	e.hpMax = hpMax
+	e.hpActual = hpMax
+	e.danoBase = sm.DanoBase
+	return e
 }
 
 // ─── IA per tick ────────────────────────────────────────────────────────
@@ -230,7 +246,10 @@ func (e *Enemigo) aiAtacar(m *Mundo, ahora int64, t time.Time) {
 		return
 	}
 	if (ahora - e.ultimoAtaqueMs) >= 2000 {
-		dano := 5 + e.nivel*2
+		dano := e.danoBase
+		if dano == 0 {
+			dano = 5 + e.nivel*2
+		}
 		if j, ok := obj.(*Jugador); ok {
 			j.recibirDaño(e.id, dano, false, m, ahora)
 		}

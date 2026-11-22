@@ -47,10 +47,21 @@ func _cargar_personaje(propio: Dictionary) -> void:
 	jugador.set_nombre(nombre)
 	hud.set_nombre_pj(nombre)
 	var clase = propio.get("clase", "guerrero")
-	if clase == "mago":
-		_slots_habilidad = ["flecha_de_hielo", "nova_de_escarcha"]
-	elif clase == "sacerdote":
-		_slots_habilidad = ["sanacion_rapida", "escudo_de_fe"]
+	match clase:
+		"mago":
+			_slots_habilidad = ["flecha_de_hielo", "nova_de_escarcha"]
+		"sacerdote":
+			_slots_habilidad = ["sanacion_rapida", "escudo_de_fe"]
+		"paladin":
+			_slots_habilidad = ["martillo_de_luz", "escudo_divino"]
+		"cazador":
+			_slots_habilidad = ["disparo_arcano", "disparo_congelante"]
+		"picaro":
+			_slots_habilidad = ["golpe_siniestro", "evasion"]
+		"brujo":
+			_slots_habilidad = ["sastraburil", "maldicion_de_agonia"]
+		_:
+			_slots_habilidad = ["golpe_heroico", "grito_guerra"]  # guerrero
 	hud.set_slots(_slots_habilidad[0], _slots_habilidad[1])
 
 func _on_mensaje(msg: Dictionary) -> void:
