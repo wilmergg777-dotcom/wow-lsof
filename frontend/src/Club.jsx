@@ -7,6 +7,14 @@ import ClubMiembros from './ClubMiembros';
 import ClubContador from './ClubContador';
 import ClubDatos from './ClubDatos';
 
+// 🔥 CLUBES: niveles (tiers) — iguales que en el backend (routes/clubs.js)
+const CLUB_TIERS_UI = {
+  0: { price: 0,   max_players: 10,  public_tournaments: 0, label: 'Nivel Gratis',  color: '#888' },
+  1: { price: 70,  max_players: 50,  public_tournaments: 0, label: 'Nivel 1 · Bronce', color: '#cd7f32' },
+  2: { price: 100, max_players: 100, public_tournaments: 1, label: 'Nivel 2 · Plata',  color: '#c0c0c0' },
+  3: { price: 300, max_players: 250, public_tournaments: 3, label: 'Nivel 3 · Oro',    color: '#ffd700' },
+};
+
 // ==========================================
 // COMPONENTES UI REUTILIZABLES
 // ==========================================
@@ -166,7 +174,7 @@ const EditClubModal = ({ club, onClose, onSave }) => {
 // ==========================================
 // 2. LOBBY DEL CLUB
 // ==========================================
-const ClubLobby = ({ club, isAdmin, onBack, onCreateTable, onOpenAdmin, onUpdateClub, activeTables, onDeleteTable, onEditTable, onOpenTab }) => {
+const ClubLobby = ({ club, isAdmin, onBack, onCreateTable, onOpenAdmin, onUpdateClub, activeTables, onDeleteTable, onEditTable, onOpenTab, onPlayTable }) => {
   const [showBottomBar, setShowBottomBar] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -234,7 +242,13 @@ const ClubLobby = ({ club, isAdmin, onBack, onCreateTable, onOpenAdmin, onUpdate
 
         <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
           <div style={{ background: '#222', borderRadius: '20px', padding: '5px 12px', fontSize: '12px', color: '#ccc', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ color: '#aaa' }}>⬡</span> Nivel Gratis
+            <span style={{ color: CLUB_TIERS_UI[club.tier || 0].color }}>⬡</span>
+            {CLUB_TIERS_UI[club.tier || 0].label} · hasta {club.max_players} jugadores
+            {(club.tier || 0) >= 2 && (
+              <span style={{ color: '#00b86b', marginLeft: '6px' }}>
+                · {CLUB_TIERS_UI[club.tier || 0].public_tournaments} torneo(s) público(s)
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -285,7 +299,18 @@ const ClubLobby = ({ club, isAdmin, onBack, onCreateTable, onOpenAdmin, onUpdate
                       <button onClick={() => onDeleteTable(table.id)} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>
                     </>
                   )}
-                  <button style={{ background: '#00b86b', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>
+                  <button
+                    onClick={() => onPlayTable && onPlayTable({
+                      tableData: {
+                        id: `club-${club.id}-${table.id}`,
+                        name: table.title || 'Mesa del club',
+                        ...(typeof table.settings === 'string' ? JSON.parse(table.settings) : (table.settings || {})),
+                        isClubTable: true,
+                        clubId: club.id,
+                      },
+                    })}
+                    style={{ background: '#00b86b', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
                     Jugar
                   </button>
                 </div>
@@ -881,43 +906,335 @@ const CreateTableUI = ({ gameType, initialData, onBack, onSaveTemplate, onCreate
 };
 
 // ==========================================
-// 5. PANEL DEL ADMINISTRADOR
+// 5. PANEL DEL ADMINISTRADOR — 🔥 CLUBES COMPLETO
+//    (nivel/pago, fichas de club, torneos del club, ganancias 3%/97%)
 // ==========================================
-const ClubAdminPanel = ({ onBack, onCreateTable }) => (
-  <div style={{ padding: '20px', paddingBottom: '80px', backgroundColor: '#0a0a0a', minHeight: '100vh' }}>
-    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-      <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'white', fontSize: '20px', marginRight: '15px', cursor: 'pointer' }}>←</button>
-      <h2 style={{ margin: 0, fontSize: '18px', color: 'white' }}>Administración</h2>
-    </div>
+const ClubAdminPanel = ({ onBack, onCreateTable, club, onPlayTable }) => {
+  const [tab, setTab] = useState('resumen');
+  const [earnings, setEarnings] = useState(null);
+  const [chips, setChips] = useState(null);
+  const [tournaments, setTournaments] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [toast, setToast] = useState(null);
+  // formularios
+  const [buyAmount, setBuyAmount] = useState(100);
+  const [chipAmount, setChipAmount] = useState(10);
+  const [chipTarget, setChipTarget] = useState('');
+  const [tName, setTName] = useState('');
+  const [tVisibility, setTVisibility] = useState('members');
 
-    <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
-      <div style={{ flex: 1, background: '#1e1e1e', padding: '15px', borderRadius: '10px', borderLeft: '4px solid #00b86b' }}>
-        <p style={{ color: '#a0aec0', fontSize: '12px', margin: 0 }}>Rake Acumulado (24h)</p>
-        <h3 style={{ color: '#00b86b', margin: '5px 0' }}>0 NTX</h3>
-        <p style={{ color: '#888', fontSize: '11px', margin: 0 }}>Tu 40%: 0 NTX</p>
+  const tier = club?.tier || 0;
+  const tierInfo = CLUB_TIERS_UI[tier];
+  const showToast = (msg) => { setToast({ msg }); setTimeout(() => setToast(null), 3200); };
+
+  const loadAll = async () => {
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    const safe = async (url, setter, map) => {
+      try {
+        const res = await fetch(`${API_URL}/api${url}`, { headers });
+        if (!res.ok) return;
+        const d = await res.json();
+        setter(map ? map(d) : d);
+      } catch (e) { /* silencio */ }
+    };
+    await Promise.all([
+      safe('/clubs/earnings', setEarnings),
+      safe('/clubs/chips', setChips, (d) => ({ ...d, is_owner: d.role === 'owner', can_manage: d.role === 'owner' || d.role === 'moderator' })),
+      safe('/clubs/tournaments', setTournaments),
+      safe('/clubs/members', setMembers, (d) => d.members?.filter(m => m.role !== 'owner') || []),
+    ]);
+  };
+
+  useEffect(() => { loadAll(); }, []);
+
+  const post = async (url, body) => {
+    setBusy(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api${url}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Error');
+      showToast(d.message || 'Hecho');
+      await loadAll();
+      return true;
+    } catch (e) {
+      showToast(e.message);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const upgradeTier = () => {
+    const next = tier + 1;
+    if (next > 3) return showToast('Ya tienes el nivel máximo');
+    const info = CLUB_TIERS_UI[next];
+    if (window.confirm(`¿Pagar ${info.price} NTX-20 para subir al ${info.label}? (${info.max_players} jugadores, ${info.public_tournaments} torneo(s) público(s))`)) {
+      post('/clubs/tier/upgrade', { tier: next });
+    }
+  };
+
+  const createTournament = async () => {
+    if (!tName.trim()) return showToast('Escribe el nombre del torneo');
+    const ok = await post('/clubs/tournaments', {
+      name: tName.trim(), type: 'MTT', mode: 'NLH',
+      settings: { smallBlind: 5, bigBlind: 10, buyIn: 50 },
+      visibility: tVisibility,
+    });
+    if (ok) setTName('');
+  };
+
+  const grantChips = () => {
+    const target = members.find(m => String(m.user_id) === String(chipTarget));
+    if (!target) return showToast('Selecciona un miembro');
+    post('/clubs/chips/grant', { userId: target.user_id, amount: Math.floor(Number(chipAmount) || 0) });
+  };
+
+  const tabs = [
+    ['resumen', '📊 Resumen'],
+    ['nivel', '⬡ Nivel'],
+    ['fichas', '💿 Fichas'],
+    ['torneos', '🏆 Torneos'],
+  ];
+
+  return (
+    <div style={{ padding: '20px', paddingBottom: '80px', backgroundColor: '#0a0a0a', minHeight: '100vh', color: 'white' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'white', fontSize: '20px', marginRight: '15px', cursor: 'pointer' }}>←</button>
+        <h2 style={{ margin: 0, fontSize: '18px' }}>Administración</h2>
       </div>
-      <div style={{ flex: 1, background: '#1e1e1e', padding: '15px', borderRadius: '10px', borderLeft: '4px solid #e2b04a' }}>
-        <p style={{ color: '#a0aec0', fontSize: '12px', margin: 0 }}>Miembros</p>
-        <h3 style={{ color: 'white', margin: '5px 0' }}>1 / 10</h3>
-        <button style={{ background: 'transparent', border: '1px solid #e2b04a', color: '#e2b04a', fontSize: '10px', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer' }}>Ampliar (+10)</button>
+
+      {/* Pestañas */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        {tabs.map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            style={{
+              padding: '9px 14px', borderRadius: '20px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', whiteSpace: 'nowrap',
+              background: tab === key ? '#00b86b' : '#1e1e1e',
+              color: tab === key ? 'white' : '#888',
+              border: tab === key ? 'none' : '1px solid #333',
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
-    </div>
 
-    <button onClick={onCreateTable} style={{ width: '100%', padding: '15px', background: '#00b86b', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', marginBottom: '20px' }}>
-      + Crear Nueva Mesa / Torneo
-    </button>
+      {/* RESUMEN */}
+      {tab === 'resumen' && (
+        <>
+          <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+            <div style={{ flex: 1, background: '#1e1e1e', padding: '15px', borderRadius: '10px', borderLeft: '4px solid #00b86b' }}>
+              <p style={{ color: '#a0aec0', fontSize: '12px', margin: 0 }}>Rake del club (24h)</p>
+              <h3 style={{ color: '#00b86b', margin: '5px 0' }}>{Number(earnings?.rake_24h || 0).toFixed(2)} NTX</h3>
+              <p style={{ color: '#888', fontSize: '11px', margin: 0 }}>Tu 97%: {Number(earnings?.owner_24h || 0).toFixed(2)} NTX · Fondo proyecto 3%: {(Number(earnings?.rake_24h || 0) * 0.03).toFixed(2)}</p>
+            </div>
+            <div style={{ flex: 1, background: '#1e1e1e', padding: '15px', borderRadius: '10px', borderLeft: '4px solid #e2b04a' }}>
+              <p style={{ color: '#a0aec0', fontSize: '12px', margin: 0 }}>Miembros</p>
+              <h3 style={{ color: 'white', margin: '5px 0' }}>{members.length + 1} / {tierInfo.max_players}</h3>
+              <p style={{ color: '#888', fontSize: '11px', margin: 0 }}>{tierInfo.label}</p>
+            </div>
+          </div>
+          <div style={{ background: '#1e1e1e', padding: '15px', borderRadius: '10px', marginBottom: '20px', borderLeft: '4px solid #c0c0c0' }}>
+            <p style={{ color: '#a0aec0', fontSize: '12px', margin: 0 }}>Ganancias totales del club</p>
+            <h3 style={{ color: 'white', margin: '5px 0' }}>{Number(earnings?.total_rake || 0).toFixed(2)} NTX</h3>
+            <p style={{ color: '#888', fontSize: '11px', margin: 0 }}>Dueño (97%): {Number(earnings?.owner_share_97 || 0).toFixed(2)} NTX · Fondo del Proyecto (3%): {Number(earnings?.project_share_3 || 0).toFixed(2)} NTX</p>
+          </div>
+          <button onClick={onCreateTable} style={{ width: '100%', padding: '15px', background: '#00b86b', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', marginBottom: '20px' }}>
+            + Crear Nueva Mesa / Torneo
+          </button>
+          <h3 style={{ color: 'white', marginBottom: '15px' }}>Gestión de Jugadores</h3>
+          <button onClick={() => setTab('nivel')} style={{ width: '100%', padding: '12px', background: '#1e1e1e', color: '#e2b04a', border: '1px solid #e2b04a', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px' }}>
+            ⬡ Gestionar nivel del club ({tierInfo.label})
+          </button>
+          <p style={{ color: '#888', fontSize: '12px' }}>Expulsa, invita y nombra moderador desde la pestaña “Miembros” del club.</p>
+        </>
+      )}
 
-    <h3 style={{ color: 'white', marginBottom: '15px' }}>Gestión de Jugadores</h3>
-    <div style={{ background: '#121212', borderRadius: '10px', padding: '10px' }}>
-      <p style={{ color: '#888', textAlign: 'center', padding: '20px' }}>Aún no hay otros jugadores en tu club.</p>
+      {/* NIVEL */}
+      {tab === 'nivel' && (
+        <>
+          <div style={{ background: '#1e1e1e', borderRadius: '12px', padding: '18px', marginBottom: '15px', border: `1px solid ${tierInfo.color}` }}>
+            <p style={{ color: '#888', fontSize: '12px', margin: 0 }}>Nivel actual</p>
+            <h3 style={{ color: tierInfo.color, margin: '5px 0' }}>{tierInfo.label}</h3>
+            <p style={{ color: '#aaa', fontSize: '13px', margin: 0 }}>
+              Hasta {tierInfo.max_players} jugadores · {tierInfo.public_tournaments === 0 ? 'Torneos solo para miembros' : `${tierInfo.public_tournaments} torneo(s) público(s) en el lobby`}
+            </p>
+          </div>
+          {tier < 3 && (
+            <div style={{ background: '#1e1e1e', borderRadius: '12px', padding: '18px', marginBottom: '10px', border: '1px solid #333' }}>
+              <p style={{ color: '#888', fontSize: '12px', margin: 0 }}>Siguiente nivel</p>
+              <h3 style={{ color: CLUB_TIERS_UI[tier + 1].color, margin: '5px 0' }}>{CLUB_TIERS_UI[tier + 1].label}</h3>
+              <p style={{ color: '#aaa', fontSize: '13px', margin: '0 0 12px' }}>
+                {CLUB_TIERS_UI[tier + 1].max_players} jugadores · {CLUB_TIERS_UI[tier + 1].public_tournaments === 0 ? 'Torneos solo para miembros' : `${CLUB_TIERS_UI[tier + 1].public_tournaments} torneo(s) público(s) en el lobby`}
+              </p>
+              <button onClick={upgradeTier} disabled={busy} style={{ width: '100%', padding: '13px', background: '#e2b04a', color: '#111', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer' }}>
+                Pagar {CLUB_TIERS_UI[tier + 1].price} NTX-20 y subir de nivel
+              </button>
+            </div>
+          )}
+          <p style={{ color: '#666', fontSize: '12px' }}>El pago sale de tu billetera NTX-20 y se suma al Fondo del Proyecto. Sube nivel por nivel (70 → 100 → 300).</p>
+        </>
+      )}
+
+      {/* FICHAS DEL CLUB */}
+      {tab === 'fichas' && (
+        <>
+          <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+            <div style={{ flex: 1, background: '#1e1e1e', padding: '15px', borderRadius: '10px', borderLeft: '4px solid #00b86b' }}>
+              <p style={{ color: '#a0aec0', fontSize: '12px', margin: 0 }}>Fondo de fichas del club</p>
+              <h3 style={{ color: '#00b86b', margin: '5px 0' }}>{Number(chips?.club_balance || 0).toFixed(0)}</h3>
+            </div>
+            <div style={{ flex: 1, background: '#1e1e1e', padding: '15px', borderRadius: '10px', borderLeft: '4px solid #e2b04a' }}>
+              <p style={{ color: '#a0aec0', fontSize: '12px', margin: 0 }}>Mis fichas de club</p>
+              <h3 style={{ color: 'white', margin: '5px 0' }}>{Number(chips?.my_chips || 0).toFixed(0)}</h3>
+            </div>
+          </div>
+
+          <p style={{ color: '#888', fontSize: '12px', margin: '0 0 15px' }}>
+            💿 1 NTX-20 = 1 ficha de club. Las fichas las compra el dueño (igual que se compra NTX-20) y las administra el dueño o el moderador. Los socios pueden invertir fichas en el club. No se canjean: solo se compran.
+          </p>
+
+          {/* Comprar (solo dueño) */}
+          {chips?.is_owner && (
+            <div style={{ background: '#1e1e1e', borderRadius: '10px', padding: '15px', marginBottom: '12px' }}>
+              <h4 style={{ margin: '0 0 10px', color: '#00b86b', fontSize: '14px' }}>Comprar fichas de club (dueño)</h4>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input type="number" min={1} value={buyAmount} onChange={(e) => setBuyAmount(e.target.value)} style={{ flex: 1, background: '#121212', border: '1px solid #333', borderRadius: '8px', padding: '10px', color: 'white' }} />
+                <button onClick={() => post('/clubs/chips/purchase', { amount: Math.floor(Number(buyAmount) || 0) })} disabled={busy} style={{ background: '#00b86b', color: 'white', border: 'none', borderRadius: '8px', padding: '10px 16px', fontWeight: 'bold', cursor: 'pointer' }}>
+                  Comprar ({Math.floor(Number(buyAmount) || 0)} NTX-20)
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Invertir (cualquier socio con fichas) */}
+          <div style={{ background: '#1e1e1e', borderRadius: '10px', padding: '15px', marginBottom: '12px' }}>
+            <h4 style={{ margin: '0 0 10px', color: '#c0c0c0', fontSize: '14px' }}>Invertir mis fichas en el club</h4>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input type="number" min={1} value={chipAmount} onChange={(e) => setChipAmount(e.target.value)} style={{ flex: 1, background: '#121212', border: '1px solid #333', borderRadius: '8px', padding: '10px', color: 'white' }} />
+              <button onClick={() => post('/clubs/chips/deposit', { amount: Math.floor(Number(chipAmount) || 0) })} disabled={busy} style={{ background: '#2a2a2a', color: 'white', border: '1px solid #555', borderRadius: '8px', padding: '10px 16px', fontWeight: 'bold', cursor: 'pointer' }}>
+                Depositar
+              </button>
+            </div>
+          </div>
+
+          {/* Entregar a socio (dueño/moderador) */}
+          {chips?.can_manage && (
+            <div style={{ background: '#1e1e1e', borderRadius: '10px', padding: '15px', marginBottom: '12px' }}>
+              <h4 style={{ margin: '0 0 10px', color: '#e2b04a', fontSize: '14px' }}>Entregar fichas a un socio</h4>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                <select value={chipTarget} onChange={(e) => setChipTarget(e.target.value)} style={{ flex: 1, background: '#121212', border: '1px solid #333', borderRadius: '8px', padding: '10px', color: 'white' }}>
+                  <option value="">Selecciona miembro...</option>
+                  {members.map(m => <option key={m.user_id} value={m.user_id}>{m.username}</option>)}
+                </select>
+                <input type="number" min={1} value={chipAmount} onChange={(e) => setChipAmount(e.target.value)} style={{ width: '100px', background: '#121212', border: '1px solid #333', borderRadius: '8px', padding: '10px', color: 'white' }} />
+              </div>
+              <button onClick={grantChips} disabled={busy || !chipTarget} style={{ width: '100%', padding: '11px', background: '#e2b04a', color: '#111', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                Entregar {Math.floor(Number(chipAmount) || 0)} fichas
+              </button>
+            </div>
+          )}
+
+          {/* Últimos movimientos */}
+          {(chips?.transactions || []).length > 0 && (
+            <div style={{ background: '#121212', borderRadius: '10px', padding: '12px' }}>
+              <h4 style={{ margin: '0 0 10px', color: '#888', fontSize: '13px' }}>Últimos movimientos</h4>
+              {chips.transactions.slice(0, 8).map(t => (
+                <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #222', fontSize: '12px', color: '#aaa' }}>
+                  <span>
+                    {{ purchase: '🛒 Compra', grant: '🎁 Entrega', deposit: '📥 Inversión', rake_owner: '🎰 Rake' }[t.type] || t.type}
+                    {t.target_username ? ` → ${t.target_username}` : ''}
+                  </span>
+                  <span style={{ color: '#00b86b', fontWeight: 'bold' }}>{Number(t.amount).toFixed(0)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* TORNEOS DEL CLUB */}
+      {tab === 'torneos' && (
+        <>
+          <div style={{ background: '#1e1e1e', borderRadius: '10px', padding: '15px', marginBottom: '15px' }}>
+            <h4 style={{ margin: '0 0 10px', color: '#00b86b', fontSize: '14px' }}>Nuevo torneo del club</h4>
+            <input value={tName} onChange={(e) => setTName(e.target.value)} placeholder="Nombre del torneo" style={{ width: '100%', background: '#121212', border: '1px solid #333', borderRadius: '8px', padding: '10px', color: 'white', marginBottom: '10px' }} />
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+              <button onClick={() => setTVisibility('members')} style={{ flex: 1, padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', background: tVisibility === 'members' ? '#00b86b' : '#121212', color: tVisibility === 'members' ? 'white' : '#888', border: '1px solid #333' }}>
+                🔒 Solo miembros
+              </button>
+              <button onClick={() => setTVisibility('public')} style={{ flex: 1, padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', background: tVisibility === 'public' ? '#00b86b' : '#121212', color: tVisibility === 'public' ? 'white' : '#888', border: '1px solid #333' }}>
+                🌐 Público en el lobby
+              </button>
+            </div>
+            <button onClick={createTournament} disabled={busy} style={{ width: '100%', padding: '12px', background: '#00b86b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+              Crear torneo
+            </button>
+            <p style={{ color: '#666', fontSize: '11px', margin: '10px 0 0' }}>
+              {tierInfo.public_tournaments === 0
+                ? 'Tu nivel no permite torneos públicos: solo miembros del club (sube a Nivel 2 o 3).'
+                : `Tu nivel permite hasta ${tierInfo.public_tournaments} torneo(s) público(s) activo(s) en el lobby del casino.`}
+            </p>
+          </div>
+
+          {tournaments.length === 0 ? (
+            <p style={{ color: '#888', textAlign: 'center', padding: '20px' }}>Aún no hay torneos del club.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {tournaments.map(t => (
+                <div key={t.id} style={{ background: '#121212', border: '1px solid #333', borderRadius: '10px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h4 style={{ margin: 0, color: '#e2b04a', fontSize: '15px' }}>{t.name}</h4>
+                    <p style={{ margin: '4px 0 0', color: '#888', fontSize: '12px' }}>
+                      {t.type} · {t.mode} · {t.visibility === 'public' ? '🌐 Público' : '🔒 Miembros'} · {t.status}
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm('¿Eliminar este torneo?')) return;
+                      setBusy(true);
+                      try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_URL}/api/clubs/tournaments/${t.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+                        if (!res.ok) throw new Error('Error al eliminar');
+                        showToast('Torneo eliminado');
+                        await loadAll();
+                      } catch (e) { showToast(e.message); } finally { setBusy(false); }
+                    }}
+                    disabled={busy}
+                    style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {toast && (
+        <div style={{ position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)', background: '#00b86b', color: 'white', padding: '12px 22px', borderRadius: '25px', fontWeight: 'bold', fontSize: '14px', zIndex: 999 }}>
+          {toast.msg}
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 // ==========================================
 // COMPONENTE PRINCIPAL
 // ==========================================
-const Club = ({ user, onBack }) => {
+const Club = ({ user, onBack, onPlayTable }) => {
   const [view, setView] = useState('loading'); 
   const [clubData, setClubData] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -967,7 +1284,7 @@ const Club = ({ user, onBack }) => {
         if (res.ok) {
           const data = await res.json();
           setClubData(data.club);
-          setIsAdmin(data.role === 'owner');
+          setIsAdmin(data.role === 'owner' || data.role === 'moderator');
           setView('lobby');
           fetchTemplates();
           fetchTables();
@@ -1201,7 +1518,7 @@ const Club = ({ user, onBack }) => {
       )}
 
       {view === 'admin' && clubData && (
-        <ClubAdminPanel onBack={() => setView('lobby')} onCreateTable={() => setView('select_game')} />
+        <ClubAdminPanel onBack={() => setView('lobby')} onCreateTable={() => setView('select_game')} club={clubData} onPlayTable={onPlayTable} />
       )}
 
       {view === 'bandeja' && <ClubBandeja onBack={() => setView('lobby')} />}

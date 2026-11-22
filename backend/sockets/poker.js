@@ -3,7 +3,9 @@ const { JWT_SECRET } = require('../config');
 const { getTable } = require('../services/practice-table');
 const mtt = require('../services/mtt-tournaments');
 // ?? IMPORTANTE: Ajusta esta ruta a donde tengas tu conexion a MySQL (ej. pool de mysql2)
-const db = require('../db'); 
+const db = require('../db');
+// 🔥 TIENDA: validar que el emote enviado sea un emoji comprado por el jugador
+const shop = require('../services/shop');
 
 const disconnectTimeouts = {};
 // 🔥 RECONEXIÓN: 90s de gracia para recuperar la sesión sin perder la silla
@@ -114,6 +116,37 @@ module.exports = function setupPokerSockets(io) {
                 username,
                 text,
                 type: 'user',
+                ts: Date.now(),
+            });
+        });
+
+        // 🔥 TIENDA: emoji en la mesa — SOLO si el jugador lo compró en la Tienda
+        socket.on('table:emote', async (data) => {
+            if (!user) return socket.emit('errorMsg', 'Debes iniciar sesión para usar emojis');
+
+            const emote = typeof data === 'string' ? data : data?.emote;
+            if (!emote || typeof emote !== 'string' || emote.length > 40) {
+                return socket.emit('errorMsg', 'Emoji inválido');
+            }
+
+            try {
+                const owned = await shop.ownsEmote(user.id, emote);
+                if (!owned) {
+                    return socket.emit('errorMsg', 'Ese emoji no está en tu inventario. Cómpralo en la Tienda.');
+                }
+            } catch (err) {
+                console.error('[Shop] Error validando emote:', err.message);
+                return;
+            }
+
+            const rooms = Array.from(socket.rooms).filter(r => r !== socket.id);
+            const room = rooms[0];
+            if (!room) return;
+
+            io.to(room).emit('table:emote', {
+                userId: user.id,
+                username: user.username,
+                emote: emote.slice(0, 40),
                 ts: Date.now(),
             });
         });

@@ -55,6 +55,7 @@ app.use('/api', require('./routes/wallet'));
 app.use('/api', require('./routes/admin'));
 app.use('/api', require('./routes/clubs'));
 app.use('/api', require('./routes/games'));
+app.use('/api', require('./routes/shop'));
 
 // ═══════════ 6. Servidor + Socket.IO con CORS cerrado ═══════════
 const server = http.createServer(app);

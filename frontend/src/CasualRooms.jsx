@@ -27,6 +27,18 @@ export default function CasualRooms({ onBack, onJoinTable }) {
   const [tables, setTables] = useState({ real: [], practice: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // 🔥 CLUBES: torneos públicos de clubes visibles en el lobby (nivel 2/3)
+  const [clubTournaments, setClubTournaments] = useState([]);
+
+  const fetchClubTournaments = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/clubs/public-tournaments`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) setClubTournaments(await res.json());
+    } catch (e) { /* sin torneos de club */ }
+  }, []);
 
   const fetchTables = useCallback(async () => {
     try {
@@ -59,9 +71,10 @@ export default function CasualRooms({ onBack, onJoinTable }) {
 
   useEffect(() => {
     fetchTables();
+    fetchClubTournaments();
     const interval = setInterval(fetchTables, 3000);
     return () => clearInterval(interval);
-  }, [fetchTables]);
+  }, [fetchTables, fetchClubTournaments]);
 
   // 🔥 AGRUPACIÓN CORREGIDA: Separa por juego (ej. HOLD'EM) y número de sala.
   const salas = useMemo(() => {
@@ -282,6 +295,44 @@ export default function CasualRooms({ onBack, onJoinTable }) {
         <p key="empty-real" style={{ color: '#a0aec0', marginBottom: '2rem' }}>
           No hay mesas reales disponibles en este momento.
         </p>
+      );
+    }
+
+    // 🔥 CLUBES: torneos públicos de clubes (lobby del casino, junto a las otras mesas)
+    if (clubTournaments.length > 0) {
+      blocks.push(
+        <div key="club-tournaments" style={{ marginBottom: '2rem' }}>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            marginBottom: '1rem', paddingBottom: '0.5rem',
+            borderBottom: '1px solid #2d3748',
+          }}>
+            <h3 style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 'bold', margin: 0 }}>
+              🏆 Torneos de Clubes
+            </h3>
+            <span style={{ background: '#00e676', color: '#000', padding: '3px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>
+              {clubTournaments.length} activo(s)
+            </span>
+          </div>
+          <div className="grid-4-cols">
+            {clubTournaments.map(t => (
+              <div key={t.id} style={{ background: '#12161f', borderRadius: '12px', overflow: 'hidden', border: '1px solid #2d3748', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ height: '90px', background: 'linear-gradient(135deg, #1a2332 0%, #0f172a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.2rem' }}>
+                  {t.club_avatar && !String(t.club_avatar).startsWith('http') ? t.club_avatar : '👑'}
+                </div>
+                <div style={{ padding: '12px', flex: 1 }}>
+                  <h4 style={{ margin: '0 0 6px', color: '#fbbf24', fontSize: '0.9rem', fontWeight: 'bold' }}>{t.name}</h4>
+                  <p style={{ margin: '0 0 4px', color: '#a0aec0', fontSize: '0.72rem' }}>
+                    Club: <span style={{ color: '#00e676' }}>{t.club_name}</span> ({t.club_code})
+                  </p>
+                  <p style={{ margin: 0, color: '#a0aec0', fontSize: '0.72rem' }}>
+                    {t.type} · {t.mode} · <span style={{ color: t.status === 'open' ? '#00e676' : '#fbbf24' }}>{t.status === 'open' ? 'INSCRIPCIONES ABIERTAS' : 'EN JUEGO'}</span>
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       );
     }
 

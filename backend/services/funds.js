@@ -5,6 +5,8 @@
 //   Rake de mesas cash  ──►  X% al Sistema de Referidos (25%)
 //                            resto al Fondo del Proyecto
 //   Comisión de torneos ──►  mismo reparto (10% de la entrada)
+//   Rake de mesas CLUB  ──►  3% al Fondo del Proyecto (siempre)
+//                            97% al dueño del club
 // Los porcentajes se leen de wallet_settings (panel admin):
 //   rake_percent            (default 5)
 //   referral_rake_share     (default 25  → % del rake que va a referidos)
@@ -65,18 +67,70 @@ function computeRakeSplit(rakeAmount, referralSharePct) {
 //  - Lo que va al proyecto + lo del referido sin referido ──► bank_reserves
 //  - Todo se registra en rake_ledger
 // DEBE llamarse dentro de una transacción ya abierta (connection).
+//
+// 🔥 CLUBES: si se pasa clubId, el reparto cambia (regla de negocio):
+//   3%  del rake ──► bank_reserves (FONDO DEL PROYECTO, siempre)
+//   97% del rake ──► billetera NTX-20 del dueño del club
+//   (el rake de club NO reparte a referidos; su padrinazgo se paga con el 97%)
 // ------------------------------------------------------------
+const CLUB_PROJECT_SHARE_PCT = 3; // % del rake de club que va al Fondo del Proyecto
+
 async function applyRake(connection, {
-    source = 'cash',            // 'cash' | 'tournament'
+    source = 'cash',            // 'cash' | 'tournament' | 'club'
     tableId = null,
     handNumber = null,
     winnerUserId = null,        // jugador que generó el rake
     rakeAmount = 0,
+    clubId = null,              // presente => reparto de club (3% / 97%)
 }) {
     const cfg = await getFundConfig();
     const rake = Math.round((Number(rakeAmount) || 0) * 100) / 100;
     if (rake <= 0) return { ok: true, referralShare: 0, projectShare: 0, referrerId: null };
 
+    // ── RUTA DE CLUB: 3% Fondo del Proyecto / 97% dueño del club ──
+    if (clubId) {
+        const toProject = Number(((rake * CLUB_PROJECT_SHARE_PCT) / 100).toFixed(2));
+        const toOwner = Number((rake - toProject).toFixed(2));
+
+        if (toProject > 0) {
+            await connection.query(
+                'UPDATE bank_reserves SET balance_ntx = balance_ntx + ? WHERE id = 1',
+                [toProject]
+            );
+        }
+
+        if (toOwner > 0) {
+            const [clubRows] = await connection.query(
+                'SELECT owner_id FROM clubs WHERE id = ?',
+                [clubId]
+            );
+            const ownerId = clubRows[0]?.owner_id;
+            if (ownerId) {
+                await connection.query(
+                    'UPDATE wallets SET balance_ntx = balance_ntx + ? WHERE user_id = ?',
+                    [toOwner, ownerId]
+                );
+            }
+        }
+
+        await connection.query(
+            `INSERT INTO rake_ledger (source, club_id, table_id, hand_number, winner_user_id, rake_amount,
+                referral_share, project_share, referrer_id)
+             VALUES ('club', ?, ?, ?, ?, ?, 0, ?, NULL)`,
+            [clubId, tableId, handNumber, winnerUserId, rake, toProject]
+        );
+
+        return {
+            ok: true,
+            mode: 'club',
+            rake,
+            projectShare: toProject,
+            ownerShare: toOwner,
+            referrerId: null,
+        };
+    }
+
+    // ── RUTA NORMAL (mesas casuales / torneos): 25% referidos / 75% proyecto ──
     const { referralShare, projectShare } = computeRakeSplit(rake, cfg.referral_rake_share);
 
     // 1. ¿Tiene referido el jugador que generó el rake?
@@ -129,4 +183,5 @@ module.exports = {
     computeRakeSplit,
     applyRake,
     CONFIG_DEFAULTS,
+    CLUB_PROJECT_SHARE_PCT,
 };

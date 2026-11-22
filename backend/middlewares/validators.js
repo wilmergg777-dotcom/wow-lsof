@@ -295,11 +295,65 @@ const validateUniqueIdParam = [
 ];
 
 // ═════════════════════════════════════════════
+// 🔥 TIENDA
+// ═════════════════════════════════════════════
+const validateShopPurchase = [
+  body('itemId').isInt({ min: 1 }).withMessage('Artículo inválido'),
+  handleValidation,
+];
+
+const validateShopEquip = [
+  body('itemId').isInt({ min: 1 }).withMessage('Artículo inválido'),
+  handleValidation,
+];
+
+// ═════════════════════════════════════════════
+// 🔥 CLUBES: niveles, fichas, miembros, torneos
+// ═════════════════════════════════════════════
+const validateClubTier = [
+  body('tier').isInt({ min: 1, max: 3 }).withMessage('Nivel de club inválido (1 a 3)'),
+  handleValidation,
+];
+
+const validateClubChips = [
+  body('amount').isInt({ min: 1, max: 100000 }).withMessage('Cantidad de fichas inválida'),
+  body('userId').optional({ nullable: true }).isInt({ min: 1 }).withMessage('Usuario inválido'),
+  handleValidation,
+];
+
+const validateClubModerator = [
+  body('userId').optional({ nullable: true }).isInt({ min: 1 }).withMessage('Usuario inválido'),
+  handleValidation,
+];
+
+const validateClubKick = [
+  body('userId').isInt({ min: 1 }).withMessage('Usuario inválido'),
+  handleValidation,
+];
+
+const validateClubInvite = [
+  body('query').isString().trim().isLength({ min: 1, max: 60 }).withMessage('Indica el usuario o su ID'),
+  handleValidation,
+];
+
+const validateClubTournament = [
+  body('name').isString().trim().isLength({ min: 1, max: 100 }).withMessage('Nombre del torneo inválido'),
+  body('type').optional().isString().trim().isLength({ max: 20 }),
+  body('mode').optional().isString().trim().isLength({ max: 20 }),
+  body('visibility').optional().isIn(['members', 'public']).withMessage('Visibilidad inválida'),
+  handleValidation,
+];
+
+// ═════════════════════════════════════════════
 // EXPORTS
 // ═════════════════════════════════════════════
 
 module.exports = {
   handleValidation,
+
+  // Shop (tienda)
+  validateShopPurchase,
+  validateShopEquip,
 
   // Auth
   validateRegister,
@@ -338,6 +392,12 @@ module.exports = {
   validateClubUpdate,
   validateClubDiscord,
   validateTemplateOrTable,
+  validateClubTier,
+  validateClubChips,
+  validateClubModerator,
+  validateClubKick,
+  validateClubInvite,
+  validateClubTournament,
 
   // Games
   validateGameRegister,

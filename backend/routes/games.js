@@ -513,20 +513,30 @@ router.post('/poker/internal/cash-out', requireInternal, async (req, res) => {
 // de referidos). El reparto lo centraliza services/funds.js y queda
 // auditado en rake_ledger.
 const processRakeHandler = async (req, res) => {
-    const { rakeAmount, playerId, tableId, handNumber } = req.body;
+    const { rakeAmount, playerId, tableId, handNumber, clubId } = req.body;
     const rake = Number(rakeAmount);
     const player = Number(playerId);
     if (!Number.isFinite(rake) || rake <= 0 || !Number.isInteger(player) || player <= 0) {
         return res.status(400).json({ error: 'Datos invalidos para procesar el rake' });
     }
 
+    // 🔥 CLUBES: el rake de mesas de club tiene reparto propio (3% fondo proyecto
+    // / 97% dueño del club). El club viene en body.clubId o en el tableId con
+    // formato "club-<id>-..." (mesas creadas por el dueño en su club).
+    const tableIdStr = tableId ? String(tableId).slice(0, 80) : null;
+    const clubMatch = /^club-(\d+)-/.exec(tableIdStr || '');
+    const effectiveClubId = Number.isInteger(Number(clubId)) && Number(clubId) > 0
+        ? Number(clubId)
+        : (clubMatch ? Number(clubMatch[1]) : null);
+
     try {
         const split = await pool.getConnection().then(async (connection) => {
             try {
                 await connection.beginTransaction();
                 const result = await applyRake(connection, {
-                    source: 'cash',
-                    tableId: tableId ? String(tableId).slice(0, 80) : null,
+                    source: effectiveClubId ? 'club' : 'cash',
+                    clubId: effectiveClubId,
+                    tableId: tableIdStr,
                     handNumber: Number.isInteger(Number(handNumber)) ? Number(handNumber) : null,
                     winnerUserId: player,
                     rakeAmount: rake,

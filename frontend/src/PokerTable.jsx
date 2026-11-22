@@ -177,12 +177,31 @@ const Confetti = () => {
 // ============================================================
 // 🔥 COMPONENTE PARA DIBUJAR LAS CARTAS CON ANIMACIÓN 3D 🔥
 // ============================================================
-const PlayingCard = ({ cardString, width = '100px', height = '140px', style = {}, hidden = false, animate = false, reveal = false }) => {
+// 🔥 TIENDA: estilos de cartas comprables (1-3 NTX-20) — visual de las cartas
+const CARD_STYLES = {
+  clasico:   { name: 'Clásico',       face: 'linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%)', back: 'repeating-linear-gradient(45deg, #1a202c, #1a202c 10px, #2d3748 10px, #2d3748 20px)', border: '#555', textColor: null, glow: 'none' },
+  neon:      { name: 'Neón',          face: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', back: 'repeating-linear-gradient(45deg, #0f172a, #0f172a 10px, #164e63 10px, #164e63 20px)', border: '#22d3ee', textColor: '#22d3ee', glow: '0 0 12px rgba(34,211,238,0.55)' },
+  vintage:   { name: 'Vintage',       face: 'linear-gradient(135deg, #f5e6c8 0%, #e3cb9a 100%)', back: 'repeating-linear-gradient(45deg, #4a3728, #4a3728 10px, #6b4f3a 10px, #6b4f3a 20px)', border: '#8b6f47', textColor: null, glow: '0 4px 10px rgba(139,111,71,0.5)' },
+  esmeralda: { name: 'Esmeralda',     face: 'linear-gradient(135deg, #ecfdf5 0%, #a7f3d0 100%)', back: 'repeating-linear-gradient(45deg, #022c22, #022c22 10px, #065f46 10px, #065f46 20px)', border: '#10b981', textColor: '#065f46', glow: '0 0 12px rgba(16,185,129,0.45)' },
+  dorado:    { name: 'Dorado',        face: 'linear-gradient(135deg, #fffbeb 0%, #fde68a 100%)', back: 'repeating-linear-gradient(45deg, #422006, #422006 10px, #b45309 10px, #b45309 20px)', border: '#f59e0b', textColor: '#b45309', glow: '0 0 14px rgba(245,158,11,0.6)' },
+  royal:     { name: 'Real Púrpura',  face: 'linear-gradient(135deg, #faf5ff 0%, #e9d5ff 100%)', back: 'repeating-linear-gradient(45deg, #2e1065, #2e1065 10px, #6d28d9 10px, #6d28d9 20px)', border: '#a855f7', textColor: '#6b21a8', glow: '0 0 14px rgba(168,85,247,0.55)' },
+};
+
+// 🔥 TIENDA: estilo activo del jugador (personal, por cuenta; todas las cartas
+// de la mesa se dibujan con el estilo equipado en la Tienda)
+let ACTIVE_CARD_STYLE = (typeof localStorage !== 'undefined' && localStorage.getItem('royalbet_card_style')) || 'clasico';
+const setGlobalCardStyle = (styleKey) => {
+  ACTIVE_CARD_STYLE = CARD_STYLES[styleKey] ? styleKey : 'clasico';
+  try { localStorage.setItem('royalbet_card_style', ACTIVE_CARD_STYLE); } catch (e) {}
+};
+
+const PlayingCard = ({ cardString, width = '100px', height = '140px', style = {}, hidden = false, animate = false, reveal = false, styleKey }) => {
   if (!cardString && !hidden) return null;
 
   const isMini = width === '14px';
   const isSmall = width === '22px' || width === '30px' || width === '35px' || width === '45px';
   const radius = isMini ? '2px' : '6px';
+  const skin = CARD_STYLES[styleKey || ACTIVE_CARD_STYLE] || CARD_STYLES.clasico;
 
   let suit = '', rank = '', color = '#111';
   if (cardString) {
@@ -193,7 +212,7 @@ const PlayingCard = ({ cardString, width = '100px', height = '140px', style = {}
     if (suit === 'd') suit = '♦';
     if (suit === 'c') suit = '♣';
     const isRed = suit === '♥' || suit === '♦';
-    color = isRed ? '#d32f2f' : '#111';
+    color = skin.textColor || (isRed ? '#d32f2f' : '#111');
   }
 
   const fontSizeRank = isMini ? '0.45rem' : (isSmall ? '0.8rem' : '1.4rem');
@@ -205,9 +224,9 @@ const PlayingCard = ({ cardString, width = '100px', height = '140px', style = {}
     backfaceVisibility: 'hidden',
     WebkitBackfaceVisibility: 'hidden',
     transform: 'rotateY(0deg)',
-    background: 'repeating-linear-gradient(45deg, #1a202c, #1a202c 10px, #2d3748 10px, #2d3748 20px)',
+    background: skin.back,
     borderRadius: radius,
-    border: '1px solid #555',
+    border: `1px solid ${skin.border}`,
     boxShadow: '0 6px 12px rgba(0,0,0,0.8)',
     display: 'flex', justifyContent: 'center', alignItems: 'center',
   };
@@ -217,9 +236,10 @@ const PlayingCard = ({ cardString, width = '100px', height = '140px', style = {}
     backfaceVisibility: 'hidden',
     WebkitBackfaceVisibility: 'hidden',
     transform: 'rotateY(180deg)',
-    background: 'linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%)',
+    background: skin.face,
     borderRadius: radius,
-    boxShadow: '0 8px 16px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(0,0,0,0.1)',
+    boxShadow: `0 8px 16px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(0,0,0,0.1)${skin.glow !== 'none' ? `, ${skin.glow}` : ''}`,
+    border: `1px solid ${skin.border}`,
     display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
     padding,
     fontFamily: '"Arial", sans-serif',
@@ -420,6 +440,30 @@ export default function PokerTable({ user, onExit, tableConfig, onMinimize, isFo
   });
   const [myCards, setMyCards] = useState([]);
   const [mySocketId, setMySocketId] = useState(null);
+
+  // 🔥 TIENDA: estilo de cartas equipado + emojis comprados para usar en la mesa
+  const [cardStyleState, setCardStyleState] = useState(ACTIVE_CARD_STYLE);
+  const [ownedEmotes, setOwnedEmotes] = useState([]);
+  const [showEmotePicker, setShowEmotePicker] = useState(false);
+  const [emoteBubbles, setEmoteBubbles] = useState([]);
+  const sendEmote = (emote) => {
+    setShowEmotePicker(false);
+    socketRef.current?.emit('table:emote', { emote });
+  };
+
+  // 🔥 TIENDA: cargar el estilo de cartas equipado y el inventario de emojis
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${API_URL}/api/shop/equipped`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.style) { setGlobalCardStyle(d.style); setCardStyleState(d.style); } })
+      .catch(() => {});
+    fetch(`${API_URL}/api/shop/inventory`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(items => { if (Array.isArray(items)) setOwnedEmotes(items.filter(i => i.item_type === 'emote')); })
+      .catch(() => {});
+  }, []);
   const [error, setError] = useState('');
   const [winnerMsg, setWinnerMsg] = useState('');
   const [blindMsg, setBlindMsg] = useState('');
@@ -693,6 +737,14 @@ export default function PokerTable({ user, onExit, tableConfig, onMinimize, isFo
         ? { user: 'Jugador', text: msg, type: 'user' }
         : { user: msg.user || 'Jugador', text: msg.text || '', type: msg.type || 'user' };
       setChatMessages(prev => [...prev, normalized]);
+    });
+
+    // 🔥 TIENDA: emojis enviados por los jugadores de esta mesa
+    socket.on('table:emote', (data) => {
+      if (!data?.emote) return;
+      const bubble = { id: `${data.userId}-${data.ts}`, username: data.username, emote: data.emote };
+      setEmoteBubbles(prev => [...prev.slice(-4), bubble]);
+      setTimeout(() => setEmoteBubbles(prev => prev.filter(b => b.id !== bubble.id)), 3500);
     });
 
     socket.on('yourCards', ({ cards }) => {
@@ -1598,6 +1650,36 @@ export default function PokerTable({ user, onExit, tableConfig, onMinimize, isFo
           </div>
         </div>
       )}
+
+      {/* 🔥 TIENDA: burbujas de emojis de los jugadores en la mesa */}
+      <div style={{ position: 'fixed', bottom: isMobile ? '190px' : '140px', left: '14px', zIndex: 9500, display: 'flex', flexDirection: 'column', gap: '6px', pointerEvents: 'none' }}>
+        {emoteBubbles.map(b => (
+          <div key={b.id} style={{ background: 'rgba(20,24,32,0.92)', border: '1px solid #2d3748', borderRadius: '16px', padding: '6px 12px', color: '#fff', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px', animation: 'popIn 0.25s ease-out', boxShadow: '0 4px 14px rgba(0,0,0,0.6)' }}>
+            <span style={{ fontSize: '1.4rem' }}>{b.emote}</span>
+            <span style={{ color: '#a0aec0' }}>{b.username}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* 🔥 TIENDA: botón + selector de emojis (solo los comprados) */}
+      <div style={{ position: 'fixed', bottom: isMobile ? '170px' : '120px', right: '14px', zIndex: 9501 }}>
+        {showEmotePicker && (
+          <div style={{ position: 'absolute', bottom: '55px', right: 0, background: '#1a1d24', border: '1px solid #2d3748', borderRadius: '12px', padding: '10px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', boxShadow: '0 10px 30px rgba(0,0,0,0.8)', animation: 'settingsPop 0.2s ease-out' }}>
+            {ownedEmotes.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', color: '#888', fontSize: '0.78rem', textAlign: 'center', padding: '6px', maxWidth: '180px' }}>Sin emojis todavía. Cómpralos en la Tienda</div>
+            ) : ownedEmotes.map(e => (
+              <button key={e.id} onClick={() => sendEmote(e.value)} style={{ background: '#12141a', border: '1px solid #2d3748', borderRadius: '10px', fontSize: '1.5rem', padding: '8px', cursor: 'pointer' }}>{e.value}</button>
+            ))}
+          </div>
+        )}
+        <button
+          onClick={() => setShowEmotePicker(v => !v)}
+          style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#1a1d24', border: '1px solid #2d3748', fontSize: '1.3rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.6)' }}
+          title="Emojis"
+        >
+          😀
+        </button>
+      </div>
     </div>
   );
 }
