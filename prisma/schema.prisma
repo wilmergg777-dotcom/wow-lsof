@@ -48,17 +48,19 @@ model User {
 
 // Mini tienda creada por un usuario vendedor
 model MiniStore {
-  id          String       @id @default(cuid())
-  name        String
-  ownerName   String
-  description String
-  category    String
-  emoji       String       @default("🏪")
-  logo        String? // foto/logotipo de la tienda (data URL)
-  color       String       @default("#5B21B6") // color de marca para el diseño
-  createdAt   DateTime     @default(now())
-  products    MiniProduct[]
-  jobOffers   JobOffer[]
+  id              String       @id @default(cuid())
+  name            String
+  ownerName       String
+  description     String
+  category        String
+  emoji           String       @default("🏪")
+  logo            String? // foto/logotipo de la tienda (data URL)
+  color           String       @default("#5B21B6") // color de marca para el diseño
+  trialEndsAt     DateTime     @default(now()) // fin de la prueba gratis (5 días desde la creación)
+  subscribedUntil DateTime? // hasta cuándo pagó la suscripción mensual (200 CUP)
+  createdAt       DateTime     @default(now())
+  products        MiniProduct[]
+  jobOffers       JobOffer[]
 }
 
 // Producto que vende una mini tienda

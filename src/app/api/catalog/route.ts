@@ -56,7 +56,15 @@ export async function GET() {
     const stores = await db.miniStore.findMany({
       include: { products: true },
     })
-    for (const s of stores) {
+    // Las tiendas suspendidas (prueba vencida y sin suscripción
+    // pagada) no aparecen en el catálogo hasta que paguen
+    const now = new Date()
+    const sellable = stores.filter((s) => {
+      const paid = s.subscribedUntil && s.subscribedUntil > now
+      const trial = s.trialEndsAt > now
+      return paid || trial
+    })
+    for (const s of sellable) {
       for (const p of s.products) {
         items.push({
           id: `mini-${p.id}`,

@@ -23,8 +23,29 @@ export type MiniStore = {
   emoji: string
   logo: string | null // foto/logotipo de la tienda
   color: string // color de marca
+  trialEndsAt: string // fin de la prueba gratis (5 días)
+  subscribedUntil: string | null // suscripción pagada hasta
   createdAt: string
   products: MiniProduct[]
+}
+
+// Estado de la suscripción de una mini tienda:
+// 5 días de prueba gratis, luego 200 CUP al mes (del saldo)
+export type StoreStatus = 'trial' | 'active' | 'expired'
+export function storeStatus(
+  s: Pick<MiniStore, 'trialEndsAt' | 'subscribedUntil'>
+): { status: StoreStatus; daysLeft: number } {
+  const now = new Date()
+  if (s.subscribedUntil && new Date(s.subscribedUntil) > now) {
+    const days = Math.ceil((new Date(s.subscribedUntil).getTime() - now.getTime()) / 86400000)
+    return { status: 'active', daysLeft: days }
+  }
+  const trialEnd = new Date(s.trialEndsAt)
+  if (trialEnd > now) {
+    const days = Math.ceil((trialEnd.getTime() - now.getTime()) / 86400000)
+    return { status: 'trial', daysLeft: days }
+  }
+  return { status: 'expired', daysLeft: 0 }
 }
 
 export type MiniProduct = {

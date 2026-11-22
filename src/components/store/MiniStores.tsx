@@ -30,11 +30,13 @@ import { CATEGORIES, formatPrice, formatCoins } from '@/lib/products'
 import { PhotoInput } from './PhotoInput'
 import {
   api,
+  storeStatus,
   type Application,
   type JobOffer,
   type MiniProduct,
   type MiniStore,
   type Settings,
+  type Wallet,
 } from '@/lib/api'
 
 // Colores de marca que puede elegir el dueño de la tienda
@@ -390,7 +392,10 @@ export function HomeMiniStores() {
           </button>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {stores.slice(0, 4).map((s) => (
+            {stores
+              .filter((s) => storeStatus(s).status !== 'expired')
+              .slice(0, 4)
+              .map((s) => (
               <button
                 key={s.id}
                 onClick={() => openMiniStore(s.id)}
@@ -485,7 +490,9 @@ export function MiniStoresView() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {stores.map((store) => (
+          {stores
+            .filter((store) => storeStatus(store).status !== 'expired')
+            .map((store) => (
             <button
               key={store.id}
               onClick={() => openMiniStore(store.id)}
@@ -590,7 +597,18 @@ export function MiniStoreDetail() {
       </div>
 
       {/* Productos */}
-      {store.products.length === 0 ? (
+      {storeStatus(store).status === 'expired' ? (
+        <div className="bg-white rounded-lg border border-[#e3e6e6] p-12 text-center">
+          <Store className="w-16 h-16 text-[#ddd] mx-auto" strokeWidth={1.2} />
+          <p className="text-[16px] font-bold text-[#0F1111] mt-4">
+            Esta mini tienda está suspendida temporalmente
+          </p>
+          <p className="text-[14px] text-[#565959] mt-1">
+            Su prueba gratis terminó y la suscripción mensual no está pagada. Vuelve más tarde:
+            cuando el dueño la renueve, sus productos volverán a verse aquí y en el catálogo.
+          </p>
+        </div>
+      ) : store.products.length === 0 ? (
         <div className="bg-white rounded-lg border border-[#e3e6e6] p-12 text-center">
           <Package className="w-16 h-16 text-[#ddd] mx-auto" strokeWidth={1.2} />
           <p className="text-[15px] text-[#565959] mt-4">
@@ -706,6 +724,9 @@ export function ManageStoreView() {
   // Ofertas de trabajo de esta tienda + postulaciones
   const [offers, setOffers] = useState<JobOffer[]>([])
   const [applications, setApplications] = useState<Application[]>([])
+  // Saldo del dueño para pagar la suscripción de la tienda
+  const [wallet, setWallet] = useState<Wallet | null>(null)
+  const [payingSub, setPayingSub] = useState(false)
   // Formulario de oferta de trabajo
   const [oTitle, setOTitle] = useState('')
   const [oZone, setOZone] = useState('')
@@ -732,6 +753,12 @@ export function ManageStoreView() {
       })
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false))
+    // Saldo del dueño (para la suscripción de la tienda)
+    if (user.name && user.name !== 'Invitado') {
+      api<Wallet>(`/api/wallet?name=${encodeURIComponent(user.name)}`)
+        .then(setWallet)
+        .catch(() => {})
+    }
   }, [user.name])
 
   const createStore = async () => {
@@ -764,6 +791,29 @@ export function ManageStoreView() {
     api<MiniStore>(`/api/ministores/${store.id}`)
       .then(setStore)
       .catch(() => {})
+  }
+
+  // Paga la suscripción mensual de la tienda con el saldo interno
+  const paySubscription = async () => {
+    if (!store) return
+    setPayingSub(true)
+    try {
+      const res = await api<{
+        store: MiniStore
+        paidCoins: number
+        balance: number
+      }>(`/api/ministores/${store.id}/subscribe`, {
+        method: 'POST',
+        body: JSON.stringify({ ownerName: user.name }),
+      })
+      setStore(res.store)
+      setWallet((w) => (w ? { ...w, coins: res.balance } : w))
+      toast.success('Suscripción pagada: tu mini tienda sigue activa 30 días más')
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setPayingSub(false)
+    }
   }
 
   const addProduct = async () => {
@@ -1012,6 +1062,72 @@ export function ManageStoreView() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Estado de la suscripción: 5 días de prueba gratis, luego 200 CUP/mes del saldo */}
+        {(() => {
+          const st = storeStatus(store)
+          const cost = 200 * rate
+          const balance = wallet?.coins ?? 0
+          if (st.status === 'trial') {
+            return (
+              <div className="lg:col-span-2 bg-[#f6f1fd] border border-[#5B21B6]/30 rounded-lg p-4 text-[13px] flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex-1">
+                  <p className="font-bold text-[#5B21B6]">
+                    Prueba gratis: te quedan {st.daysLeft}{' '}
+                    {st.daysLeft === 1 ? 'día' : 'días'}
+                  </p>
+                  <p className="text-[#565959] mt-0.5">
+                    Después, tu mini tienda se mantiene con una suscripción de{' '}
+                    <b>200 CUP ({formatCoins(cost)} monedas) al mes</b>, que se descuenta de tu
+                    saldo automáticamente al pagarla. Tu saldo actual:{' '}
+                    {formatCoins(balance)} monedas.
+                  </p>
+                </div>
+                <button
+                  onClick={paySubscription}
+                  disabled={payingSub}
+                  className="bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full px-5 py-2 cursor-pointer disabled:opacity-60 shrink-0"
+                >
+                  {payingSub ? 'Pagando…' : 'Pagar la suscripción ahora'}
+                </button>
+              </div>
+            )
+          }
+          if (st.status === 'active') {
+            return (
+              <div className="lg:col-span-2 bg-[#f0faf0] border border-[#007600]/30 rounded-lg p-3 text-[13px]">
+                <p className="font-bold text-[#007600]">
+                  Suscripción al día: tu tienda está activa hasta{' '}
+                  {new Date(store.subscribedUntil as string).toLocaleDateString('es')}
+                </p>
+                <p className="text-[#565959] mt-0.5">
+                  La renovación cuesta 200 CUP ({formatCoins(cost)} monedas) y se descuenta de tu
+                  saldo al pagarla. Saldo actual: {formatCoins(balance)} monedas.
+                </p>
+              </div>
+            )
+          }
+          return (
+            <div className="lg:col-span-2 bg-[#FEF3C7] border border-[#B45309]/40 rounded-lg p-4 text-[13px] flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-1">
+                <p className="font-bold text-[#B45309]">
+                  ¡Tu prueba de 5 días terminó! Tu tienda está suspendida para el público
+                </p>
+                <p className="text-[#B45309] mt-0.5">
+                  Paga la suscripción de <b>200 CUP ({formatCoins(cost)} monedas)</b> con tu saldo
+                  para volver a vender. Tu saldo: {formatCoins(balance)} monedas.
+                </p>
+              </div>
+              <button
+                onClick={paySubscription}
+                disabled={payingSub}
+                className="bg-[#B45309] hover:bg-[#92400e] text-white text-[13px] font-bold rounded-full px-5 py-2 cursor-pointer disabled:opacity-60 shrink-0"
+              >
+                {payingSub ? 'Pagando…' : 'Pagar 200 CUP con mi saldo'}
+              </button>
+            </div>
+          )
+        })()}
+
         {/* PUBLICAR PRODUCTO */}
         <section className="bg-white rounded-lg border border-[#e3e6e6] p-6">
           <h2 className="text-[18px] font-bold text-[#0F1111] flex items-center gap-2 mb-1">

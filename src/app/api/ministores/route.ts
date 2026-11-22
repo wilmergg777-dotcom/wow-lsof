@@ -43,6 +43,8 @@ export async function POST(req: Request) {
       emoji: String(emoji || '🏪'),
       logo: typeof logo === 'string' && logo.startsWith('data:image') ? logo : null,
       color: typeof color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(color) ? color : '#5B21B6',
+      // 5 días de prueba gratis desde hoy
+      trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
     },
     include: { products: true },
   })
