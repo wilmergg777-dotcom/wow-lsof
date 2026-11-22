@@ -169,6 +169,7 @@ $dbTableNames	= array(
 	// AstroIO - Sistema de Misiones de Facción
 	// ============================================
 	'FACTION_MISSIONS'			=> DB_PREFIX.'faction_missions',
+	'FACTION_BUFF_POOL'		=> DB_PREFIX.'faction_buff_pool',
 	'USERS_FACTION_MISSIONS'	=> DB_PREFIX.'users_faction_missions',
 	'FACTION_DAILY_ROTATION'	=> DB_PREFIX.'faction_daily_rotation',
 	'FACTION_GLOBAL_MISSIONS'	=> DB_PREFIX.'faction_global_missions',

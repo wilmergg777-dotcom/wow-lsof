@@ -1458,14 +1458,453 @@
 }
 </style>
 
+<style>
+/* ═══════════════════════════════════════════════════════════
+   ASTROIO MARKET v5.0 — RESKIN "MERCADO NEGRO" estilo
+   pixel-art cálido (referencia: marketplace Sunflower Land):
+   crema/naranja, bordes gruesos marrón, sombras duras, badges
+   verdes, botones naranja. Override por encima del tema
+   glassmorphism v4.8 (mismas clases .astromkt_*, sin tocar HTML).
+   Las variables se re-declaran SOLO dentro de .astromkt_wrap
+   para no filtrar a otras páginas.
+   ═══════════════════════════════════════════════════════════ */
+
+.astromkt_wrap {
+    /* Paleta Sunflower-Land */
+    --mk-cream:      #FFF3D6;   /* tarjetas */
+    --mk-cream-dark: #F7E3B8;   /* paneles internos / cabeceras de fila */
+    --mk-tan:        #E9B76D;   /* panel exterior */
+    --mk-tan-deep:   #D89A45;   /* franjas */
+    --mk-green:      #4F7A38;   /* header/banner */
+    --mk-green-deep: #35572B;
+    --mk-badge:      #7AB648;   /* badges/pills verdes */
+    --mk-orange:     #F49F33;   /* botones */
+    --mk-orange-hi:  #FFB84D;
+    --mk-brown:      #663F19;   /* texto y bordes */
+    --mk-brown-soft: #8A6135;
+    --mk-red:        #C0392B;
+    --mk-blue:       #4A78B8;
+    --mk-border:     3px solid var(--mk-brown);
+    --mk-border-2:   2px solid var(--mk-brown);
+    --mk-shadow:     3px 3px 0 rgba(102, 63, 25, .28);
+    --mk-shadow-sm:  2px 2px 0 rgba(102, 63, 25, .22);
+
+    /* Re-map de variables del tema v4.8 usadas por las reglas viejas */
+    --bg-dark:       rgba(233, 183, 109, 0);
+    --bg-card:       var(--mk-cream);
+    --bg-card-solid: var(--mk-cream);
+    --bg-inner:      var(--mk-cream-dark);
+    --border-color:  var(--mk-brown);
+    --text-main:     var(--mk-brown);
+    --text-muted:    var(--mk-brown-soft);
+    --text-title:    var(--mk-brown);
+    --accent-blue:   var(--mk-blue);
+    --accent-cyan:   var(--mk-green);
+    --accent-purple: var(--mk-brown-soft);
+    --accent-gold:   var(--mk-orange);
+    --accent-green:  var(--mk-badge);
+    --accent-red:    var(--mk-red);
+    --accent-orange: var(--mk-orange);
+
+    color: var(--mk-brown);
+    font-family: 'Trebuchet MS', 'Segoe UI', Verdana, sans-serif;
+    font-size: 13px;
+    background: transparent;
+}
+
+/* Quita el blur glass del tema viejo */
+.astromkt_wrap * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* ===== PANEL EXTERIOR ===== */
+.astromkt_wrap .astromkt_panel {
+    width: 1240px;
+    max-width: 100%;
+    background: var(--mk-tan);
+    border: var(--mk-border);
+    border-radius: 10px;
+    box-shadow: 5px 5px 0 rgba(102, 63, 25, .30);
+    padding: 10px;
+}
+
+/* ===== HEADER — banner verde con title crema ===== */
+.astromkt_wrap .astromkt_header {
+    background:
+        repeating-linear-gradient(135deg,
+            rgba(255,255,255,.06) 0 14px,
+            rgba(0,0,0,.05) 14px 28px),
+        var(--mk-green);
+    border: var(--mk-border);
+    border-radius: 8px;
+    box-shadow: var(--mk-shadow);
+    padding: 14px 18px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.astromkt_wrap .astromkt_title {
+    color: #FFF6DC;
+    font-size: clamp(18px, 2.4vw, 26px);
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 rgba(53, 87, 43, .95);
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.astromkt_wrap .astromkt_subtitle {
+    font-size: clamp(11px, 1.3vw, 13px);
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #CFE3A8;
+    text-shadow: 1px 1px 0 rgba(53, 87, 43, .9);
+}
+
+.astromkt_wrap .astromkt_title .icon { text-shadow: none; }
+
+/* Saldo: chips crema */
+.astromkt_wrap .astromkt_balance_box { display: flex; gap: 8px; flex-wrap: wrap; }
+.astromkt_wrap .astromkt_balance_item {
+    background: var(--mk-cream);
+    border: var(--mk-border-2);
+    border-radius: 6px;
+    box-shadow: var(--mk-shadow-sm);
+    padding: 6px 12px;
+    min-width: 110px;
+}
+.astromkt_wrap .astromkt_balance_item .label {
+    color: var(--mk-brown-soft);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+.astromkt_wrap .astromkt_balance_item .value {
+    color: var(--mk-brown);
+    font-size: 16px;
+    font-weight: 800;
+    text-shadow: none;
+}
+
+/* ===== FEEDBACK ===== */
+.astromkt_wrap .astromkt_feedback {
+    border: var(--mk-border-2);
+    border-radius: 6px;
+    box-shadow: var(--mk-shadow-sm);
+    background: var(--mk-cream);
+    color: var(--mk-brown);
+    font-weight: 700;
+    padding: 10px 14px;
+    margin-top: 10px;
+    border-left-width: 8px;
+}
+.astromkt_wrap .astromkt_feedback.ok   { border-left-color: var(--mk-badge); }
+.astromkt_wrap .astromkt_feedback.err  { border-left-color: var(--mk-red); }
+.astromkt_wrap .astromkt_feedback.warn { border-left-color: var(--mk-orange); }
+
+/* ===== TABS — chips como la sidebar de Sunflower Land ===== */
+.astromkt_wrap .astromkt_tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+}
+.astromkt_wrap .astromkt_tab {
+    background: var(--mk-cream);
+    color: var(--mk-brown);
+    border: var(--mk-border-2);
+    border-radius: 6px;
+    box-shadow: var(--mk-shadow-sm);
+    padding: 7px 12px;
+    font-weight: 800;
+    font-size: 12px;
+    text-decoration: none;
+    transition: transform .08s ease;
+}
+.astromkt_wrap .astromkt_tab:hover { transform: translate(-1px, -1px); box-shadow: var(--mk-shadow); }
+.astromkt_wrap .astromkt_tab.active {
+    background: var(--mk-badge);
+    color: #fff;
+    text-shadow: 1px 1px 0 rgba(53, 87, 43, .7);
+}
+.astromkt_wrap .astromkt_tab--cross,
+.astromkt_wrap .astromkt_tab--colonies { background: var(--mk-orange); color: #5b3a12; }
+
+/* ===== WIDGET TENDENCIAS / SECCIONES ===== */
+.astromkt_wrap .astromkt_widget,
+.astromkt_wrap .astromkt_filters {
+    background: var(--mk-cream);
+    border: var(--mk-border);
+    border-radius: 8px;
+    box-shadow: var(--mk-shadow);
+    padding: 12px;
+    margin-top: 12px;
+}
+.astromkt_wrap .astromkt_widget_title,
+.astromkt_wrap .astromkt_section_title {
+    display: inline-block;
+    background: var(--mk-badge);
+    color: #fff;
+    text-shadow: 1px 1px 0 rgba(53,87,43,.7);
+    border: var(--mk-border-2);
+    border-radius: 5px;
+    padding: 4px 10px;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: .4px;
+    margin-bottom: 8px;
+}
+.astromkt_wrap .astromkt_widget_item {
+    color: var(--mk-brown);
+    padding: 4px 0;
+    font-weight: 600;
+}
+.astromkt_wrap .astromkt_widget_item .val { font-weight: 800; }
+
+/* ===== BUSCADOR / CATEGORÍAS ===== */
+.astromkt_wrap .astromkt_search {
+    width: 100%;
+    box-sizing: border-box;
+    background: #fff;
+    border: var(--mk-border-2);
+    border-radius: 6px;
+    padding: 9px 12px;
+    color: var(--mk-brown);
+    font-weight: 600;
+    font-size: 13px;
+}
+.astromkt_wrap .astromkt_search:focus { outline: 3px solid var(--mk-badge); outline-offset: 0; }
+.astromkt_wrap .astromkt_cats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.astromkt_wrap .astromkt_cat {
+    background: var(--mk-cream-dark);
+    color: var(--mk-brown);
+    border: var(--mk-border-2);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-weight: 800;
+    font-size: 12px;
+    text-decoration: none;
+}
+.astromkt_wrap .astromkt_cat.active {
+    background: var(--mk-badge);
+    color: #fff;
+    text-shadow: 1px 1px 0 rgba(53,87,43,.7);
+}
+.astromkt_wrap .astromkt_sort {
+    background: #fff;
+    border: var(--mk-border-2);
+    border-radius: 6px;
+    color: var(--mk-brown);
+    font-weight: 700;
+    padding: 6px 10px;
+}
+
+/* ===== GRID DE TARJETAS (ofertas) ===== */
+.astromkt_wrap .astromkt_card,
+.astromkt_wrap .astromkt_mycard {
+    background: var(--mk-cream);
+    border: var(--mk-border);
+    border-radius: 8px;
+    box-shadow: var(--mk-shadow);
+    padding: 10px;
+    color: var(--mk-brown);
+    transition: transform .08s ease, box-shadow .08s ease;
+    position: relative;
+    overflow: hidden;
+}
+.astromkt_wrap .astromkt_card:hover,
+.astromkt_wrap .astromkt_mycard:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 rgba(102, 63, 25, .30);
+}
+.astromkt_wrap .astromkt_imgwrap {
+    background: var(--mk-cream-dark);
+    border: var(--mk-border-2);
+    border-radius: 6px;
+    padding: 8px;
+}
+
+/* Badge de precio estilo Sunflower Land (esquina superior izquierda) */
+.astromkt_wrap .astromkt_badge_tl {
+    background: var(--mk-badge);
+    color: #fff;
+    text-shadow: 1px 1px 0 rgba(53,87,43,.7);
+    border: var(--mk-border-2);
+    border-radius: 5px;
+    font-weight: 800;
+    font-size: 11px;
+    padding: 3px 8px;
+    box-shadow: var(--mk-shadow-sm);
+}
+
+/* Badge de estado */
+.astromkt_wrap .astromkt_status_badge {
+    border: var(--mk-border-2);
+    border-radius: 5px;
+    font-weight: 800;
+    padding: 2px 8px;
+    box-shadow: var(--mk-shadow-sm);
+}
+.astromkt_wrap .astromkt_status_badge.active    { background: var(--mk-badge);    color: #fff; }
+.astromkt_wrap .astromkt_status_badge.sold      { background: var(--mk-orange);   color: #5b3a12; }
+.astromkt_wrap .astromkt_status_badge.expired   { background: #C8B489;            color: var(--mk-brown); }
+.astromkt_wrap .astromkt_status_badge.cancelled { background: var(--mk-red);      color: #fff; }
+
+/* Timer badge (expira en...) */
+.astromkt_wrap .astromkt_timer_badge {
+    background: var(--mk-cream-dark);
+    border: var(--mk-border-2);
+    border-radius: 5px;
+    color: var(--mk-brown);
+    font-weight: 800;
+    font-size: 11px;
+    padding: 2px 8px;
+}
+
+/* ===== BOTONES ===== */
+.astromkt_wrap .astromkt_btn_full,
+.astromkt_wrap .astromkt_submit,
+.astromkt_wrap .astromkt_pick,
+.astromkt_wrap .astromkt_cat_btn {
+    display: inline-block;
+    background: linear-gradient(180deg, var(--mk-orange-hi), var(--mk-orange));
+    color: #5b3a12;
+    border: var(--mk-border-2);
+    border-radius: 6px;
+    box-shadow: var(--mk-shadow-sm);
+    font-weight: 800;
+    font-size: 13px;
+    padding: 9px 16px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform .08s ease, box-shadow .08s ease;
+    text-shadow: 1px 1px 0 rgba(255,255,255,.4);
+}
+.astromkt_wrap .astromkt_btn_full:hover,
+.astromkt_wrap .astromkt_submit:hover,
+.astromkt_wrap .astromkt_pick:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: var(--mk-shadow);
+}
+.astromkt_wrap .astromkt_btn_full:active,
+.astromkt_wrap .astromkt_submit:active { transform: translate(1px, 1px); box-shadow: none; }
+
+/* ===== FORMULARIOS ===== */
+.astromkt_wrap .astromkt_field { margin: 8px 0; }
+.astromkt_wrap .astromkt_input,
+.astromkt_wrap .astromkt_select {
+    background: #fff;
+    border: var(--mk-border-2);
+    border-radius: 6px;
+    color: var(--mk-brown);
+    font-weight: 600;
+    padding: 8px 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+.astromkt_wrap .astromkt_input:focus,
+.astromkt_wrap .astromkt_select:focus { outline: 3px solid var(--mk-badge); }
+.astromkt_wrap .astromkt_duration {
+    background: var(--mk-cream-dark);
+    border: var(--mk-border-2);
+    border-radius: 6px;
+    color: var(--mk-brown);
+    font-weight: 700;
+    padding: 8px 10px;
+    cursor: pointer;
+}
+.astromkt_wrap .astromkt_duration.on {
+    background: var(--mk-badge);
+    color: #fff;
+    text-shadow: 1px 1px 0 rgba(53,87,43,.7);
+}
+
+/* ===== TABLAS / LISTADOS (historial, mis listados, order book) ===== */
+.astromkt_wrap table { border-collapse: separate; border-spacing: 0 4px; width: 100%; }
+.astromkt_wrap th {
+    background: var(--mk-cream-dark);
+    color: var(--mk-brown);
+    border: var(--mk-border-2);
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 11px;
+    padding: 6px 10px;
+}
+.astromkt_wrap td {
+    background: var(--mk-cream);
+    color: var(--mk-brown);
+    border-top: var(--mk-border-2);
+    border-bottom: var(--mk-border-2);
+    padding: 7px 10px;
+    font-weight: 600;
+}
+.astromkt_wrap tr td:first-child { border-left: var(--mk-border-2); border-radius: 6px 0 0 6px; }
+.astromkt_wrap tr td:last-child  { border-right: var(--mk-border-2); border-radius: 0 6px 6px 0; }
+
+/* ===== VARIOS ===== */
+.astromkt_wrap .astromkt_hint,
+.astromkt_wrap .astromkt_empty {
+    color: var(--mk-brown-soft);
+    font-weight: 600;
+}
+.astromkt_wrap .astromkt_empty {
+    background: var(--mk-cream);
+    border: var(--mk-border-2);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+}
+.astromkt_wrap .astromkt_fmt { color: var(--mk-brown); font-weight: 800; }
+.astromkt_wrap .astromkt_warning_banner {
+    background: var(--mk-cream);
+    border: var(--mk-border-2);
+    border-left: 8px solid var(--mk-orange);
+    border-radius: 6px;
+    color: var(--mk-brown);
+    font-weight: 700;
+    padding: 10px 14px;
+    box-shadow: var(--mk-shadow-sm);
+}
+.astromkt_wrap .astromkt_progress_bar { background: var(--mk-cream-dark); border: var(--mk-border-2); border-radius: 5px; }
+.astromkt_wrap .astromkt_progress_bar > div { background: var(--mk-badge); }
+.astromkt_wrap .astromkt_summary_row { color: var(--mk-brown); font-weight: 700; }
+.astromkt_wrap .astromkt_total_text  { color: var(--mk-brown); font-weight: 800; }
+.astromkt_wrap .astromkt_stat_text   { color: var(--mk-brown-soft); }
+
+/* Enlaces genéricos dentro del mercado */
+.astromkt_wrap a { color: var(--mk-blue); font-weight: 700; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 740px) {
+    .astromkt_wrap .astromkt_panel { padding: 6px; }
+    .astromkt_wrap .astromkt_header { padding: 10px; }
+    .astromkt_wrap .astromkt_tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+    .astromkt_wrap .astromkt_tab { white-space: nowrap; }
+    .astromkt_wrap .astromkt_card,
+    .astromkt_wrap .astromkt_mycard { width: 100% !important; box-sizing: border-box; }
+    .astromkt_wrap table { display: block; overflow-x: auto; }
+}
+</style>
+
 <div class="astromkt_wrap">
 <div class="astromkt_panel">
 
 	{* ===== HEADER ===== *}
 	<div class="astromkt_header">
 		<h1 class="astromkt_title">
-			<span class="icon">🏛️</span> Mercado
-			{if $is_vip}<span style="color:#ff88aa; font-size:13px;">⭐ VIP</span>{/if}
+			<span class="icon">🏴‍☠️</span> Mercado Negro
+			<span class="astromkt_subtitle">Compra · Intercambia · Vende</span>
+			{if $is_vip}<span style="color:#ffd94a; font-size:13px;">⭐ VIP</span>{/if}
 		</h1>
 		<div class="astromkt_balance_box">
 			<div class="astromkt_balance_item">

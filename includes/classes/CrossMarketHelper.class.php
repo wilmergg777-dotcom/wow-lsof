@@ -874,12 +874,27 @@ class CrossMarketHelper
             [':id' => (int)$sellOrderId]
         );
 
+        // ✅ v3.9 — Solo el proceso que GANA el lock ejecuta el cruce (rowCount):
+        // antes el resultado del UPDATE no se comprobaba y dos compradores
+        // concurrentes ejecutaban el cruce COMPLETO dos veces (doble pago,
+        // doble entrega de items).
+        if (self::db()->rowCount() !== 1) {
+            return ['error' => 'La orden acaba de ser ejecutada por otro jugador'];
+        }
+
+        // ✅ v3.9 — Tracking de pasos para compensación en cascada
+        $done = array();
+
         try {
             self::subtractBalance($buyerId, self::CURRENCY_INT, $untxToPay);
+            $done[] = 'buyer_paid';
             self::addBalance($sellerId, self::CURRENCY_NAC, $cupAmount);
+            $done[] = 'seller_paid';
 
             self::addReserve(self::CURRENCY_INT, $untxToPay);
+            $done[] = 'res_int';
             self::subtractReserve(self::CURRENCY_NAC, $cupAmount);
+            $done[] = 'res_nac';
 
             self::addLedger(
                 $buyerId,
@@ -889,6 +904,7 @@ class CrossMarketHelper
                 'cross_sell_'.$sellOrderId,
                 ['order_id' => $sellOrderId, 'tasa' => $calc['tasa'], 'spread_pct' => $calc['spread_pct']]
             );
+            $done[] = 'led_b';
 
             self::addLedger(
                 $sellerId,
@@ -898,9 +914,12 @@ class CrossMarketHelper
                 'cross_sell_'.$sellOrderId,
                 ['order_id' => $sellOrderId, 'buyer_id' => $buyerId]
             );
+            $done[] = 'led_s';
 
             self::removeUserItem($sellerId, $sellerPlanet, $itemType, $itemId, $itemAmount);
+            $done[] = 'item_s';
             self::addUserItem($buyerId, $realBuyerPlanet, $itemType, $itemId, $itemAmount);
+            $done[] = 'item_b';
 
             self::db()->insert(
                 "INSERT INTO `".$prefix."cross_trades`
@@ -948,13 +967,38 @@ class CrossMarketHelper
             return ['ok' => true, 'trade_id' => $tradeId, 'calc' => $calc];
 
         } catch (Exception $e) {
+            // ✅ v3.9 — Compensación en cascada SOLO de lo que llegó a moverse
+            // (antes el catch solo re-abría la orden: dinero/items descontados
+            // sin entrega ni devolución). Los asientos de ledger se dejan como
+            // rastro de auditoría (no se revierten).
+            try {
+                if (in_array('item_b', $done, true)) {
+                    self::removeUserItem($buyerId, $realBuyerPlanet, $itemType, $itemId, $itemAmount);
+                }
+                if (in_array('item_s', $done, true)) {
+                    self::addUserItem($sellerId, $sellerPlanet, $itemType, $itemId, $itemAmount);
+                }
+                if (in_array('res_nac', $done, true)) {
+                    self::addReserve(self::CURRENCY_NAC, $cupAmount);
+                }
+                if (in_array('res_int', $done, true)) {
+                    self::subtractReserve(self::CURRENCY_INT, $untxToPay);
+                }
+                if (in_array('seller_paid', $done, true)) {
+                    self::subtractBalance($sellerId, self::CURRENCY_NAC, $cupAmount);
+                }
+                if (in_array('buyer_paid', $done, true)) {
+                    self::addBalance($buyerId, self::CURRENCY_INT, $untxToPay);
+                }
+            } catch (Exception $e2) { /* best-effort */ }
+
             self::db()->update(
                 "UPDATE `".$prefix."cross_orders`
                  SET status = 'open'
-                 WHERE id = :id",
+                 WHERE id = :id AND status = 'locked'",
                 [':id' => (int)$sellOrderId]
             );
-            return ['error' => 'Error al ejecutar cruce: '.$e->getMessage()];
+            return ['error' => 'Error al ejecutar cruce (movimientos revertidos): '.$e->getMessage()];
         }
     }
 
@@ -1033,14 +1077,26 @@ class CrossMarketHelper
             [':id' => (int)$buyOrderId]
         );
 
+        // ✅ v3.9 — Solo el proceso que GANA el lock ejecuta el cruce (rowCount)
+        if (self::db()->rowCount() !== 1) {
+            return ['error' => 'La orden acaba de ser ejecutada por otro jugador'];
+        }
+
+        // ✅ v3.9 — Tracking de pasos para compensación en cascada
+        $done = array();
+
         try {
             // Mover monedas
             self::subtractBalance($buyerId, self::CURRENCY_INT, $untxAmount);
+            $done[] = 'buyer_paid';
             self::addBalance($acceptorId, self::CURRENCY_NAC, $cupToPay);
+            $done[] = 'acceptor_paid';
 
             // Reservas: entra UNTX, sale NTX
             self::addReserve(self::CURRENCY_INT, $untxAmount);
+            $done[] = 'res_int';
             self::subtractReserve(self::CURRENCY_NAC, $cupToPay);
+            $done[] = 'res_nac';
 
             // Ledger del comprador internacional
             self::addLedger(
@@ -1051,6 +1107,7 @@ class CrossMarketHelper
                 'cross_buy_'.$buyOrderId,
                 ['order_id' => $buyOrderId, 'tasa' => $calc['tasa'], 'spread_pct' => $calc['spread_pct']]
             );
+            $done[] = 'led_b';
 
             // Ledger del aceptador nacional
             self::addLedger(
@@ -1061,10 +1118,13 @@ class CrossMarketHelper
                 'cross_buy_'.$buyOrderId,
                 ['order_id' => $buyOrderId, 'buyer_id' => $buyerId]
             );
+            $done[] = 'led_s';
 
             // Mover ítem real
             self::removeUserItem($acceptorId, $acceptorPlanet, $itemType, $itemId, $itemAmount);
+            $done[] = 'item_s';
             self::addUserItem($buyerId, $buyerPlanet, $itemType, $itemId, $itemAmount);
+            $done[] = 'item_b';
 
             // Registrar cruce
             self::db()->insert(
@@ -1114,14 +1174,36 @@ class CrossMarketHelper
             return ['ok' => true, 'trade_id' => $tradeId, 'calc' => $calc];
 
         } catch (Exception $e) {
-            // Revertir bloqueo
+            // ✅ v3.9 — Compensación en cascada SOLO de lo que llegó a moverse
+            try {
+                if (in_array('item_b', $done, true)) {
+                    self::removeUserItem($buyerId, $buyerPlanet, $itemType, $itemId, $itemAmount);
+                }
+                if (in_array('item_s', $done, true)) {
+                    self::addUserItem($acceptorId, $acceptorPlanet, $itemType, $itemId, $itemAmount);
+                }
+                if (in_array('res_nac', $done, true)) {
+                    self::addReserve(self::CURRENCY_NAC, $cupToPay);
+                }
+                if (in_array('res_int', $done, true)) {
+                    self::subtractReserve(self::CURRENCY_INT, $untxAmount);
+                }
+                if (in_array('acceptor_paid', $done, true)) {
+                    self::subtractBalance($acceptorId, self::CURRENCY_NAC, $cupToPay);
+                }
+                if (in_array('buyer_paid', $done, true)) {
+                    self::addBalance($buyerId, self::CURRENCY_INT, $untxAmount);
+                }
+            } catch (Exception $e2) { /* best-effort */ }
+
+            // Revertir bloqueo (solo si sigue locked)
             self::db()->update(
                 "UPDATE `".$prefix."cross_orders`
                  SET status = 'open'
-                 WHERE id = :id",
+                 WHERE id = :id AND status = 'locked'",
                 [':id' => (int)$buyOrderId]
             );
-            return ['error' => 'Error al ejecutar cruce: '.$e->getMessage()];
+            return ['error' => 'Error al ejecutar cruce (movimientos revertidos): '.$e->getMessage()];
         }
     }
 }

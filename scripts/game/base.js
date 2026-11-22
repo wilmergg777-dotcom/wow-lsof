@@ -454,9 +454,12 @@ $(function() {
             try {
                 var data = JSON.parse(xhr.responseText);
 
-                // ¿Hay ataque O espionaje activo?
-                var underThreat = (data.hasAttack && data.total > 0) ||
-                                  (data.hasSpy    && data.spyTotal > 0);
+                // ✅ v3.9 — SOLO un ataque PvP REAL reactiva la sirena.
+                // El endpoint ahora separa las banderas: hasAttack (misión
+                // 1/2/9 en ida de otro jugador), hasPve (eventos NPC) y
+                // hasSpy (espionaje). Antes espionaje + PVE + flotas en
+                // VUELTA disparaban la sirena → falsas alarmas constantes.
+                var underThreat = !!(data.hasAttack && data.total > 0);
 
                 if (!underThreat) {
                     // Sin amenaza → parar cualquier cosa y limpiar start
@@ -507,10 +510,12 @@ $(function() {
 
         createAudio();
 
-        // ─── 🆕 Reanudar alarma en curso INMEDIATAMENTE ───
-        // Si venimos de otra página y todavía quedaban segundos,
-        // arranca ya sin esperar al primer checkAttacks.
-        resumeAlarmIfNeeded();
+        // ─── ✅ v3.9 — YA NO se reanuda a ciegas al cargar la página ───
+        // Antes `resumeAlarmIfNeeded()` sonaba ANTES de preguntar al servidor:
+        // si navegabas dentro de los 24s de una alarma vieja, la sirena
+        // arrancaba aunque la amenaza ya no existiera. Ahora la reanudación
+        // solo ocurre dentro de checkAttacks() cuando el servidor CONFIRMA
+        // un ataque real en curso (mismo check, unos ms más tarde).
 
         // Arrancar comprobación periódica
         checkAttacks();
@@ -518,23 +523,30 @@ $(function() {
 
         // Desbloqueador de audio (los navegadores bloquean autoplay)
         var unlockAudio = function() {
-            if (audioAttack) {
-                // Solo probar si NO está sonando, para no cortarla
-                if (!alarmIsSounding) {
-                    audioAttack.play().then(function() {
-                        audioAttack.pause();
-                        audioAttack.currentTime = 0;
-                    }).catch(function(e) {});
+            try {
+                // ✅ v3.9 — Desbloqueo SILENCIOSO (WebAudio): antes la sonda
+                // era audioAttack.play()+pause() y, con el mp3 ya en caché,
+                // se oía un fragmento real de la sirena al hacer cualquier
+                // click ("das un click y se activa la alarma"). Un buffer
+                // vacío de 1 muestra desbloquea el autoplay sin sonar.
+                var AC = window.AudioContext || window.webkitAudioContext;
+                if (AC) {
+                    var ctx = new AC();
+                    var buf = ctx.createBuffer(1, 1, 22050);
+                    var src = ctx.createBufferSource();
+                    src.buffer = buf;
+                    src.connect(ctx.destination);
+                    src.start(0);
                 }
-            }
+            } catch (e) {}
             document.removeEventListener('click', unlockAudio);
             document.removeEventListener('touchstart', unlockAudio);
-            console.log('[AstroIO] Audio desbloqueado por interacción del usuario.');
+            console.log('[AstroIO] Audio desbloqueado (silencioso) por interacción del usuario.');
         };
         document.addEventListener('click', unlockAudio);
         document.addEventListener('touchstart', unlockAudio);
 
-        console.log('[AstroIO] Alarma activa v2.1 — 24s persistente + 30min cooldown');
+        console.log('[AstroIO] Alarma activa v3.9 — solo ataques PvP reales (ida), 24s + 30min cooldown');
     }
 
     if (document.readyState === 'loading') {

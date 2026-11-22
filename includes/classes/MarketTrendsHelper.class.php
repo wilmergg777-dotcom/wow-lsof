@@ -70,6 +70,11 @@ class MarketTrendsHelper
                  ':avg'=>$newAvg, ':p'=>$price, ':id'=>$row['stat_id']]);
         } else {
             // Insertar primera fila del día
+            // ✅ v3.9 — UPSERT atómico: la tabla tiene UNIQUE
+            // (stat_date,item_type,item_id); antes check-then-insert y dos
+            // compras concurrentes del mismo item el mismo día lanzaban
+            // duplicate-key DESPUÉS de que el dinero ya se movió (la compra
+            // se completaba pero el jugador veía pantalla de error).
             $db->insert(
                 "INSERT INTO `".$prefix."market_stats` SET
                     stat_date    = :d,
@@ -81,9 +86,15 @@ class MarketTrendsHelper
                     avg_price    = :p,
                     min_price    = :p,
                     max_price    = :p,
-                    total_volume = :v",
+                    total_volume = :v
+                ON DUPLICATE KEY UPDATE
+                    total_sold   = total_sold + :a,
+                    total_volume = total_volume + :v,
+                    avg_price    = FLOOR((avg_price * total_sold + :p2 * :a) / (total_sold + :a)),
+                    min_price    = LEAST(min_price, :p),
+                    max_price    = GREATEST(max_price, :p)",
                 [':d'=>$today, ':t'=>$itemType, ':i'=>$itemId, ':n'=>$itemName,
-                 ':a'=>$amount, ':p'=>$price, ':v'=>$price*$amount]);
+                 ':a'=>$amount, ':p'=>$price, ':p2'=>$price, ':v'=>$price*$amount]);
         }
     }
 

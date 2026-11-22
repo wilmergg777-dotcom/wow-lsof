@@ -1054,7 +1054,9 @@ class ShowMarketPage extends AbstractGamePage
 
         $type = isset($_GET['item_type']) ? $_GET['item_type'] : '';
         $id   = isset($_GET['item_id'])   ? (int)$_GET['item_id'] : 0;
-        $days = isset($_GET['days'])      ? (int)$_GET['days'] : 7;
+        // ✅ v3.9 — Acotar days: antes ?days=99999999 hacía un for() gigante
+        // con query amplia por cada día (DoS barato contra el endpoint AJAX).
+        $days = isset($_GET['days'])      ? min(90, max(1, (int)$_GET['days'])) : 7;
 
         echo json_encode(MarketTrendsHelper::getChartData($type, $id, $days));
         exit;

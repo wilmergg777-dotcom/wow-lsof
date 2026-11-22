@@ -331,19 +331,46 @@ class MarketHelper
     public static function subtractBalance($userId, $amount)
     {
         $amount = (int)$amount;
-        if ($amount <= 0) return;
+        if ($amount <= 0) return true;
         $prefix = self::prefix();
 
-        Database::get()->update(
+        $db = Database::get();
+        // ✅ v3.9 — Guard condicional + rowCount: antes era
+        // GREATEST(0, ntx20 - :a) SIN guard → en carrera el pago salía 0 y el
+        // vendedor recibía NTX de la nada. Ahora si el saldo no alcanza
+        // devuelve false y el llamador aborta (nada se mueve).
+        $db->update(
             "UPDATE `".$prefix."users`
-             SET ntx20 = GREATEST(0, ntx20 - :a)
-             WHERE id = :u",
+             SET ntx20 = ntx20 - :a
+             WHERE id = :u AND ntx20 >= :a",
             [':a' => $amount, ':u' => (int)$userId]);
+
+        if ($db->rowCount() !== 1) {
+            return false;
+        }
 
         if (isset($GLOBALS['USER']['id'])
             && (int)$GLOBALS['USER']['id'] === (int)$userId) {
             $GLOBALS['USER']['ntx20'] = max(0, (int)$GLOBALS['USER']['ntx20'] - $amount);
         }
+
+        return true;
+    }
+
+    /**
+     * ✅ v3.9 — Revertir el claim de una oferta (status='sold' → 'active')
+     * cuando el flujo de compra/aceptación aborta ANTES de mover dinero.
+     */
+    private static function revertOfferClaim($offerId)
+    {
+        $prefix = self::prefix();
+        try {
+            Database::get()->update(
+                "UPDATE `".$prefix."market_offers`
+                 SET status = 'active'
+                 WHERE offer_id = :id AND status = 'sold'",
+                [':id' => $offerId]);
+        } catch (Throwable $e) {}
     }
 
     public static function freezeBalance($userId, $amount)
@@ -1504,6 +1531,14 @@ class MarketHelper
         $planetId = isset($GLOBALS['PLANET']['id'])
             ? (int)$GLOBALS['PLANET']['id'] : 0;
 
+        // ✅ v3.9 — Rechazar planet_id=0: sin planeta la oferta caería en la
+        // rama LEGACY al cancelar/expirar (devolvía items con addUserItem que
+        // el vendedor NUNCA perdió en v2.6) y al vender entregaba al comprador
+        // sin quitar nada al vendedor → items acuñados. Mejor no publicar.
+        if ($planetId <= 0) {
+            return ['error' => 'No se pudo resolver tu planeta. No se publicó la oferta.'];
+        }
+
         $ttl = $duration === self::DURATION_48H
             ? self::OFFER_TTL_48H : self::OFFER_TTL_24H;
 
@@ -1684,6 +1719,19 @@ class MarketHelper
         if (self::getAvailableBalance($buyerId) < $total)
             return ['error' => "Necesitas $total NTX-20"];
 
+        // ✅ v3.9 — CLAIM atómico ANTES de mover dinero (UPDATE condicional +
+        // rowCount): solo el primer request compra. Antes el UPDATE final era
+        // incondicional y dos compras concurrentes cobraban al comprador,
+        // acreditaban al vendedor y entregaban items DOS veces (items
+        // acuñados de la nada).
+        $db->update(
+            "UPDATE `".$prefix."market_offers` SET status = 'sold'
+             WHERE offer_id = :id AND status = 'active'",
+            [':id' => $offerId]);
+        if ($db->rowCount() !== 1) {
+            return ['error' => 'Oferta no disponible (otro jugador acaba de comprarla)'];
+        }
+
         // v2.6 — VERIFICAR que el vendedor TENGA los items (solo para
         // ofertas nuevas — legacy ya los tenían removidos al crear)
         $planetId   = isset($o['planet_id']) ? (int)$o['planet_id'] : 0;
@@ -1711,6 +1759,16 @@ class MarketHelper
             }
         }
 
+        // ✅ v3.9 — Resolver el planeta del comprador ANTES de cobrar:
+        // si no se puede resolver, aborta SIN cobrar ni tocar la oferta
+        // (antes el pago ya salía y el item nunca se entregaba).
+        $buyerPlanet = isset($GLOBALS['PLANET']['id'])
+            ? (int)$GLOBALS['PLANET']['id'] : 0;
+        if ($planetId > 0 && $buyerPlanet <= 0) {
+            self::revertOfferClaim($offerId);
+            return ['error' => 'No se pudo resolver tu planeta. Intenta de nuevo.'];
+        }
+
         // v2.5 — Calcular fee que se descuenta al vendedor
         if ($isAdmin) {
             $sellerFeePct = 0;
@@ -1720,11 +1778,21 @@ class MarketHelper
             $duration     = (int)$o['duration'];
             $sellerFeePct = self::getSellerFeePct($seller, $duration);
             $sellerFee    = (int)ceil($price * $sellerFeePct / 100);
+            // ✅ v3.9 — PISO del neto del vendedor: la comisión NUNCA se come
+            // la venta entera (antes vender por 1 NTX con fee 5% →
+            // ceil(0.05)=1 → el vendedor recibía 0). El fee se limita a
+            // price - 1: el vendedor siempre gana al menos 1 NTX-20.
+            $sellerFee    = min($sellerFee, max(0, $price - 1));
             $sellerNet    = $price - $sellerFee;
         }
 
         // Movimientos de saldo
-        self::subtractBalance($buyerId, $total);
+        // ✅ v3.9 — Con guard: si el saldo del comprador ya no alcanza
+        // (carrera con otro gasto), NADA se mueve y la oferta vuelve a active.
+        if (!self::subtractBalance($buyerId, $total)) {
+            self::revertOfferClaim($offerId);
+            return ['error' => 'Saldo insuficiente. No se te ha cobrado nada.'];
+        }
         self::addBalance($seller, $sellerNet);
 
         // Log del comprador (gasto)
@@ -1769,9 +1837,7 @@ class MarketHelper
                 $seller, $sellerPlanet,
                 $o['item_type'], (int)$o['item_id'], (int)$o['amount']);
 
-            // 2) Dar al comprador (usando su planeta actual)
-            $buyerPlanet = isset($GLOBALS['PLANET']['id'])
-                ? (int)$GLOBALS['PLANET']['id'] : 0;
+            // 2) Dar al comprador (planeta YA resuelto antes de cobrar ✅ v3.9)
             if ($buyerPlanet > 0) {
                 self::addUserItem(
                     $buyerId, $buyerPlanet,
@@ -1808,10 +1874,10 @@ class MarketHelper
                            $o['item_name']);
         }
 
-        // Marcar la oferta como vendida
+        // ✅ v3.9 — La oferta ya está 'sold' (claim atómico de arriba):
+        // aquí solo se registran las comisiones efectivamente pagadas.
         $db->update(
             "UPDATE `".$prefix."market_offers` SET
-                status = 'sold',
                 seller_fee_paid = :sfp,
                 fee_seller_pct = :fsp
              WHERE offer_id = :id",
@@ -1889,7 +1955,10 @@ class MarketHelper
         // v2.6 — VERIFICAR que el BUYER TENGA el NTX
         $planetId = isset($o['planet_id']) ? (int)$o['planet_id'] : 0;
 
-        if (!$isAdmin && self::getBalance($buyer) < $price) {
+        if (!$isAdmin && self::getAvailableBalance($buyer) < $price) {
+            // ✅ v3.9 — Saldo DISPONIBLE (antes getBalance sin descontar el
+            // congelado): un buyer con NTX congelado pasaba el check y luego
+            // el subtractBalance pagaba 0 → NTX acuñados hacia el aceptador.
             // AUTO-CANCELAR la orden
             $db->update(
                 "UPDATE `".$prefix."market_offers`
@@ -1908,6 +1977,17 @@ class MarketHelper
                                (int)$o['item_id'], (int)$o['amount']);
         if (!$check['ok']) return ['error' => $check['msg']];
 
+        // ✅ v3.9 — CLAIM atómico ANTES de quitar items ni cobrar (rowCount):
+        // dos aceptadores concurrentes ya no pueden ejecutar la orden dos
+        // veces (doble cobro al buyer, items acuñados).
+        $db->update(
+            "UPDATE `".$prefix."market_offers` SET status = 'sold'
+             WHERE offer_id = :id AND status = 'active'",
+            [':id' => $offerId]);
+        if ($db->rowCount() !== 1) {
+            return ['error' => 'Orden no disponible (otro jugador acaba de aceptarla)'];
+        }
+
         // v2.5 — Calcular fee del aceptador según duración + VIP
         if ($isAdmin) {
             $acceptorFeePct = 0;
@@ -1917,27 +1997,38 @@ class MarketHelper
             $duration       = (int)$o['duration'];
             $acceptorFeePct = self::getAcceptorFeePct($acceptorId, $duration);
             $acceptorFee    = (int)ceil($price * $acceptorFeePct / 100);
+            // ✅ v3.9 — PISO del neto (idéntico a buyOffer): la comisión nunca
+            // deja al aceptador en 0.
+            $acceptorFee    = min($acceptorFee, max(0, $price - 1));
             $acceptorNet    = $price - $acceptorFee;
+        }
+
+        // ✅ v3.9 — Resolver el destino del buyer ANTES de quitar items ni
+        // cobrar: si no hay planeta, aborta limpio (revertir claim).
+        $buyerPlanet = self::resolvePlanetId($buyer, $planetId);
+        if ($buyerPlanet <= 0) {
+            self::revertOfferClaim($offerId);
+            return ['error' => 'El comprador no tiene planeta disponible. Intenta de nuevo.'];
+        }
+
+        // ✅ v3.9 — Cobrar al buyer PRIMERO y con guard (primer movimiento de
+        // dinero): si falla, aborta SIN haber quitado items a nadie.
+        if ($planetId === 0) {
+            self::unfreezeBalance($buyer, $price);
+        }
+        if (!self::subtractBalance($buyer, $price)) {
+            self::revertOfferClaim($offerId);
+            return ['error' => 'El comprador ya no tiene saldo. Nada se ha perdido.'];
         }
 
         // v2.6 — Quitar el ítem del aceptador (usuario actual)
         self::removeItem($acceptorId, $o['item_type'],
                          (int)$o['item_id'], (int)$o['amount']);
 
-        // v2.6 — Dar el ítem al buyer (OTRO usuario)
-        // Usar addUserItem con el planet_id del buyer (o su principal).
-        $buyerPlanet = self::resolvePlanetId($buyer, $planetId);
+        // v2.6 — Dar el ítem al buyer (planeta ya resuelto ✅ v3.9)
         self::addUserItem(
             $buyer, $buyerPlanet,
             $o['item_type'], (int)$o['item_id'], (int)$o['amount']);
-
-        // v2.6 — Cobrar al buyer:
-        // · Legacy (planet_id = 0): unfreeze + subtract (era el viejo flujo)
-        // · Nuevo (planet_id > 0): solo subtract (nunca se congeló)
-        if ($planetId === 0) {
-            self::unfreezeBalance($buyer, $price);
-        }
-        self::subtractBalance($buyer, $price);
 
         // Acreditar al aceptador el neto
         self::addBalance($acceptorId, $acceptorNet);
@@ -1975,10 +2066,10 @@ class MarketHelper
             );
         }
 
-        // Marcar como vendida
+        // ✅ v3.9 — La orden ya está 'sold' (claim atómico): solo se
+        // registran las comisiones efectivamente pagadas.
         $db->update(
             "UPDATE `".$prefix."market_offers` SET
-                status = 'sold',
                 acceptor_fee = :af,
                 fee_acceptor_pct = :afp
              WHERE offer_id = :id",
