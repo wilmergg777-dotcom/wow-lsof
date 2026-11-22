@@ -7,9 +7,6 @@ export const metadata: Metadata = {
   description:
     "Violetero es tu tienda online: compra en mini tiendas de emprendedores, recibe a domicilio con repartidores y vende tus propios productos.",
   keywords: ["Violetero", "tienda online", "mini tiendas", "entrega a domicilio", "ofertas"],
-  icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
-  },
 };
 
 export default function RootLayout({
