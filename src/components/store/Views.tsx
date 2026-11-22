@@ -442,8 +442,8 @@ export function ProductDetail() {
               <Coins className="w-4 h-4" /> o {formatCoins(coins)} monedas de la tienda
             </p>
             <p className="text-[13px] text-[#565959] mt-1">
-              Puedes pagar en <b>dinero ($)</b> al recibir o con tu <b>saldo en monedas</b> de la
-              billetera interna.
+              Puedes pagar en <b>efectivo o transferencia (CUP)</b> al recibir o con tu{' '}
+              <b>saldo en monedas</b> de la billetera interna.
             </p>
             <p className="text-[14px] mt-3">
               <span className="font-bold text-[#0F1111]">Entrega a domicilio</span> con un
