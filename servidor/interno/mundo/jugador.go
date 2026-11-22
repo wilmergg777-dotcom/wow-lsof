@@ -1085,3 +1085,59 @@ func (j *Jugador) Craftear(m *Mundo, recetaID string) ResultadoCrafteo {
 		SubioSkill:        subio,
 	}
 }
+
+// Recolectar permite a un jugador con una profesión de recolección
+// (Herboristería, futuras Minería / Desuello) recolectar de un nodo del
+// mundo. A diferencia de Craftear, no consume materiales de la bolsa (el
+// nodo es la fuente); simplemente comprueba la habilidad mínima, produce
+// el item del nodo y sube la habilidad mientras skill < SkillHasta.
+func (j *Jugador) Recolectar(m *Mundo, nodoID string) ResultadoCrafteo {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// Buscar el nodo en todas las profesiones.
+	var nodo DefNodo
+	var profDef DefProfesion
+	var ep *EstadoProfesion
+	encontrado := false
+	for pid, pd := range m.profesiones {
+		for _, nd := range pd.Nodos {
+			if nd.ID == nodoID {
+				nodo = nd
+				profDef = pd
+				ep = j.profesiones[pid]
+				encontrado = true
+				break
+			}
+		}
+		if encontrado {
+			break
+		}
+	}
+	if !encontrado {
+		return ResultadoCrafteo{RecetaID: nodoID, Error: "nodo inválido"}
+	}
+	if ep == nil {
+		return ResultadoCrafteo{RecetaID: nodoID, Error: "no conoces la profesión de este nodo"}
+	}
+	skillMax := ep.SkillMax(profDef)
+	if ep.Skill < nodo.SkillReq {
+		return ResultadoCrafteo{RecetaID: nodoID, Error: "habilidad insuficiente para recolectar este nodo"}
+	}
+	// Producir resultado (sin consumir materiales).
+	j.AgregarItem(nodo.ResultadoID, nodo.ResultadoCantidad)
+	// Subir habilidad si current < SkillHasta y current < skillMax.
+	subio := false
+	if ep.Skill < nodo.SkillHasta && ep.Skill < skillMax {
+		ep.Skill++
+		subio = true
+	}
+	return ResultadoCrafteo{
+		OK:                true,
+		RecetaID:          nodoID,
+		ResultadoItemID:   nodo.ResultadoID,
+		ResultadoCantidad: nodo.ResultadoCantidad,
+		Skill:             ep.Skill,
+		SkillMax:          skillMax,
+		SubioSkill:        subio,
+	}
+}

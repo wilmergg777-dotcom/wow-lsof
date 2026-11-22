@@ -491,6 +491,7 @@ func itemsPredefinidos() map[string]DefItem {
 		"hierba_cardenal":         "Hierba cardenal",
 		"marregal":                "Marregal",
 		"alga_estranguladora":     "Alga estranguladora",
+		"raíz_de_tierra":          "Raíz de tierra",
 		"vidarraíz":               "Vidarraíz",
 		"sangrerregia":            "Sangrerregia",
 		"espina_de_oro":           "Espina de oro",

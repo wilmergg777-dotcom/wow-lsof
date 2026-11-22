@@ -307,6 +307,26 @@ profesión nueva es solo añadir otra `DefProfesion` al registro.
   binarias (Ingeniería goblin / gnómica, skill 200) que consumen
   productos crafteados de la propia profesión (20 Bomba de hierro grande
   para goblin, 6 Tubo de mitril para gnómica).
+- **Herboristería** (WoW 3.3.5): la primera profesión de **RECOLECCIÓN** del
+  juego. A diferencia de las 7 profesiones de crafteo, no tiene `Recetas`:
+  sube recogiendo hierbas de **Nodos** en el mundo con el verbo
+  `Recolectar(nodoID)` — que produce la hierba y da habilidad mientras
+  `skill < SkillHasta` **sin consumir materiales** (el nodo es la fuente, no
+  la bolsa). El framework diferencia ambos verbos: `Craftear` busca en
+  `Recetas` y consume materiales; `Recolectar` busca en `Nodos` (campo
+  `[]DefNodo` de `DefProfesion`) y no consume nada. 6 rangos y 25 nodos que
+  cubren 0→450 de forma **contigua** (cada nivel de skill tiene al menos un
+  nodo que la da), siguiendo las zonas de la guía: Mulgore/Elwynn (1-75),
+  Loch Modan/Baldíos (75-115), Tierras Altas de Arathi (115-205), Garganta
+  de Fuego (205-230), Feralas (230-275), Tierras de la Peste del Oeste
+  (275-300), Frondavil/Peste del Este TBC (300-330), Marisma de Zangar
+  (330-375), Rasganorte/Cuenca de Sholazar (375-435) y Las Cumbres
+  Tormentosas (435-450). Es el **eslabón cross-profesión recolección →
+  crafteo**: las hierbas recolectadas son los materiales que consume
+  Alquimia (y la futura Inscripción). Reutiliza las 21 hierbas que Alquimia
+  ya registró y solo añade Raíz de tierra (Earthroot, nombrada en la guía
+  1-75). Sin especializaciones. Cada nodo guarda su `Zona` recomendada
+  (informativo, para el cliente).
 
 El cliente abre el panel de profesiones con la tecla **P**; muestra las
 profesiones conocidas (barra de habilidad + botón para aprender el
