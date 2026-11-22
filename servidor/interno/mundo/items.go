@@ -38,6 +38,8 @@ const (
 	TipoFrasco = "frasco" // consumibles potentes que cuentan como elixir de batalla y guardián
 	// Tipos de Herrería
 	TipoArma = "arma" // armas crafteadas (hachas, mazas, espadas, dagas)
+	// Tipos de Ingeniería
+	TipoExplosivo = "explosivo" // bombas, dinamita, fuegos artificiales, bengalas, señuelos
 )
 
 // Calidades.
@@ -681,6 +683,95 @@ func itemsPredefinidos() map[string]DefItem {
 		"piedra_serpiente_voshgajin":         "Piedra serpiente de Vosh'gajin",
 		"delantal_herrero_martillos_carmesi": "Delantal de herrero de martillos carmesí",
 		"insignia_guarda_negra":              "Insignia de la Guarda Negra",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadRaro)
+	}
+
+	// ─── Materiales de Ingeniería (no compartidos) ───
+	// Lingote de cobre (la familia de lingotes de Herrería no incluye cobre;
+	// Joyería usa "barra_cobre", aquí se registra el lingote para la guía),
+	// Paño de Escarcha (WotLK) y Fuego cristalizado.
+	for id, n := range map[string]string{
+		"lingote_cobre":       "Lingote de cobre",
+		"paño_escarcha":       "Paño de Escarcha",
+		"fuego_cristalizado":  "Fuego cristalizado",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+
+	// ─── Productos crafteados de Ingeniería (1-450) ───
+	// 42 recetas. Ingeniería se caracteriza por cadenas de productos
+	// intermedios: pólvoras → bombas, tornillos → bombas/mosquetes, tubos →
+	// mosquetes/gafas/gadgets, envolturas → bombas, capacitor → señuelos.
+	// Muchos intermedios son a la vez producto y material de recetas
+	// posteriores (p.ej. el Overcharged Capacitor se consume en el
+	// Explosive Decoy). Los "pure-material" (tornillos/pólvora elemental del
+	// escalón TBC 300-310) se craftean en masa sin dar skill.
+	craftedIngenieria := []struct {
+		id, nombre, tipo, calidad string
+	}{
+		// Intermedios Classic (pólvoras, tornillos, tubos) — materiales
+		{"pólvora_basta", "Pólvora basta", TipoMaterial, CalidadComun},
+		{"tornillos_cobre", "Puñado de tornillos de cobre", TipoMaterial, CalidadComun},
+		{"tubo_cobre", "Tubo de cobre", TipoMaterial, CalidadComun},
+		{"pólvora_burda", "Pólvora burda", TipoMaterial, CalidadComun},
+		{"contacto_plata", "Contacto de plata", TipoMaterial, CalidadComun},
+		{"tubo_bronce", "Tubo de bronce", TipoMaterial, CalidadComun},
+		{"pólvora_pesada", "Pólvora pesada", TipoMaterial, CalidadComun},
+		{"pólvora_sólida", "Pólvora sólida", TipoMaterial, CalidadComun},
+		{"tubo_mitril", "Tubo de mitril", TipoMaterial, CalidadComun},
+		{"disparador_inestable", "Disparador inestable", TipoMaterial, CalidadRaro},
+		{"pólvora_densa", "Pólvora densa", TipoMaterial, CalidadComun},
+		{"girotiro_mitril", "Girotiro de mitril", TipoMaterial, CalidadComun},
+		{"envoltura_mitril", "Envoltura de mitril", TipoMaterial, CalidadComun},
+		{"tubo_torio", "Tubo de torio", TipoMaterial, CalidadRaro},
+		// Intermedios TBC
+		{"envoltura_hierro_vil", "Envoltura de hierro vil", TipoMaterial, CalidadComun},
+		{"tornillos_hierro_vil", "Puñado de tornillos de hierro vil", TipoMaterial, CalidadComun},
+		{"pólvora_elemental", "Pólvora elemental", TipoMaterial, CalidadComun},
+		// Intermedios WotLK
+		{"tornillos_cobalto", "Puñado de tornillos de cobalto", TipoMaterial, CalidadComun},
+		{"gatillo_explosivo_volátil", "Gatillo explosivo volátil", TipoMaterial, CalidadComun},
+		{"capacitor_sobrecargado", "Capacitor sobrecargado", TipoMaterial, CalidadRaro},
+		{"tubo_acero_frío", "Tubo de acero frío", TipoMaterial, CalidadRaro},
+		// Productos Classic: herramientas, armas, explosivos
+		{"llave_arcoluz", "Llave inglesa Arcoluz", TipoMaterial, CalidadComun},
+		{"trabuco_basto", "Trabuco basto", TipoArma, CalidadComun},
+		{"bomba_bronce_pequeña", "Bomba de bronce pequeña", TipoExplosivo, CalidadComun},
+		{"bomba_bronce_grande", "Bomba de bronce grande", TipoExplosivo, CalidadComun},
+		{"fuego_artificial_rojo", "Fuego artificial rojo", TipoExplosivo, CalidadComun},
+		{"microajustador_giromático", "Microajustador giromático", TipoMaterial, CalidadComun},
+		{"bomba_hierro_grande", "Bomba de hierro grande", TipoExplosivo, CalidadComun},
+		{"balas_mitril_gran_impacto", "Balas de mitril de gran impacto", TipoMaterial, CalidadComun},
+		// Productos Artesano
+		{"bomba_gran_carga", "Bomba de gran carga", TipoExplosivo, CalidadRaro},
+		{"trastos_wow_torio", "Trastos wow de torio", TipoMaterial, CalidadRaro},
+		// Productos TBC
+		{"bomba_hierro_vil", "Bomba de hierro vil", TipoExplosivo, CalidadRaro},
+		{"mosquete_hierro_vil", "Mosquete de hierro vil", TipoArma, CalidadRaro},
+		{"bengala_humo_blanco", "Bengala de humo blanco", TipoExplosivo, CalidadComun},
+		// Productos WotLK: gadgets, gafas, navaja
+		{"señuelo_explosivo", "Señuelo explosivo", TipoExplosivo, CalidadRaro},
+		{"mira_refractora_diamante", "Mira refractora de corte diamante", TipoMaterial, CalidadRaro},
+		{"caja_de_bombas", "Caja de bombas", TipoExplosivo, CalidadRaro},
+		{"soldador_rayo_goblin", "Soldador de rayo goblin", TipoMaterial, CalidadRaro},
+		{"kit_inyector_mana", "Kit inyector de maná", TipoMaterial, CalidadRaro},
+		{"gafas_nieve_mecanizadas", "Gafas de nieve mecanizadas", TipoArmadura, CalidadRaro},
+		{"máquina_ruido", "Máquina de ruido", TipoMaterial, CalidadRaro},
+		{"navaja_ejército_gnómica", "Navaja del ejército gnómico", TipoMaterial, CalidadEpico},
+	}
+	for _, c := range craftedIngenieria {
+		m[c.id] = def(c.id, c.nombre, c.tipo, c.calidad)
+	}
+	// ─── Materiales de las especializaciones de Ingeniería ───
+	// Goblin entrega 20 Bomba de hierro grande (producto, reutilizado), 20
+	// Dinamita sólida y 5 Oveja explosiva. Gnómica entrega 6 Tubo de mitril
+	// (producto, reutilizado), 1 Mira de precisión y 2 Muñeco-diana avanzado.
+	for id, n := range map[string]string{
+		"dinamita_sólida":      "Dinamita sólida",
+		"oveja_explosiva":      "Oveja explosiva",
+		"mira_precisión":       "Mira de precisión",
+		"muñeco_diana_avanzado": "Muñeco-diana avanzado",
 	} {
 		m[id] = def(id, n, TipoMaterial, CalidadRaro)
 	}

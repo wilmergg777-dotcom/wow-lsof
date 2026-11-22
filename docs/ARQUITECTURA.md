@@ -285,6 +285,28 @@ profesión nueva es solo añadir otra `DefProfesion` al registro.
   skill 200) y 3 sub-maestrías bajo armas (hachas / martillos / invocador,
   skill 225). `AprenderEspecializacion()` valida skill >= req, la relación
   padre/hoja, y consume los materiales.
+- **Ingeniería** (WoW 3.3.5): 6 rangos y 42 recetas (Classic 1-300, TBC
+  300-350, WotLK 350-450). Su rasgo distintivo son las **cadenas de
+  productos intermedios**: pólvoras → bombas, tornillos →
+  bombas/mosquetes, tubos → mosquetes/gafas/gadgets, envolturas → bombas,
+  capacitor → señuelo. Muchos intermedios son a la vez producto y material
+  de recetas posteriores (p.ej. el Capacitor sobrecargado se consume en el
+  Señuelo explosivo). El escalón TBC 300-310 fabrica en masa tres
+  intermedios: la Envoltura de hierro vil da los 10 puntos de skill y los
+  otros dos (tornillos y pólvora elemental) son **recetas "pure-material"**
+  (`SkillReq == SkillHasta`: nunca dan skill, se craftean solo como
+  material para las bombas, el mosquete y la bengala). El framework lo
+  soporta de forma natural: `Craftear` siempre produce el item (línea de
+  producir resultado) y solo sube skill si `skill < SkillHasta`. Produce
+  explosivos (TipoExplosivo: bombas, bengalas, fuegos artificiales,
+  señuelos), armas (TipoArma: trabucos, mosquetes), gafas (TipoArmadura) y
+  gadgets/herramientas (TipoMaterial: navaja del ejército gnómico, miras,
+  inyectores). Reutiliza items de otras profesiones: lingotes de
+  plata/bronce/hierro/acero/mitril/torio (Herrería), saronita y titanio
+  (Alquimia), cuero pesado y paños (Peletería). 2 especializaciones
+  binarias (Ingeniería goblin / gnómica, skill 200) que consumen
+  productos crafteados de la propia profesión (20 Bomba de hierro grande
+  para goblin, 6 Tubo de mitril para gnómica).
 
 El cliente abre el panel de profesiones con la tecla **P**; muestra las
 profesiones conocidas (barra de habilidad + botón para aprender el
