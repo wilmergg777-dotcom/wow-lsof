@@ -77,10 +77,10 @@ function Filters({
         <ul className="space-y-1">
           {[
             ['all', 'Todos los precios'],
-            ['0-25', 'Menos de $25'],
-            ['25-50', '$25 a $50'],
-            ['50-150', '$50 a $150'],
-            ['150+', '$150 y más'],
+            ['0-2000', 'Menos de 2.000 CUP'],
+            ['2000-10000', '2.000 a 10.000 CUP'],
+            ['10000-30000', '10.000 a 30.000 CUP'],
+            ['30000+', '30.000 CUP y más'],
           ].map(([v, label]) => (
             <li key={v}>
               <button
@@ -107,10 +107,10 @@ function applyFilters(
 ): CatalogItem[] {
   let out = list
   if (onlyDeals) out = out.filter((p) => itemDiscount(p) > 0)
-  if (priceRange === '0-25') out = out.filter((p) => p.price < 25)
-  if (priceRange === '25-50') out = out.filter((p) => p.price >= 25 && p.price <= 50)
-  if (priceRange === '50-150') out = out.filter((p) => p.price > 50 && p.price <= 150)
-  if (priceRange === '150+') out = out.filter((p) => p.price > 150)
+  if (priceRange === '0-2000') out = out.filter((p) => p.price < 2000)
+  if (priceRange === '2000-10000') out = out.filter((p) => p.price >= 2000 && p.price <= 10000)
+  if (priceRange === '10000-30000') out = out.filter((p) => p.price > 10000 && p.price <= 30000)
+  if (priceRange === '30000+') out = out.filter((p) => p.price > 30000)
   return out
 }
 
@@ -379,6 +379,9 @@ export function ProductDetail() {
     priceCoins: item.priceCoins > 0 ? item.priceCoins : undefined,
     photo: item.photo ?? undefined,
     storeName: item.store,
+    productId: item.id.replace(/^(web|mini)-/, ''),
+    kind: item.kind,
+    stock: item.stock,
   }
 
   return (
@@ -465,29 +468,49 @@ export function ProductDetail() {
                 <Coins className="w-3.5 h-3.5" /> {formatCoins(coins)} monedas
               </p>
               <p className="text-[13px] text-[#565959]">
-                <span className="text-[#007600] font-bold">Envío GRATIS</span> en pedidos mayores de
-                $35
+                <span className="text-[#007600] font-bold">Envío GRATIS</span> con repartidor de{' '}
+                {STORE_NAME}
               </p>
-              <label className="block text-[13px]">
-                Cantidad:
-                <select
-                  value={qty}
-                  onChange={(e) => setQty(Number(e.target.value))}
-                  className="ml-2 border border-[#ddd] rounded px-2 py-1 bg-[#f0f2f2] cursor-pointer"
-                >
-                  {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {item.stock <= 0 ? (
+                <p className="text-[14px] font-bold text-[#C7511F] bg-[#FDE8E0] rounded px-3 py-2">
+                  Agotado: no hay unidades en el almacén ahora mismo
+                </p>
+              ) : (
+                <>
+                  <p
+                    className={`text-[13px] font-bold ${
+                      item.stock <= 5 ? 'text-[#B45309]' : 'text-[#007600]'
+                    }`}
+                  >
+                    {item.stock <= 5
+                      ? `¡Últimas ${item.stock} unidades!`
+                      : `Hay ${item.stock} unidades disponibles en el almacén`}
+                  </p>
+                  <label className="block text-[13px]">
+                    Cantidad:
+                    <select
+                      value={qty}
+                      onChange={(e) => setQty(Number(e.target.value))}
+                      className="ml-2 border border-[#ddd] rounded px-2 py-1 bg-[#f0f2f2] cursor-pointer"
+                    >
+                      {Array.from({ length: Math.min(10, item.stock) }, (_, i) => i + 1).map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              )}
               <button
                 onClick={() => {
                   addToCart(item.id, qty, snapshot)
                   toast.success(`Agregado al carrito (${qty})`, { description: item.name })
                 }}
-                className="w-full bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[14px] rounded-full py-2 cursor-pointer"
+                disabled={item.stock <= 0}
+                className={`w-full bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[14px] rounded-full py-2 ${
+                  item.stock <= 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                }`}
               >
                 Agregar al carrito
               </button>
@@ -496,7 +519,10 @@ export function ProductDetail() {
                   addToCart(item.id, qty, snapshot)
                   openCart()
                 }}
-                className="w-full bg-[#FFA41C] hover:bg-[#FA8900] text-[#0F1111] text-[14px] rounded-full py-2 cursor-pointer"
+                disabled={item.stock <= 0}
+                className={`w-full bg-[#FFA41C] hover:bg-[#FA8900] text-[#0F1111] text-[14px] rounded-full py-2 ${
+                  item.stock <= 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                }`}
               >
                 Comprar ahora
               </button>

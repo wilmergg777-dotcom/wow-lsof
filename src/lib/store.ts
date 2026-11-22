@@ -46,6 +46,9 @@ export type CartItem = {
     priceCoins?: number
     photo?: string
     storeName: string
+    productId?: string // id real en la base para descontar del almacén
+    kind?: 'web' | 'mini' // oferta del administrador o producto de mini tienda
+    stock?: number // unidades disponibles al agregar al carrito
   }
 }
 

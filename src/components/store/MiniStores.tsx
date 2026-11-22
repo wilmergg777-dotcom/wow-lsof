@@ -126,6 +126,62 @@ function DualPrice({ cash, coins, big = false }: { cash: number; coins: number; 
 // ============================================================
 // SECCIÓN DE INICIO: mini tiendas destacadas
 // ============================================================
+// Editor de la cantidad en el almacén de un producto (solo el dueño)
+function StockEditor({
+  productId,
+  ownerName,
+  current,
+  onSaved,
+}: {
+  productId: string
+  ownerName: string
+  current: number
+  onSaved: () => void
+}) {
+  const [val, setVal] = useState(String(current))
+  const [saving, setSaving] = useState(false)
+  useEffect(() => setVal(String(current)), [current])
+  const save = async () => {
+    const n = parseInt(val, 10)
+    if (isNaN(n) || n < 0) {
+      toast.error('La cantidad debe ser 0 o más')
+      return
+    }
+    setSaving(true)
+    try {
+      await api(`/api/miniproducts/${productId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ stock: n, ownerName }),
+      })
+      toast.success('Cantidad del almacén actualizada')
+      onSaved()
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+  return (
+    <div className="flex items-center gap-1 shrink-0">
+      <input
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        type="number"
+        min="0"
+        aria-label="Cantidad en el almacén"
+        className="w-16 border border-[#888c8c] rounded px-2 py-1 text-[13px] outline-none focus:border-[#e77600]"
+      />
+      <button
+        onClick={save}
+        disabled={saving}
+        className="text-[12px] font-bold bg-[#FFD814] hover:bg-[#F7CA00] rounded-full px-3 py-1 cursor-pointer disabled:opacity-60"
+      >
+        Guardar
+      </button>
+    </div>
+  )
+}
+
 export function HomeMiniStores() {
   const openView = useStore((s) => s.openView)
   const openMiniStore = useStore((s) => s.openMiniStore)
@@ -351,20 +407,41 @@ export function MiniStoreDetail() {
               <div className="px-1">
                 <DualPrice cash={p.price} coins={p.priceCoins} />
               </div>
+              <p
+                className={`px-1 text-[12px] font-bold mt-1 ${
+                  p.stock <= 0 ? 'text-[#C7511F]' : 'text-[#007600]'
+                }`}
+              >
+                {p.stock <= 0
+                  ? 'Agotado'
+                  : p.stock <= 5
+                    ? `¡Últimas ${p.stock} unidades!`
+                    : `Hay ${p.stock} en el almacén`}
+              </p>
               <button
                 onClick={() => {
+                  if (p.stock <= 0) {
+                    toast.error(`"${p.name}" está agotado: no hay unidades disponibles`)
+                    return
+                  }
                   addToCart(`mini-${p.id}`, 1, {
                     name: p.name,
                     price: p.price,
                     priceCoins: p.priceCoins,
                     photo: p.photo ?? undefined,
                     storeName: store.name,
+                    productId: p.id,
+                    kind: 'mini',
+                    stock: p.stock,
                   })
                   toast.success(`"${p.name}" se agregó al carrito`)
                 }}
-                className="mt-3 w-full bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full py-2 cursor-pointer"
+                disabled={p.stock <= 0}
+                className={`mt-3 w-full bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full py-2 ${
+                  p.stock <= 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                }`}
               >
-                Agregar al carrito
+                {p.stock <= 0 ? 'Agotado' : 'Agregar al carrito'}
               </button>
             </div>
           ))}
@@ -399,6 +476,7 @@ export function ManageStoreView() {
   const [pCoins, setPCoins] = useState('')
   const [pDesc, setPDesc] = useState('')
   const [pPhoto, setPPhoto] = useState<string | null>(null)
+  const [pStock, setPStock] = useState('')
 
   // Ofertas de trabajo de esta tienda + postulaciones
   const [offers, setOffers] = useState<JobOffer[]>([])
@@ -456,12 +534,19 @@ export function ManageStoreView() {
     }
   }
 
+  const refreshStore = () => {
+    if (!store) return
+    api<MiniStore>(`/api/ministores/${store.id}`)
+      .then(setStore)
+      .catch(() => {})
+  }
+
   const addProduct = async () => {
     if (!store) return
     const price = parseFloat(pPrice)
     const coins = pCoins.trim() ? parseInt(pCoins, 10) : NaN
     if (!pName.trim() || !price || price <= 0) {
-      toast.error('El producto necesita nombre y un precio en $ mayor que 0')
+      toast.error('El producto necesita nombre y un precio en CUP mayor que 0')
       return
     }
     if (pCoins.trim() && (!coins || coins <= 0)) {
@@ -478,6 +563,7 @@ export function ManageStoreView() {
           price,
           priceCoins: pCoins.trim() ? coins : undefined,
           photo: pPhoto,
+          stock: pStock.trim() ? Math.max(1, Math.floor(Number(pStock))) : 20,
         }),
       })
       setPName('')
@@ -485,6 +571,7 @@ export function ManageStoreView() {
       setPCoins('')
       setPDesc('')
       setPPhoto(null)
+      setPStock('')
       const updated = await api<MiniStore>(`/api/ministores/${store.id}`)
       setStore(updated)
       toast.success(`Producto "${pName}" publicado con sus dos precios`)
@@ -721,7 +808,7 @@ export function ManageStoreView() {
           <div className="flex gap-3 mb-3">
             <div className="flex-1">
               <label className="block text-[12px] font-bold text-[#0F1111] mb-1">
-                Precio en dinero ($)
+                Precio en dinero (CUP)
               </label>
               <input
                 value={pPrice}
@@ -729,7 +816,7 @@ export function ManageStoreView() {
                 type="number"
                 min="0.01"
                 step="0.01"
-                placeholder="Ej: 5.00"
+                placeholder="Ej: 500"
                 aria-label="Precio en dinero"
                 className="w-full border border-[#888c8c] rounded px-3 py-2 text-[14px] outline-none focus:border-[#e77600]"
               />
@@ -751,9 +838,22 @@ export function ManageStoreView() {
             </div>
           </div>
           <p className="text-[12px] text-[#565959] mb-3 flex items-center gap-1">
-            <Coins className="w-3.5 h-3.5 text-[#5B21B6]" /> Cambio actual: 1 $ = {rate} monedas. Si
-            dejas el precio en monedas vacío se calcula solo.
+            <Coins className="w-3.5 h-3.5 text-[#5B21B6]" /> Cambio actual: 1 CUP = {rate} monedas.
+            Si dejas el precio en monedas vacío se calcula solo.
           </p>
+          <label className="block text-[12px] font-bold text-[#0F1111] mb-1">
+            Cantidad a la venta (almacén)
+          </label>
+          <input
+            value={pStock}
+            onChange={(e) => setPStock(e.target.value)}
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Ej: 10 (se descuenta solo al vender)"
+            aria-label="Cantidad a la venta"
+            className="w-full border border-[#888c8c] rounded px-3 py-2 text-[14px] outline-none focus:border-[#e77600] mb-3"
+ />
           <textarea
             value={pDesc}
             onChange={(e) => setPDesc(e.target.value)}
@@ -789,7 +889,20 @@ export function ManageStoreView() {
                         <Coins className="w-3 h-3" /> {formatCoins(p.priceCoins)}
                       </span>
                     </p>
+                    <p
+                      className={`text-[12px] font-bold mt-0.5 ${
+                        p.stock <= 0 ? 'text-[#C7511F]' : 'text-[#007600]'
+                      }`}
+                    >
+                      {p.stock <= 0 ? 'Agotado' : `Almacén: ${p.stock}`} · Vendidos: {p.sold}
+                    </p>
                   </div>
+                  <StockEditor
+                    productId={p.id}
+                    ownerName={user.name}
+                    current={p.stock}
+                    onSaved={refreshStore}
+                  />
                   <button
                     onClick={() => removeProduct(p.id, p.name)}
                     className="text-[#C7511F] hover:underline text-[13px] flex items-center gap-1 cursor-pointer"

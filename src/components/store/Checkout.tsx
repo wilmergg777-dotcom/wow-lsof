@@ -72,6 +72,9 @@ export function CheckoutView() {
             coins: i.mini.priceCoins ?? cashToCoins(i.mini.price, rate),
             qty: i.qty,
             store: i.mini.storeName,
+            productId: i.mini.productId,
+            kind: i.mini.kind,
+            stock: i.mini.stock,
           }
         })
         .filter((x) => x !== null),
@@ -118,6 +121,16 @@ export function CheckoutView() {
         toast.error('Escribe el ID de la transferencia (aparece en tu app del banco)')
         return
       }
+    }
+    // Almacén: comprobar que hay unidades suficientes de cada artículo
+    const sinStock = items.find(
+      (i) => typeof i.stock === 'number' && i.qty > i.stock
+    )
+    if (sinStock) {
+      toast.error(
+        `Solo quedan ${sinStock.stock} unidad(es) de "${sinStock.name}". Ajusta la cantidad en el carrito.`
+      )
+      return
     }
     setSending(true)
     try {

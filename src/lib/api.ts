@@ -37,6 +37,7 @@ export type MiniProduct = {
   emoji: string
   photo: string | null
   stock: number
+  sold: number // unidades vendidas
   createdAt: string
 }
 
@@ -153,7 +154,8 @@ export type Offer = {
   priceCoins: number // monedas internas (0 = se calcula con la tasa)
   oldPrice: number | null // precio anterior para mostrar descuento
   photo: string | null // foto subida o elegida de la galería
-  stock: number
+  stock: number // unidades a la venta (0 = agotado)
+  sold: number // unidades vendidas (almacén)
   active: boolean
   createdAt: string
 }

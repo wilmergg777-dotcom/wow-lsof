@@ -58,9 +58,20 @@ export function ProductCard({ item, rate = 0 }: { item: CatalogItem; rate?: numb
           <ItemPhoto
             src={item.photo}
             alt={item.name}
-            className="max-h-44 w-full rounded transition-transform group-hover:scale-[1.04]"
+            className={`max-h-44 w-full rounded transition-transform ${
+              item.stock <= 0 ? 'opacity-60 grayscale' : 'group-hover:scale-[1.04]'
+            }`}
           />
         </div>
+        {item.stock <= 0 ? (
+          <span className="self-start bg-[#565959] text-white text-[11px] font-bold px-1.5 py-0.5 rounded-sm mb-1">
+            Agotado
+          </span>
+        ) : item.stock <= 5 ? (
+          <span className="self-start bg-[#FEF3C7] text-[#B45309] text-[11px] font-bold px-1.5 py-0.5 rounded-sm mb-1">
+            ¡Últimas {item.stock} unidades!
+          </span>
+        ) : null}
         {pct > 0 && (
           <span className="self-start bg-[#CC0C39] text-white text-[11px] font-bold px-1.5 py-0.5 rounded-sm mb-1">
             -{pct}% Oferta
@@ -96,12 +107,19 @@ export function ProductCard({ item, rate = 0 }: { item: CatalogItem; rate?: numb
       </button>
       <button
         onClick={() => {
+          if (item.stock <= 0) {
+            toast.error(`"${item.name}" está agotado: no hay unidades en el almacén`)
+            return
+          }
           addToCart(item.id, 1, {
             name: item.name,
             price: item.price,
             priceCoins: item.priceCoins > 0 ? item.priceCoins : undefined,
             photo: item.photo ?? undefined,
             storeName: item.store,
+            productId: item.id.replace(/^(web|mini)-/, ''),
+            kind: item.kind,
+            stock: item.stock,
           })
           toast.success('Agregado al carrito', { description: item.name })
         }}

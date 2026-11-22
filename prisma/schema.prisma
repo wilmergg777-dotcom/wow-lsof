@@ -19,7 +19,8 @@ model Offer {
   priceCoins  Int      @default(0) // precio en monedas internas (0 = se calcula con la tasa)
   oldPrice    Float? // precio anterior opcional (para mostrar descuento)
   photo       String? // foto subida o foto elegida de la galería de la tienda
-  stock       Int      @default(20)
+  stock       Int      @default(20) // unidades a la venta (0 = agotado)
+  sold        Int      @default(0) // unidades vendidas (almacén)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
 }
@@ -58,7 +59,8 @@ model MiniProduct {
   priceCoins  Int       @default(0) // precio en monedas internas
   emoji       String    @default("📦")
   photo       String? // foto del producto (data URL)
-  stock       Int       @default(20)
+  stock       Int       @default(20) // unidades a la venta (0 = agotado)
+  sold        Int       @default(0) // unidades vendidas (almacén)
   createdAt   DateTime  @default(now())
 }
 

@@ -49,6 +49,45 @@ export async function POST(req: Request) {
       { status: 400 }
     )
   }
+
+  // ------- ALMACÉN: validar el inventario de cada artículo -------
+  // Los artículos nuevos traen productId + kind ("web" oferta del
+  // administrador | "mini" producto de mini tienda). Los carritos
+  // viejos sin productId se aceptan sin control de inventario.
+  type StockOp = { id: string; qty: number }
+  const offerOps: StockOp[] = []
+  const miniOps: StockOp[] = []
+  for (const it of items as Array<Record<string, unknown>>) {
+    const pid = String(it?.productId || '')
+    const kind = String(it?.kind || '')
+    const q = Math.max(1, Math.floor(Number(it?.qty) || 1))
+    if (!pid || (kind !== 'web' && kind !== 'mini')) continue
+    ;(kind === 'web' ? offerOps : miniOps).push({ id: pid, qty: q })
+  }
+  for (const op of offerOps) {
+    const o = await db.offer.findUnique({ where: { id: op.id } })
+    if (!o) {
+      return NextResponse.json({ error: 'Un artículo del carrito ya no existe. Actualiza la página.' }, { status: 400 })
+    }
+    if (o.stock < op.qty) {
+      return NextResponse.json(
+        { error: `Solo quedan ${o.stock} unidad(es) de "${o.title}" en el almacén` },
+        { status: 400 }
+      )
+    }
+  }
+  for (const op of miniOps) {
+    const p = await db.miniProduct.findUnique({ where: { id: op.id } })
+    if (!p) {
+      return NextResponse.json({ error: 'Un artículo del carrito ya no existe. Actualiza la página.' }, { status: 400 })
+    }
+    if (p.stock < op.qty) {
+      return NextResponse.json(
+        { error: `Solo quedan ${p.stock} unidad(es) de "${p.name}" en la mini tienda` },
+        { status: 400 }
+      )
+    }
+  }
   const buyer = String(buyerName).trim()
   const x = Number(mapX) || 50
   const y = Number(mapY) || 50
@@ -93,6 +132,20 @@ export async function POST(req: Request) {
       etaMinutes,
     },
   })
+
+  // Descontar del almacén y contar las unidades vendidas
+  for (const op of offerOps) {
+    await db.offer.update({
+      where: { id: op.id },
+      data: { stock: { decrement: op.qty }, sold: { increment: op.qty } },
+    })
+  }
+  for (const op of miniOps) {
+    await db.miniProduct.update({
+      where: { id: op.id },
+      data: { stock: { decrement: op.qty }, sold: { increment: op.qty } },
+    })
+  }
 
   // Notificación al comprador con el resumen de su compra
   const payText =

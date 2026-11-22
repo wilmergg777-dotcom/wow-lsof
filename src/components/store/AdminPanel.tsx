@@ -41,7 +41,7 @@ import {
 import { formatCoins, formatPrice, CATEGORIES } from '@/lib/products'
 import { PhotoInput } from './PhotoInput'
 
-type Tab = 'general' | 'ofertas' | 'recargas' | 'cobros'
+type Tab = 'general' | 'inventario' | 'ofertas' | 'recargas' | 'cobros'
 
 export function AdminView() {
   const [tab, setTab] = useState<Tab>('general')
@@ -111,6 +111,7 @@ export function AdminView() {
           {(
             [
               ['general', 'General'],
+              ['inventario', 'Almacén e inventario'],
               ['ofertas', 'Ofertas de la web'],
               ['recargas', 'Recargas de saldo'],
               ['cobros', 'Cobros y tasa de cambio'],
@@ -203,12 +204,212 @@ export function AdminView() {
         </>
       )}
 
+      {tab === 'inventario' && <InventorySection onChanged={loadMain} />}
+
       {tab === 'ofertas' && <OffersSection onChanged={loadMain} />}
 
       {tab === 'recargas' && <TopUpsSection />}
 
       {tab === 'cobros' && <PaymentMethodsSection rate={settings?.coinRate || 100} onRateChange={(r) => setSettings((s) => (s ? { ...s, coinRate: r } : s))} />}
     </div>
+  )
+}
+
+// ============================================================
+// PESTAÑA ALMACÉN: inventario de las ofertas de la web.
+// La cantidad se descuenta sola al vender; en 0 se muestra
+// AGOTADO y no se puede comprar. Aquí se gestiona la cantidad,
+// los precios y la visibilidad de cada artículo.
+// ============================================================
+function InventorySection({ onChanged }: { onChanged: () => void }) {
+  const [offers, setOffers] = useState<Offer[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(() => {
+    api<Offer[]>('/api/offers?all=1')
+      .then(setOffers)
+      .catch((e) => toast.error(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  if (loading) return <p className="text-center py-10 text-[#565959]">Abriendo el almacén…</p>
+
+  const totalUnits = offers.reduce((a, o) => a + o.stock, 0)
+  const totalSold = offers.reduce((a, o) => a + o.sold, 0)
+  const soldOut = offers.filter((o) => o.stock <= 0 && o.active).length
+
+  return (
+    <>
+      {/* Resumen del almacén */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white rounded-lg border border-[#e3e6e6] p-5 text-center">
+          <p className="text-[28px] font-bold text-[#0F1111]">{offers.length}</p>
+          <p className="text-[13px] text-[#565959]">Artículos publicados</p>
+        </div>
+        <div className="bg-white rounded-lg border border-[#e3e6e6] p-5 text-center">
+          <p className="text-[28px] font-bold text-[#007600]">{totalUnits}</p>
+          <p className="text-[13px] text-[#565959]">Unidades en el almacén</p>
+        </div>
+        <div className="bg-white rounded-lg border border-[#e3e6e6] p-5 text-center">
+          <p className="text-[28px] font-bold text-[#C7511F]">{soldOut}</p>
+          <p className="text-[13px] text-[#565959]">Artículos agotados</p>
+        </div>
+        <div className="bg-white rounded-lg border border-[#e3e6e6] p-5 text-center">
+          <p className="text-[28px] font-bold text-[#5B21B6]">{totalSold}</p>
+          <p className="text-[13px] text-[#565959]">Unidades vendidas</p>
+        </div>
+      </div>
+
+      <section className="bg-white rounded-lg border border-[#e3e6e6] p-6">
+        <h2 className="text-[18px] font-bold text-[#0F1111] flex items-center gap-2">
+          <Package className="w-5 h-5 text-[#5B21B6]" /> Inventario de las ofertas de la web
+        </h2>
+        <p className="text-[13px] text-[#565959] mt-1 mb-4">
+          Cada compra descuenta las unidades solas. Con 0 unidades el artículo se muestra AGOTADO y
+          nadie puede comprarlo. Aquí puedes cambiar la cantidad, el precio y ocultarlo cuando
+          quieras.
+        </p>
+        {offers.length === 0 ? (
+          <p className="text-[13px] text-[#565959]">
+            Todavía no hay artículos. Publica la primera oferta en la pestaña Ofertas de la web.
+          </p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-[#e3e6e6]">
+            {offers.map((o) => (
+              <InventoryRow key={o.id} offer={o} onSaved={load} onChanged={onChanged} />
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
+  )
+}
+
+// Fila del inventario: cantidad, precio y visibilidad de un artículo
+function InventoryRow({
+  offer,
+  onSaved,
+  onChanged,
+}: {
+  offer: Offer
+  onSaved: () => void
+  onChanged: () => void
+}) {
+  const [stock, setStock] = useState(String(offer.stock))
+  const [price, setPrice] = useState(String(offer.price))
+  const [saving, setSaving] = useState(false)
+  useEffect(() => {
+    setStock(String(offer.stock))
+    setPrice(String(offer.price))
+  }, [offer.stock, offer.price])
+
+  const patch = async (data: Record<string, unknown>, okMsg: string) => {
+    setSaving(true)
+    try {
+      await api(`/api/offers/${offer.id}`, { method: 'PATCH', body: JSON.stringify(data) })
+      toast.success(okMsg)
+      onSaved()
+      onChanged()
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const estado = !offer.active
+    ? { label: 'Oculta', color: '#565959', bg: '#f0f2f2' }
+    : offer.stock <= 0
+      ? { label: 'Agotada', color: '#C7511F', bg: '#FDE8E0' }
+      : offer.stock <= 5
+        ? { label: 'Pocas unidades', color: '#B45309', bg: '#FEF3C7' }
+        : { label: 'A la venta', color: '#007600', bg: '#E7F7E7' }
+
+  return (
+    <li className="py-4 flex flex-col sm:flex-row sm:items-center gap-4">
+      <div className="w-14 h-14 rounded-md overflow-hidden bg-[#f7fafa] border border-[#e3e6e6] shrink-0 flex items-center justify-center">
+        {offer.photo ? (
+          <img src={offer.photo} alt={offer.title} className="w-full h-full object-cover" />
+        ) : (
+          <Package className="w-6 h-6 text-[#c8cdcd]" strokeWidth={1.3} />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[15px] font-bold text-[#0F1111]">{offer.title}</p>
+        <p className="text-[12px] text-[#565959]">
+          {offer.category} ·{' '}
+          {offer.priceCoins > 0
+            ? `${formatCoins(offer.priceCoins)} monedas`
+            : 'monedas automáticas'}{' '}
+          · Vendidos: {offer.sold}
+        </p>
+        <span
+          className="inline-block rounded-full px-3 py-0.5 font-bold text-[11px] mt-1"
+          style={{ color: estado.color, backgroundColor: estado.bg }}
+        >
+          {estado.label}
+        </span>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className="text-[12px] font-bold text-[#0F1111]">
+          Cantidad:
+          <input
+            value={stock}
+            onChange={(e) => setStock(e.target.value)}
+            type="number"
+            min="0"
+            aria-label={`Cantidad en el almacén de ${offer.title}`}
+            className="w-16 border border-[#888c8c] rounded px-2 py-1 text-[13px] ml-1 outline-none focus:border-[#e77600]"
+          />
+        </label>
+        <label className="text-[12px] font-bold text-[#0F1111]">
+          Precio CUP:
+          <input
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            type="number"
+            min="1"
+            aria-label={`Precio en CUP de ${offer.title}`}
+            className="w-24 border border-[#888c8c] rounded px-2 py-1 text-[13px] ml-1 outline-none focus:border-[#e77600]"
+          />
+        </label>
+        <button
+          onClick={() => {
+            const n = parseInt(stock, 10)
+            const p = parseFloat(price)
+            if (isNaN(n) || n < 0) {
+              toast.error('La cantidad debe ser 0 o más')
+              return
+            }
+            if (!p || p <= 0) {
+              toast.error('El precio debe ser mayor que 0')
+              return
+            }
+            patch({ stock: n, price: p }, 'Inventario actualizado')
+          }}
+          disabled={saving}
+          className="text-[12px] font-bold bg-[#FFD814] hover:bg-[#F7CA00] rounded-full px-4 py-1.5 cursor-pointer disabled:opacity-60"
+        >
+          Guardar
+        </button>
+        <button
+          onClick={() =>
+            patch(
+              { active: !offer.active },
+              offer.active ? 'Oferta oculta: deja de verse en la tienda' : 'Oferta visible otra vez'
+            )
+          }
+          disabled={saving}
+          className="text-[12px] font-bold border border-[#d5d9d9] rounded-full px-4 py-1.5 cursor-pointer disabled:opacity-60 hover:bg-[#f7fafa]"
+        >
+          {offer.active ? 'Ocultar' : 'Mostrar'}
+        </button>
+      </div>
+    </li>
   )
 }
 
