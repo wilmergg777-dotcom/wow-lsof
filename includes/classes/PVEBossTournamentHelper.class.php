@@ -154,6 +154,11 @@ class PVEBossTournamentHelper
                 array(':amt' => $realAmount, ':uid' => $userId, ':amt2' => $realAmount)
             );
 
+            // [v3.8] rowCount: el guard SQL (`>= :amt2`) puede dejar el UPDATE
+            // en 0 filas si otro request concurrente ya gasto el saldo. Antes
+            // se devolvia true igualmente -> inscripcion sin pago efectivo.
+            if ($db->rowCount() !== 1) return false;
+
             if (isset($GLOBALS['USER']['id']) && (int)$GLOBALS['USER']['id'] === $userId) {
                 $GLOBALS['USER'][$col] = max(0, (int)($GLOBALS['USER'][$col] ?? 0) - $realAmount);
             }
@@ -584,6 +589,10 @@ class PVEBossTournamentHelper
 
         $winnerPctTotal = (float) $winner['pct_damage_total'] + $extraPct;
 
+        // [v3.8] UPDATE condicional + rowCount: solo el proceso que realmente
+        // cambia el estado reparte el premio. Antes dos llamadas concurrentes
+        // (cron + admin) pasaban ambas el check de estado y ejecutaban
+        // distributePrize() dos veces -> premios duplicados.
         $db->update(
             "UPDATE %%PVE_BOSS_EVENT%% SET
                 status                  = 'finished',
@@ -592,7 +601,7 @@ class PVEBossTournamentHelper
                 winner_ally_id          = :waid,
                 winner_damage           = :wdmg,
                 winner_pct              = :wpct
-             WHERE id = :id;",
+             WHERE id = :id AND status = 'active';",
             array(
                 ':now'  => $now,
                 ':wrid' => (int) $winner['id'],
@@ -602,6 +611,10 @@ class PVEBossTournamentHelper
                 ':id'   => $eventId,
             )
         );
+
+        if ($db->rowCount() !== 1) {
+            return array('ok' => false, 'error' => 'El evento ya fue finalizado por otro proceso.');
+        }
 
         $db->update(
             "UPDATE %%PVE_BOSS_REGISTRATIONS%% SET pct_damage_total = :pct WHERE id = :id;",
@@ -684,12 +697,16 @@ class PVEBossTournamentHelper
 
         $refundedCount = 0;
         if ($refund && $event['entry_mode'] === 'paid' && (int) $event['entry_cost_ntx'] > 0) {
+            // [v3.8] Incluir 'active': startEvent() marca las registraciones
+            // como 'active' al spawnear; antes un evento pagado cancelado tras
+            // arrancar excluya a esas alianzas del reembolso (dinero perdido).
             $regs = $db->select(
                 "SELECT * FROM %%PVE_BOSS_REGISTRATIONS%%
-                 WHERE event_id = :eid AND status = 'registered' AND paid_ntx > 0;",
+                 WHERE event_id = :eid AND status IN ('registered','active') AND paid_ntx > 0;",
                 array(':eid' => $eventId)
             );
 
+            $refundedIds = array();
             if (is_array($regs)) {
                 foreach ($regs as $reg) {
                     $uid        = (int) $reg['registered_by'];
@@ -702,17 +719,24 @@ class PVEBossTournamentHelper
                     if (self::addRealAmount($uid, $realAmount, $riel, 'pve_boss_refund',
                         'Reembolso Torneo Devorador #' . $eventId)) {
                         $refundedCount++;
+                        $refundedIds[] = (int) $reg['id'];
                     }
                 }
             }
 
-            $db->update(
-                "UPDATE %%PVE_BOSS_REGISTRATIONS%% SET
-                    status       = 'refunded',
-                    refunded_at  = :now
-                 WHERE event_id = :eid AND status = 'registered';",
-                array(':now' => $now, ':eid' => $eventId)
-            );
+            // [v3.8] Solo marcar 'refunded' las que SE reembolsaron de verdad.
+            // Antes el UPDATE era incondicional: si addRealAmount fallaba, el
+            // lider no cobraba pero su registro quedaba 'refunded' -> imposible
+            // reintentar.
+            if (!empty($refundedIds)) {
+                $db->update(
+                    "UPDATE %%PVE_BOSS_REGISTRATIONS%% SET
+                        status       = 'refunded',
+                        refunded_at  = :now
+                     WHERE id IN (" . implode(',', $refundedIds) . ");",
+                    array(':now' => $now)
+                );
+            }
         }
 
         self::destroyAllGhosts($eventId);
@@ -1076,6 +1100,17 @@ class PVEBossTournamentHelper
             PVEHelper::log(self::LOG_TYPE, $eventId, 'spawn_insert_error', 0, 0, array(
                 'error' => $e->getMessage(),
             ));
+
+            // [v3.8] El fantasma (users+planets+statpoints+pve_ghosts) ya
+            // existe aunque el INSERT en pve_boss_ghosts haya fallado:
+            // destruirlo para no dejar un planeta fantasma huerfano e
+            // invisible para destroyAllGhosts/cleanupOrphans.
+            try {
+                if (!empty($ghost['user_id'])) {
+                    PVEGhostHelper::destroyGhostByUserId((int) $ghost['user_id']);
+                }
+            } catch (Throwable $e2) {}
+
             return null;
         }
     }
@@ -1102,11 +1137,39 @@ class PVEBossTournamentHelper
             $key = "{$g}:{$s}:{$p}";
             if (in_array($key, $taken, true)) continue;
 
+            // [v3.8] Filtro por universo: los fantasmas se crean con
+            // universe = Universe::current() (PVEGhostHelper), pero este
+            // SELECT miraba TODOS los universos -> coordenadas libres aqui
+            // se rechazaban por estar ocupadas en otro universo.
             $exists = $db->selectSingle(
                 "SELECT id FROM %%PLANETS%%
                  WHERE galaxy = :g AND system = :s AND planet = :p AND planet_type = 1
+                   AND universe = :uni
                  LIMIT 1;",
-                array(':g' => $g, ':s' => $s, ':p' => $p)
+                array(':g' => $g, ':s' => $s, ':p' => $p, ':uni' => Universe::current())
+            );
+            if (!empty($exists)) continue;
+
+            return array('galaxy' => $g, 'system' => $s, 'planet' => $p);
+        }
+
+        // [v3.8] El fallback ANTES devolvia coordenadas sin validar (si
+        // estaban ocupadas, se creaban dos planetas en la misma posicion).
+        // Ahora intenta validarlas antes de rendirse.
+        for ($i = 0; $i < 30; $i++) {
+            $g = 1;
+            $s = random_int(1, $maxSystem);
+            $p = random_int($minPlanet, $maxPlanet);
+
+            $key = "{$g}:{$s}:{$p}";
+            if (in_array($key, $taken, true)) continue;
+
+            $exists = $db->selectSingle(
+                "SELECT id FROM %%PLANETS%%
+                 WHERE galaxy = :g AND system = :s AND planet = :p AND planet_type = 1
+                   AND universe = :uni
+                 LIMIT 1;",
+                array(':g' => $g, ':s' => $s, ':p' => $p, ':uni' => Universe::current())
             );
             if (!empty($exists)) continue;
 
@@ -1338,16 +1401,31 @@ class PVEBossTournamentHelper
         $oldPhase = (int) $ghost['phase'];
         $result['old_phase'] = $oldPhase;
 
-        $newHp = max(0, (int) $ghost['hp_current'] - $damage);
-
+        // [v3.8] Decremento atomico en SQL (GREATEST + guard de estado): antes
+        // el HP se leia en PHP y se escribia el resultado, asi que dos ataques
+        // concurrentes perdian uno de los dos danios (lost update). Ademas
+        // pct_damage sumaba :dmg2 sobre damage_done YA incrementado (MySQL
+        // evalua los SET de izquierda a derecha con el valor nuevo), con lo
+        // que el porcentaje quedaba inflado.
         $db->update(
             "UPDATE %%PVE_BOSS_GHOSTS%% SET
-                hp_current  = :hp,
+                hp_current  = GREATEST(0, hp_current - :dmg),
                 damage_done = damage_done + :dmg,
-                pct_damage  = ROUND((damage_done + :dmg2) / GREATEST(hp_max, 1) * 100, 2)
-             WHERE id = :id;",
-            array(':hp' => $newHp, ':dmg' => $damage, ':dmg2' => $damage, ':id' => $ghostId)
+                pct_damage  = ROUND(damage_done / GREATEST(hp_max, 1) * 100, 2)
+             WHERE id = :id AND status = 'active';",
+            array(':dmg' => $damage, ':id' => $ghostId)
         );
+
+        if ($db->rowCount() !== 1) {
+            return $result; // el ghost ya no esta activo (otro proceso lo mato)
+        }
+
+        // Releer el HP real tras el decremento atomico
+        $rowHp = $db->selectSingle(
+            "SELECT hp_current FROM %%PVE_BOSS_GHOSTS%% WHERE id = :id LIMIT 1;",
+            array(':id' => $ghostId)
+        );
+        $newHp = !empty($rowHp) ? (int) $rowHp['hp_current'] : 0;
 
         if ($newHp <= 0) {
             return self::killGhost($ghost, $result, $userId);
@@ -1407,12 +1485,20 @@ class PVEBossTournamentHelper
         $db = Database::get();
         $now = TIMESTAMP;
 
+        // [v3.8] Guard anti-carrera: solo el primer proceso que mata al ghost
+        // acredita el kill (WHERE status='active' + rowCount). Antes dos
+        // ataques concurrentes ejecutaban killGhost dos veces:
+        // ghosts_killed +2, pct_damage_total +200 y respawn duplicado.
         $db->update(
             "UPDATE %%PVE_BOSS_GHOSTS%% SET
                 hp_current = 0, status = 'killed', killed_at = :now
-             WHERE id = :id;",
+             WHERE id = :id AND status = 'active';",
             array(':now' => $now, ':id' => (int) $ghost['id'])
         );
+
+        if ($db->rowCount() !== 1) {
+            return $result; // otro proceso ya lo mato
+        }
 
         $result['killed'] = true;
 
@@ -1503,6 +1589,17 @@ class PVEBossTournamentHelper
 
         $sent = self::launchCounterAttack($ghost, $target, $phase);
 
+        // [v3.8] Acumular los ultimos objetivos en vez de sobrescribir con 1:
+        // pickCounterTarget() usa counter_last_targets como lista de
+        // repeticiones a evitar; antes solo se evitaba al ultimo atacado.
+        $lastTargets = array();
+        if (!empty($ghost['counter_last_targets'])) {
+            $decoded = json_decode((string) $ghost['counter_last_targets'], true);
+            if (is_array($decoded)) $lastTargets = array_map('intval', $decoded);
+        }
+        $lastTargets[] = (int) $target['id'];
+        $lastTargets   = array_values(array_unique(array_slice($lastTargets, -5)));
+
         $db->update(
             "UPDATE %%PVE_BOSS_GHOSTS%% SET
                 counter_next_at      = :next,
@@ -1510,7 +1607,7 @@ class PVEBossTournamentHelper
              WHERE id = :id;",
             array(
                 ':next'    => $now + ($intervalMin * 60),
-                ':targets' => json_encode(array((int) $target['id'])),
+                ':targets' => json_encode($lastTargets),
                 ':id'      => (int) $ghost['id'],
             )
         );
@@ -2112,10 +2209,14 @@ class PVEBossTournamentHelper
     private static function announceGlobalSpawn(int $eventId, int $count): void
     {
         $db = Database::get();
+        // [v3.8] Antes se enviaba SOLO al staff (authlevel >= 1): el aviso
+        // "¡EL TORNEO HA COMENZADO!" nunca llegaba a los jugadores. Ahora va
+        // a todos los usuarios reales activos; el universo correcto de cada
+        // destinatario lo resuelve sendMessageToUser() (getUniverseForUser).
         $users = $db->select(
             "SELECT id FROM %%USERS%%
-             WHERE authlevel >= 1 AND bana = 0
-             LIMIT 500;"
+             WHERE bana = 0 AND urlaubs_modus = 0
+             LIMIT 2000;"
         );
         if (!is_array($users)) return;
 
@@ -2476,7 +2577,57 @@ class PVEBossTournamentHelper
             }
 
             // 5) Flotas del boss atascadas (mission=23, >1h sin llegar)
+            // [v3.8] Si la flota es de un jugador real (no del fantasma),
+            // devolver sus naves y carga al planeta de origen antes de
+            // borrar: un DELETE directo DESTRUIA las naves para siempre.
             $limitTime = TIMESTAMP - 3600;
+            $stuckFleets = $db->select(
+                "SELECT * FROM %%FLEETS%%
+                 WHERE fleet_mission = :mission
+                   AND fleet_end_time < :limit
+                   AND fleet_mess = 0;",
+                array(':mission' => 23, ':limit' => $limitTime)
+            );
+            if (is_array($stuckFleets)) {
+                global $resource;
+                foreach ($stuckFleets as $f) {
+                    if ((int) $f['fleet_owner'] >= 900000000) continue; // fantasma: nada que devolver
+                    try {
+                        $units = FleetFunctions::unserialize($f['fleet_array']);
+                        $params = array(':pid' => (int) $f['fleet_start_id']);
+                        $sets   = array();
+                        if (is_array($units)) {
+                            foreach ($units as $elementId => $amount) {
+                                $amount = (int) $amount;
+                                if ($amount <= 0 || !isset($resource[$elementId])) continue;
+                                $col = $resource[$elementId];
+                                $sets[] = "`{$col}` = `{$col}` + :n_{$elementId}";
+                                $params[":n_{$elementId}"] = $amount;
+                            }
+                        }
+                        foreach (array('fleet_resource_metal' => 901, 'fleet_resource_crystal' => 902, 'fleet_resource_deuterium' => 903) as $fCol => $resId) {
+                            $cargo = (float) $f[$fCol];
+                            if ($cargo > 0) {
+                                $col = $resource[$resId];
+                                $sets[] = "`{$col}` = `{$col}` + :r_{$resId}";
+                                $params[":r_{$resId}"] = $cargo;
+                            }
+                        }
+                        if (!empty($sets)) {
+                            $db->update(
+                                "UPDATE %%PLANETS%% SET " . implode(', ', $sets) . " WHERE id = :pid;",
+                                $params
+                            );
+                        }
+                    } catch (Throwable $eRescue) {
+                        PVEHelper::log(self::LOG_TYPE, 0, 'cleanup_fleet_rescue_error', (int) $f['fleet_owner'], 0, array(
+                            'fleet_id' => (int) $f['fleet_id'],
+                            'error'    => $eRescue->getMessage(),
+                        ));
+                    }
+                }
+            }
+
             $db->delete(
                 "DELETE FROM %%FLEETS%%
                  WHERE fleet_mission = :mission
@@ -2512,8 +2663,10 @@ class PVEBossTournamentHelper
             'events_deleted'        => 0,
         );
 
+        // [v3.8] Persistido en pve_config: antes $_SESSION (no existe en el
+        // cron CLI) -> la limpieza profunda corria en cada tick.
         $cacheKey = 'pve_boss_cleanup_deep_last';
-        $lastRun  = isset($_SESSION[$cacheKey]) ? (int) $_SESSION[$cacheKey] : 0;
+        $lastRun  = (int) PVEHelper::get($cacheKey, 0);
 
         if (!$forceRun && (TIMESTAMP - $lastRun) < 86400) {
             return $stats;
@@ -2552,7 +2705,23 @@ class PVEBossTournamentHelper
             );
             $stats['events_deleted'] = $db->rowCount();
 
-            $_SESSION[$cacheKey] = TIMESTAMP;
+            // [v3.8] Guardar en pve_config (mismo patron que markAsScheduledThisMonth)
+            $cfgRow = $db->selectSingle(
+                "SELECT id FROM %%PVE_CONFIG%% WHERE config_key = :key LIMIT 1;",
+                array(':key' => $cacheKey)
+            );
+            if (!empty($cfgRow)) {
+                $db->update(
+                    "UPDATE %%PVE_CONFIG%% SET config_value = :val, updated_at = :now WHERE config_key = :key;",
+                    array(':val' => (string) TIMESTAMP, ':now' => TIMESTAMP, ':key' => $cacheKey)
+                );
+            } else {
+                $db->insert(
+                    "INSERT INTO %%PVE_CONFIG%% SET config_key = :key, config_value = :val, updated_at = :now;",
+                    array(':key' => $cacheKey, ':val' => (string) TIMESTAMP, ':now' => TIMESTAMP)
+                );
+            }
+            PVEHelper::clearConfigCache();
 
             PVEHelper::log(self::LOG_TYPE, 0, 'cleanup_deep_boss_done', 0, 0, $stats);
         } catch (Throwable $e) {

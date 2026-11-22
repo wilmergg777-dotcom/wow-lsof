@@ -249,11 +249,21 @@ class PVEGhostHelper
      * @param array $data           Mismos campos que createGhostForEmpire()
      *                              (name, galaxy, system, planet, hp, metal,
      *                               crystal, deuterium, ships, defenses, buildings)
+     * @param int   $idBase         ✅ v3.8 Base de IDs del sistema llamante.
+     *                              Por defecto ID_BASE (900000000, Torneo del
+     *                              Devorador). PVEBastionHelper pasa su
+     *                              ID_BASE_BASTION (950000000) para que un
+     *                              Bastión y un Boss con el mismo (eventId,
+     *                              registrationId) NO colisionen en
+     *                              uni*_users.id / uni*_planets.id (antes el
+     *                              segundo INSERT fallaba y la alianza se
+     *                              quedaba sin evento, silenciosamente).
      * @return array ['user_id'=>int, 'planet_id'=>int]
      */
-    public static function createGhostForBoss(int $eventId, int $registrationId, array $data): array
+    public static function createGhostForBoss(int $eventId, int $registrationId, array $data, ?int $idBase = null): array
     {
-        $uniqueId = self::ID_BASE + ($eventId * 1000) + $registrationId;
+        $base     = ($idBase !== null && $idBase > 0) ? $idBase : self::ID_BASE;
+        $uniqueId = $base + ($eventId * 1000) + $registrationId;
 
         return self::createGhostWithCustomId('boss', $eventId, $uniqueId, $data);
     }

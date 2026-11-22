@@ -229,16 +229,17 @@ class PVECrisisHelper
 				WHERE id = :id AND processing = 0 AND status IN ('scheduled','active');";
 		$db->update($sql, array(':id' => $crisisId));
 
-		// ─── 2) Verificar lock vía SELECT (más fiable que rowCount) ───
-		$lockRow = $db->selectSingle(
-			"SELECT processing FROM %%PVE_CRISIS%% WHERE id = :id;",
-			array(':id' => $crisisId)
-		);
-		$locked = !empty($lockRow) ? (int) $lockRow['processing'] : 0;
+		// ─── 2) ✅ v3.8 — Verificar lock vía rowCount del UPDATE condicional ───
+		// El patrón anterior (UPDATE + SELECT) no distinguía quién ganó la
+		// carrera: dos procesos concurrentes veían ambos processing=1 y
+		// ejecutaban la oleada DOS veces (flotas duplicadas a todos los
+		// jugadores). El rowCount del UPDATE condicional sí identifica al
+		// ganador (1 fila = nosotros pusimos el lock).
+		$locked = ($db->rowCount() === 1);
 
-		if ($locked !== 1) {
+		if (!$locked) {
 			PVEHelper::log('crisis', $crisisId, 'execute_skip_locked', 0, 0, array(
-				'processing' => $locked,
+				'lost_race' => 1,
 			));
 			return 0;
 		}
@@ -301,6 +302,14 @@ class PVECrisisHelper
 				));
 
 				$waveId = (int) $db->lastInsertId();
+
+				// ✅ v3.8 — Si el INSERT no devolvió ID, NO seguir: la wave
+				// fantasma (id=0) haría que el UPDATE "executed" no afecte a
+				// nada y el siguiente tick re-enviara la oleada completa.
+				// El catch de arriba ya loguea y el finally libera el lock.
+				if ($waveId <= 0) {
+					throw new Exception('wave_fallback_lastInsertId_empty');
+				}
 
 				PVEHelper::log('crisis', $crisisId, 'wave_created_fallback', 0, 0, array(
 					'wave_number' => $nextWave,
@@ -597,20 +606,17 @@ class PVECrisisHelper
 			WHERE id = :id AND status != 'finished';";
 		$db->update($sql, array(':id' => $crisisId, ':now' => TIMESTAMP));
 
-		// ─── 2) Verificar que la crisis está finished ──────────
-		$check = $db->selectSingle(
-			"SELECT status FROM %%PVE_CRISIS%% WHERE id = :id;",
-			array(':id' => $crisisId)
-		);
-
-		if (empty($check) || $check['status'] !== 'finished') {
-			PVEHelper::log('crisis', $crisisId, 'finish_failed', 0, 0, array(
-				'check_status' => !empty($check['status']) ? $check['status'] : 'null',
-			));
+		// ─── 2) ✅ v3.8 — rowCount del UPDATE condicional ──────
+		// Solo el proceso que realmente cambió el estado otorga recompensas.
+		// Antes se re-leía el estado con SELECT: dos procesos concurrentes
+		// veían ambos 'finished' y ambos llegaban a grantRewards() →
+		// recompensas duplicadas por superviviente.
+		if ($db->rowCount() !== 1) {
+			PVEHelper::log('crisis', $crisisId, 'finish_skip_lost_race', 0, 0, null);
 			return false;
 		}
 
-		// ─── 3) GUARD anti-duplicado: ¿ya hay rewards? ────────
+		// ─── 3) GUARD anti-duplicado (segunda barrera) ────────
 		$existing = $db->selectSingle(
 			"SELECT COUNT(*) AS total FROM %%PVE_REWARDS%%
 			 WHERE event_type = 'crisis' AND event_id = :cid;",
@@ -1002,9 +1008,26 @@ class PVECrisisHelper
 			if (!empty($zombies)) {
 				foreach ($zombies as $z) {
 					$zid = (int) $z['id'];
+
+					// ✅ v3.8 — Si todas las oleadas ya se enviaron, NO cerrar
+					// en seco: finalizar por la vía normal (finishCrisis) para
+					// que los supervivientes reciban recompensas. Antes el
+					// cierre zombie borraba pve_crisis_attacks sin dar premios.
+					$zRow = $db->selectSingle(
+						"SELECT current_wave, total_waves FROM %%PVE_CRISIS%% WHERE id = :id;",
+						array(':id' => $zid)
+					);
+					if (!empty($zRow) && (int) $zRow['current_wave'] >= (int) $zRow['total_waves']) {
+						if (self::finishCrisis($zid)) {
+							$stats['crisis_closed']++;
+							PVEHelper::log('crisis', $zid, 'cleanup_zombie_finished_with_rewards', 0, 0, null);
+							continue;
+						}
+					}
+
 					$db->update(
-						"UPDATE %%PVE_CRISIS%% 
-						 SET status = 'finished', processing = 0 
+						"UPDATE %%PVE_CRISIS%%
+						 SET status = 'finished', processing = 0
 						 WHERE id = :id AND status = 'active';",
 						array(':id' => $zid)
 					);
@@ -1138,9 +1161,12 @@ class PVECrisisHelper
 			return $stats;
 		}
 
-		// Cache de 24h para no ejecutarla en cada request
+		// Cache de 24h para no ejecutarla en cada request.
+		// ✅ v3.8 — Persistido en pve_config: antes se usaba $_SESSION, que no
+		// existe en el cron (CLI) → $lastRun siempre era 0 y la limpieza
+		// profunda se ejecutaba en CADA tick (cada 5 min).
 		$cacheKey = 'pve_cleanup_deep_last';
-		$lastRun  = isset($_SESSION[$cacheKey]) ? (int) $_SESSION[$cacheKey] : 0;
+		$lastRun  = (int) PVEHelper::get($cacheKey, 0);
 
 		if (!$forceRun && (TIMESTAMP - $lastRun) < 86400) {
 			return $stats; // aún no toca
@@ -1220,8 +1246,24 @@ class PVECrisisHelper
 			);
 			$stats['acs_invites_deleted'] = $db->rowCount();
 
-			// Guardar timestamp de última ejecución
-			$_SESSION[$cacheKey] = TIMESTAMP;
+			// Guardar timestamp de última ejecución en pve_config
+			// ✅ v3.8 (mismo patrón que markAsScheduledThisMonth)
+			$cfgRow = $db->selectSingle(
+				"SELECT id FROM %%PVE_CONFIG%% WHERE config_key = :key LIMIT 1;",
+				array(':key' => $cacheKey)
+			);
+			if (!empty($cfgRow)) {
+				$db->update(
+					"UPDATE %%PVE_CONFIG%% SET config_value = :val, updated_at = :now WHERE config_key = :key;",
+					array(':val' => (string) TIMESTAMP, ':now' => TIMESTAMP, ':key' => $cacheKey)
+				);
+			} else {
+				$db->insert(
+					"INSERT INTO %%PVE_CONFIG%% SET config_key = :key, config_value = :val, updated_at = :now;",
+					array(':key' => $cacheKey, ':val' => (string) TIMESTAMP, ':now' => TIMESTAMP)
+				);
+			}
+			PVEHelper::clearConfigCache();
 
 			PVEHelper::log('cron', 0, 'cleanup_deep_done', 0, 0, $stats);
 
@@ -1243,6 +1285,12 @@ class PVECrisisHelper
 
 	public static function getDifficultyLevel($points)
 	{
+		// ✅ v3.8 — Puntos negativos (stats corruptas/reset parcial) → nivel
+		// mínimo, no el máximo (antes ningún rango casaba y caía en el 5).
+		if ((int) $points < self::DIFFICULTY[1]['min']) {
+			return 1;
+		}
+
 		foreach (self::DIFFICULTY as $level => $data) {
 			if ($points >= $data['min'] && $points < $data['max']) {
 				return $level;
@@ -1347,7 +1395,7 @@ class PVECrisisHelper
 			// ─── 7) Marcar el mes como ya programado ───
 			self::markAsScheduledThisMonth($currentYearMonth);
 
-			PVEHelper::log('cron', 0, 'crisis_auto_scheduled', $crisisId, 0, array(
+			PVEHelper::log('cron', $crisisId, 'crisis_auto_scheduled', 0, 0, array(
 				'month'     => $currentYearMonth,
 				'day'       => $day,
 				'hour'      => $hour,

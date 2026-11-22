@@ -150,6 +150,11 @@ class PVEBastionHelper
                 array(':amt' => $realAmount, ':uid' => $userId, ':amt2' => $realAmount)
             );
 
+            // ✅ v3.8 — rowCount: el guard SQL (`>= :amt2`) puede dejar el
+            // UPDATE en 0 filas si otro request concurrente ya gastó el saldo.
+            // Antes se devolvía true igualmente → inscripción sin pago efectivo.
+            if ($db->rowCount() !== 1) return false;
+
             if (isset($GLOBALS['USER']['id']) && (int)$GLOBALS['USER']['id'] === $userId) {
                 $GLOBALS['USER'][$col] = max(0, (int)($GLOBALS['USER'][$col] ?? 0) - $realAmount);
             }
@@ -559,6 +564,10 @@ class PVEBastionHelper
         $winnerPctTotal = (float) $winner['pct_hp_preserved'] + $extraPct;
         if ($winnerPctTotal > 100) $winnerPctTotal = 100;
 
+        // ✅ v3.8 — UPDATE condicional + rowCount: solo el proceso que
+        // realmente cambia el estado reparte el premio. Antes dos llamadas
+        // concurrentes (cron + admin) pasaban ambas el check de estado y
+        // ejecutaban distributePrize() dos veces → premios duplicados.
         $db->update(
             "UPDATE %%PVE_BASTION_EVENT%% SET
                 status                 = 'finished',
@@ -567,7 +576,7 @@ class PVEBastionHelper
                 winner_ally_id         = :waid,
                 winner_score           = :wscore,
                 winner_pct_hp          = :wpct
-             WHERE id = :id;",
+             WHERE id = :id AND status = 'active';",
             array(
                 ':now'    => $now,
                 ':wrid'   => (int) $winner['id'],
@@ -577,6 +586,10 @@ class PVEBastionHelper
                 ':id'     => $eventId,
             )
         );
+
+        if ($db->rowCount() !== 1) {
+            return array('ok' => false, 'error' => 'El evento ya fue finalizado por otro proceso.');
+        }
 
         $db->update(
             "UPDATE %%PVE_BASTION_REGISTRATIONS%% SET pct_hp_total = :pct WHERE id = :id;",
@@ -654,12 +667,16 @@ class PVEBastionHelper
 
         $refundedCount = 0;
         if ($refund && $event['entry_mode'] === 'paid' && (int) $event['entry_cost_ntx'] > 0) {
+            // ✅ v3.8 — Incluir 'active': startEvent() marca las registraciones
+            // como 'active' al spawnear; antes un evento pagado cancelado tras
+            // arrancar excluía a esas alianzas del reembolso (dinero perdido).
             $regs = $db->select(
                 "SELECT * FROM %%PVE_BASTION_REGISTRATIONS%%
-                 WHERE event_id = :eid AND status = 'registered' AND paid_ntx > 0;",
+                 WHERE event_id = :eid AND status IN ('registered','active') AND paid_ntx > 0;",
                 array(':eid' => $eventId)
             );
 
+            $refundedIds = array();
             if (is_array($regs)) {
                 foreach ($regs as $reg) {
                     $uid        = (int) $reg['registered_by'];
@@ -672,17 +689,24 @@ class PVEBastionHelper
                     if (self::addRealAmount($uid, $realAmount, $riel, 'pve_bastion_refund',
                         'Reembolso Bastión Asediado #' . $eventId)) {
                         $refundedCount++;
+                        $refundedIds[] = (int) $reg['id'];
                     }
                 }
             }
 
-            $db->update(
-                "UPDATE %%PVE_BASTION_REGISTRATIONS%% SET
-                    status      = 'refunded',
-                    refunded_at = :now
-                 WHERE event_id = :eid AND status = 'registered';",
-                array(':now' => $now, ':eid' => $eventId)
-            );
+            // ✅ v3.8 — Solo marcar 'refunded' las que SE reembolsaron de
+            // verdad. Antes el UPDATE era incondicional: si addRealAmount
+            // fallaba (excepción tragada), el líder no cobraba pero su
+            // registro quedaba 'refunded' → imposible reintentar.
+            if (!empty($refundedIds)) {
+                $db->update(
+                    "UPDATE %%PVE_BASTION_REGISTRATIONS%% SET
+                        status      = 'refunded',
+                        refunded_at = :now
+                     WHERE id IN (" . implode(',', $refundedIds) . ");",
+                    array(':now' => $now)
+                );
+            }
         }
 
         self::returnReinforcementsToAll($eventId);
@@ -947,8 +971,11 @@ class PVEBastionHelper
         $defensesJson = self::getDefaultDefensesJson();
 
         // Crear el fantasma con ID custom de bastión
-        $uniqueId = self::ID_BASE_BASTION + ($eventId * 1000) + $registrationId;
-
+        // ✅ v3.8 — Se pasa ID_BASE_BASTION (950.000.000): antes
+        // createGhostForBoss() usaba siempre la base 900.000.000 y un Bastión
+        // y un Boss con el mismo (eventId, registrationId) colisionaban en
+        // uni*_users.id (el comentario del "rango distinto" era código muerto;
+        // el segundo INSERT fallaba y la alianza se quedaba sin evento).
         try {
             $ghost = PVEGhostHelper::createGhostForBoss($eventId, $registrationId, array(
                 'name'      => '⚓ Bastión [' . $allyTag . ']',
@@ -962,7 +989,7 @@ class PVEBastionHelper
                 'ships'     => json_decode($shipsJson, true) ?: array(),
                 'defenses'  => json_decode($defensesJson, true) ?: array(),
                 'buildings' => array(),
-            ));
+            ), self::ID_BASE_BASTION);
         } catch (Throwable $e) {
             PVEHelper::log(self::LOG_TYPE, $eventId, 'spawn_ghost_error', 0, 0, array(
                 'registration_id' => $registrationId,
@@ -1059,6 +1086,18 @@ class PVEBastionHelper
             PVEHelper::log(self::LOG_TYPE, $eventId, 'spawn_insert_error', 0, 0, array(
                 'error' => $e->getMessage(),
             ));
+
+            // ✅ v3.8 — El fantasma (users+planets+statpoints+pve_ghosts) ya
+            // existe pero el INSERT en pve_bastion_ghosts falló: sin esta
+            // limpieza, el planeta fantasma quedaba huérfano en la galaxia
+            // para siempre (destroyAllGhosts/cleanup trabajan sobre
+            // pve_bastion_ghosts y no lo encontrarían).
+            try {
+                if (!empty($ghost['user_id'])) {
+                    PVEGhostHelper::destroyGhostByUserId((int) $ghost['user_id']);
+                }
+            } catch (Throwable $e2) {}
+
             return null;
         }
     }
@@ -1085,11 +1124,40 @@ class PVEBastionHelper
             $key = "{$g}:{$s}:{$p}";
             if (in_array($key, $taken, true)) continue;
 
+            // ✅ v3.8 — Filtro por universo: los fantasmas se crean con
+            // universe = Universe::current() (PVEGhostHelper), pero este
+            // SELECT miraba TODOS los universos → coordenadas libres aquí
+            // se rechazaban por estar ocupadas en otro universo.
             $exists = $db->selectSingle(
                 "SELECT id FROM %%PLANETS%%
                  WHERE galaxy = :g AND system = :s AND planet = :p AND planet_type = 1
+                   AND universe = :uni
                  LIMIT 1;",
-                array(':g' => $g, ':s' => $s, ':p' => $p)
+                array(':g' => $g, ':s' => $s, ':p' => $p, ':uni' => Universe::current())
+            );
+            if (!empty($exists)) continue;
+
+            return array('galaxy' => $g, 'system' => $s, 'planet' => $p);
+        }
+
+        // ✅ v3.8 — El fallback ANTES devolvía coordenadas sin validar (si
+        // estaban ocupadas, se creaban dos planetas en la misma posición).
+        // Ahora intenta validarlas; si no puede tras otros 30 intentos,
+        // devuelve las últimas generadas (comportamiento previo).
+        for ($i = 0; $i < 30; $i++) {
+            $g = 1;
+            $s = random_int(1, $maxSystem);
+            $p = random_int($minPlanet, $maxPlanet);
+
+            $key = "{$g}:{$s}:{$p}";
+            if (in_array($key, $taken, true)) continue;
+
+            $exists = $db->selectSingle(
+                "SELECT id FROM %%PLANETS%%
+                 WHERE galaxy = :g AND system = :s AND planet = :p AND planet_type = 1
+                   AND universe = :uni
+                 LIMIT 1;",
+                array(':g' => $g, ':s' => $s, ':p' => $p, ':uni' => Universe::current())
             );
             if (!empty($exists)) continue;
 
@@ -1124,9 +1192,13 @@ class PVEBastionHelper
     private static function destroyAllGhosts(int $eventId): void
     {
         $db = Database::get();
+        // ✅ v3.8 — Incluir 'breached': al ser conquistado, el fantasma pasa
+        // a 'breached' SIN destruirse; antes los únicos destruidores
+        // filtraban status='active' → los planetas-bastión caídos quedaban
+        // en la galaxia para siempre con sus defensas.
         $ghosts = $db->select(
             "SELECT id, ghost_user_id FROM %%PVE_BASTION_GHOSTS%%
-             WHERE event_id = :eid AND status = 'active';",
+             WHERE event_id = :eid AND status IN ('active','breached');",
             array(':eid' => $eventId)
         );
 
@@ -2208,10 +2280,14 @@ class PVEBastionHelper
     private static function announceGlobalSpawn(int $eventId, int $count): void
     {
         $db = Database::get();
+        // ✅ v3.8 — Antes se enviaba SOLO al staff (authlevel >= 1): el aviso
+        // "¡EL ASEDIO HA COMENZADO!" nunca llegaba a los jugadores. Ahora va
+        // a todos los usuarios reales activos; el universo correcto de cada
+        // destinatario lo resuelve sendMessageToUser() (getUniverseForUser).
         $users = $db->select(
             "SELECT id FROM %%USERS%%
-             WHERE authlevel >= 1 AND bana = 0
-             LIMIT 500;"
+             WHERE bana = 0 AND urlaubs_modus = 0
+             LIMIT 2000;"
         );
         if (!is_array($users)) return;
 
@@ -2571,7 +2647,59 @@ class PVEBastionHelper
             }
 
             // 6) Flotas huérfanas de misión 24 (refuerzos que nunca llegaron)
+            // ✅ v3.8 — La misión 24 entrega las naves al planeta fantasma al
+            // llegar (la flota se elimina en TargetEvent), así que un DELETE
+            // directo de una flota atascada DESTRUIA las naves (y la carga)
+            // del jugador para siempre. Ahora se devuelven al planeta de
+            // origen antes de borrar (misma filosofía "anti-flotas-huérfanas").
             $limitTime = TIMESTAMP - 3600;
+            $stuckFleets = $db->select(
+                "SELECT * FROM %%FLEETS%%
+                 WHERE fleet_mission = :mission
+                   AND fleet_end_time < :limit
+                   AND fleet_mess = 0;",
+                array(':mission' => 24, ':limit' => $limitTime)
+            );
+            if (is_array($stuckFleets)) {
+                global $resource, $reslist;
+                foreach ($stuckFleets as $f) {
+                    if ((int) $f['fleet_owner'] >= 900000000) continue; // fantasma: nada que devolver
+                    try {
+                        $units = FleetFunctions::unserialize($f['fleet_array']);
+                        $params = array(':pid' => (int) $f['fleet_start_id']);
+                        $sets   = array();
+                        if (is_array($units)) {
+                            foreach ($units as $elementId => $amount) {
+                                $amount = (int) $amount;
+                                if ($amount <= 0 || !isset($resource[$elementId])) continue;
+                                $col = $resource[$elementId];
+                                $sets[] = "`{$col}` = `{$col}` + :n_{$elementId}";
+                                $params[":n_{$elementId}"] = $amount;
+                            }
+                        }
+                        foreach (array('fleet_resource_metal' => 901, 'fleet_resource_crystal' => 902, 'fleet_resource_deuterium' => 903) as $fCol => $resId) {
+                            $cargo = (float) $f[$fCol];
+                            if ($cargo > 0) {
+                                $col = $resource[$resId];
+                                $sets[] = "`{$col}` = `{$col}` + :r_{$resId}";
+                                $params[":r_{$resId}"] = $cargo;
+                            }
+                        }
+                        if (!empty($sets)) {
+                            $db->update(
+                                "UPDATE %%PLANETS%% SET " . implode(', ', $sets) . " WHERE id = :pid;",
+                                $params
+                            );
+                        }
+                    } catch (Throwable $eRescue) {
+                        PVEHelper::log(self::LOG_TYPE, 0, 'cleanup_fleet_rescue_error', (int) $f['fleet_owner'], 0, array(
+                            'fleet_id' => (int) $f['fleet_id'],
+                            'error'    => $eRescue->getMessage(),
+                        ));
+                    }
+                }
+            }
+
             $db->delete(
                 "DELETE FROM %%FLEETS%%
                  WHERE fleet_mission = :mission
@@ -2604,8 +2732,10 @@ class PVEBastionHelper
             'waves_deleted'         => 0,
         );
 
+        // ✅ v3.8 — Persistido en pve_config: antes $_SESSION (no existe en
+        // el cron CLI) → la limpieza profunda corría en cada tick.
         $cacheKey = 'pve_bastion_cleanup_deep_last';
-        $lastRun  = isset($_SESSION[$cacheKey]) ? (int) $_SESSION[$cacheKey] : 0;
+        $lastRun  = (int) PVEHelper::get($cacheKey, 0);
 
         if (!$forceRun && (TIMESTAMP - $lastRun) < 86400) return $stats;
 
@@ -2649,7 +2779,24 @@ class PVEBastionHelper
             );
             $stats['events_deleted'] = $db->rowCount();
 
-            $_SESSION[$cacheKey] = TIMESTAMP;
+            // ✅ v3.8 — Guardar en pve_config (antes $_SESSION, sin efecto en CLI)
+            $cfgRow = $db->selectSingle(
+                "SELECT id FROM %%PVE_CONFIG%% WHERE config_key = :key LIMIT 1;",
+                array(':key' => $cacheKey)
+            );
+            if (!empty($cfgRow)) {
+                $db->update(
+                    "UPDATE %%PVE_CONFIG%% SET config_value = :val, updated_at = :now WHERE config_key = :key;",
+                    array(':val' => (string) TIMESTAMP, ':now' => TIMESTAMP, ':key' => $cacheKey)
+                );
+            } else {
+                $db->insert(
+                    "INSERT INTO %%PVE_CONFIG%% SET config_key = :key, config_value = :val, updated_at = :now;",
+                    array(':key' => $cacheKey, ':val' => (string) TIMESTAMP, ':now' => TIMESTAMP)
+                );
+            }
+            PVEHelper::clearConfigCache();
+
             PVEHelper::log(self::LOG_TYPE, 0, 'cleanup_deep_bastion_done', 0, 0, $stats);
         } catch (Throwable $e) {
             PVEHelper::log(self::LOG_TYPE, 0, 'cleanup_deep_error', 0, 0, array(

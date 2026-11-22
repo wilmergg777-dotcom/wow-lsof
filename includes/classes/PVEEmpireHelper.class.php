@@ -625,46 +625,74 @@ class PVEEmpireHelper
 			return array('new_hp' => 0, 'destroyed' => false);
 		}
 
-		$newHp = max(0, (int) $empire['current_hp'] - (int) $damage);
-
+		// ✅ v3.8 — UPDATE atómico:
+		//  - GREATEST(0, current_hp - :dmg) hace el decremento en SQL: antes
+		//    el HP se leía en PHP y se escribía el resultado (read-modify-
+		//    write), así que dos ataques concurrentes perdían uno de los dos
+		//    daños (lost update).
+		//  - AND status = 'active' impide "dañar" un imperio ya
+		//    destruido/expirado y re-activar la destrucción.
 		$sql = "UPDATE %%PVE_EMPIRES%% SET
-			current_hp             = :newHp,
+			current_hp             = GREATEST(0, current_hp - :dmg),
 			total_damage_received  = total_damage_received + :dmg,
 			total_attacks          = total_attacks + 1
-			WHERE id = :id;";
+			WHERE id = :id AND status = 'active';";
 		$db->update($sql, array(
-			':newHp' => $newHp,
 			':dmg'   => (int) $damage,
 			':id'    => $empireId,
 		));
 
+		if ($db->rowCount() !== 1) {
+			// No estaba activo (ya destruido/expirado) o no existe
+			$row = $db->selectSingle(
+				"SELECT current_hp FROM %%PVE_EMPIRES%% WHERE id = :id;",
+				array(':id' => $empireId)
+			);
+			return array(
+				'new_hp'    => !empty($row) ? (int) $row['current_hp'] : 0,
+				'destroyed' => false,
+			);
+		}
+
+		// Releer el HP real tras el decremento atómico
+		$row = $db->selectSingle(
+			"SELECT current_hp FROM %%PVE_EMPIRES%% WHERE id = :id;",
+			array(':id' => $empireId)
+		);
+		$newHp = !empty($row) ? (int) $row['current_hp'] : 0;
+
 		$destroyed = ($newHp <= 0);
 
 		if ($destroyed) {
+			// ✅ v3.8 — Destrucción condicional: solo el primer proceso la
+			// aplica (rowCount=1); el segundo ya no vuelve a llamar
+			// destroyGhost() (antes un imperio podía "destruirse" dos veces).
 			$sql = "UPDATE %%PVE_EMPIRES%% SET
 				status         = 'destroyed',
 				destroyed_at   = :now,
 				current_hp     = 0
-				WHERE id = :id;";
+				WHERE id = :id AND status = 'active';";
 			$db->update($sql, array(
 				':now' => TIMESTAMP,
 				':id'  => $empireId,
 			));
 
-			// 🔥 Eliminar el fantasma (borrado limpio en cascada)
-			try {
-				if (class_exists('PVEGhostHelper')) {
-					PVEGhostHelper::destroyGhost((int) $empireId, 'empire');
+			if ($db->rowCount() === 1) {
+				// 🔥 Eliminar el fantasma (borrado limpio en cascada)
+				try {
+					if (class_exists('PVEGhostHelper')) {
+						PVEGhostHelper::destroyGhost((int) $empireId, 'empire');
+					}
+				} catch (Throwable $e) {
+					PVEHelper::log('empire', $empireId, 'ghost_destroy_error', 0, 0, array(
+						'error' => $e->getMessage(),
+					));
 				}
-			} catch (Throwable $e) {
-				PVEHelper::log('empire', $empireId, 'ghost_destroy_error', 0, 0, array(
-					'error' => $e->getMessage(),
+
+				PVEHelper::log('empire', $empireId, 'destroyed', 0, 0, array(
+					'final_hp' => $newHp,
 				));
 			}
-
-			PVEHelper::log('empire', $empireId, 'destroyed', 0, 0, array(
-				'final_hp' => $newHp,
-			));
 		}
 
 		return array('new_hp' => $newHp, 'destroyed' => $destroyed);
@@ -767,6 +795,23 @@ class PVEEmpireHelper
 		// ─── 1) Cargar imperio ────────────────────────────────────
 		$empire = self::getEmpire($empireId);
 		if (empty($empire)) {
+			return;
+		}
+
+		// ✅ v3.8 — GUARD anti-duplicado: dos ataques concurrentes que
+		// derrumban el HP a cero a la vez ejecutan grantEmpireRewards()
+		// dos veces (MissionCasePveEmpire lo llama ANTES de applyDamage
+		// para repartir con el fantasma vivo). Sin este guard, cada
+		// contribuyente cobraría el botín por duplicado.
+		$existing = $db->selectSingle(
+			"SELECT COUNT(*) AS total FROM %%PVE_REWARDS%%
+			 WHERE event_type = 'empire' AND event_id = :eid;",
+			array(':eid' => $empireId)
+		);
+		if (!empty($existing) && (int) $existing['total'] > 0) {
+			PVEHelper::log('empire', $empireId, 'rewards_skip_already_granted', 0, 0, array(
+				'rewards_existing' => (int) $existing['total'],
+			));
 			return;
 		}
 

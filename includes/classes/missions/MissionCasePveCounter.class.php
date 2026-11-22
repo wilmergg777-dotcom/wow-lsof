@@ -312,6 +312,50 @@ class MissionCasePveCounter extends MissionFunctions implements Mission
 			$db->update($sql, $updateParams);
 		}
 
+		// ✅ v3.8 — Aplicar también las pérdidas de las flotas ESTACIONADAS
+		// (misión 5). Antes solo se actualizaba el planeta: las flotas
+		// estacionadas luchaban, perdían naves… y esas naves "resucitaban"
+		// porque su fleet_array nunca se escribía de vuelta (quedaban al
+		// 100% para el siguiente combate).
+		foreach ($fleetDefend as $defFleetId => $defFleet) {
+			if (!is_numeric($defFleetId) || (int) $defFleetId === 0) continue;
+			if (empty($defFleet['unit']) || !is_array($defFleet['unit'])) continue;
+
+			$fleetArray = '';
+			$totalCount = 0;
+			foreach ($defFleet['unit'] as $elementId => $amount) {
+				$amount = max(0, (int) $amount);
+				if ($amount <= 0) continue;
+				$fleetArray .= $elementId . ',' . $amount . ';';
+				$totalCount += $amount;
+			}
+
+			if ($totalCount > 0) {
+				$sql = "UPDATE %%FLEETS%% SET
+					fleet_array  = :fleetData,
+					fleet_amount = :fleetCount
+				 WHERE fleet_id = :fleetId;";
+				$db->update($sql, array(
+					':fleetData'  => rtrim($fleetArray, ';'),
+					':fleetCount' => $totalCount,
+					':fleetId'    => (int) $defFleetId,
+				));
+			} else {
+				// Flota estacionada destruida por completo → eliminarla
+				$sql = 'DELETE %%FLEETS%%, %%FLEETS_EVENT%%
+					FROM %%FLEETS%%
+					INNER JOIN %%FLEETS_EVENT%% ON fleetID = fleet_id
+					WHERE fleet_id = :fleetId;';
+				$db->delete($sql, array(':fleetId' => (int) $defFleetId));
+
+				$sql = 'UPDATE %%LOG_FLEETS%% SET fleet_state = :fleetState WHERE fleet_id = :fleetId;';
+				$db->update($sql, array(
+					':fleetId'    => (int) $defFleetId,
+					':fleetState' => FLEET_HOLD,
+				));
+			}
+		}
+
 		// ─── 7) Robar recursos si el imperio/boss gana ───
 		$stolen = array(901 => 0, 902 => 0, 903 => 0);
 
