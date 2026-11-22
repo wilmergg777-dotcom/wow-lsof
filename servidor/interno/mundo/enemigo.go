@@ -34,6 +34,7 @@ type Enemigo struct {
 	hpActual      int
 	hpMax         int
 	spawnPos      proto.Vec3
+	instanciaID   string // "" = mundo abierto; inst.id = mob de instancia
 	estado        string // "patrullando" | "persiguiendo" | "atacando" | "muerto"
 	objetivoID    string
 	ultimoAtaqueMs int64
@@ -116,12 +117,15 @@ func (e *Enemigo) actualizar(m *Mundo, t time.Time) {
 	}
 }
 
-// aiPatrullar: camina lentamente alrededor del spawn. Si un jugador entra
-// en rango de agro, cambia a persiguiendo.
+// aiPatrullar: camina lentamente alrededor del spawn. Si un jugador
+// entra en rango de agro (y está en la misma zona), cambia a persiguiendo.
 func (e *Enemigo) aiPatrullar(m *Mundo, ahora int64) {
-	// ¿Jugador cercano para aggro?
+	// ¿Jugador cercano para aggro? Solo de la misma zona (instanciaID).
 	for _, j := range m.jugadores {
 		if !j.EstaVivo() {
+			continue
+		}
+		if j.instanciaID != e.instanciaID {
 			continue
 		}
 		if distancia2D(j.pos, e.pos) <= RangoAgroMetros {
@@ -253,14 +257,14 @@ func (e *Enemigo) recibirDaño(origenID string, cantidad int, critico bool, m *M
 		}
 	}
 
-	// Broadcast del evento de daño a jugadores cercanos (incluido el atacante).
-	m.broadcastCercano(proto.MensajeServidor{
+	// Broadcast del evento de daño a jugadores cercanos en la misma zona.
+	m.broadcastCercanoZona(proto.MensajeServidor{
 		Tipo:       "dano",
 		OrigenID:   origenID,
 		ObjetivoID: e.id,
 		Cantidad:   cantidad,
 		Critico:    critico,
-	}, e.pos)
+	}, e.pos, e.instanciaID)
 
 	if e.hpActual <= 0 {
 		e.hpActual = 0
@@ -268,16 +272,16 @@ func (e *Enemigo) recibirDaño(origenID string, cantidad int, critico bool, m *M
 	}
 }
 
-// morir pone al mob en estado muerto y notifica.
+// morir pone al mob en estado muerto y notifica a su zona.
 func (e *Enemigo) morir(m *Mundo, ahora int64) {
 	e.muertoDesdeMs = ahora
 	e.estado = "muerto"
 	e.objetivoID = ""
 	e.enCombate = false
-	m.broadcastCercano(proto.MensajeServidor{
+	m.broadcastCercanoZona(proto.MensajeServidor{
 		Tipo:      "muerte",
 		EntidadID: e.id,
-	}, e.pos)
+	}, e.pos, e.instanciaID)
 
 	// Otorgar experiencia al último atacante si es jugador.
 	// MVP simplificado: dar experiencia a quien fuera el objetivo del mob

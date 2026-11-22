@@ -24,6 +24,7 @@ type Personaje struct {
 	Nombre       string  `json:"nombre"`
 	Cuenta       string  `json:"cuenta"`       // usuario dueño
 	Clase        string  `json:"clase"`
+	Faccion      string  `json:"faccion"`      // "forjasol" | "lunagris"
 	Nivel        int     `json:"nivel"`
 	Experiencia  int     `json:"experiencia"`
 	PosMundo     geometria.Vec3 `json:"pos_mundo"`   // última posición guardada

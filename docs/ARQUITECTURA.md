@@ -38,14 +38,16 @@ servidor/
     ├── auth/             Cuentas de usuario. bcrypt cost 10. Archivos JSON.
     ├── persistencia/     Personajes. JSON atómico (.tmp + rename).
     ├── mundo/            El corazón del Sim.
-    │   ├── mundo.go      Mundo struct + Entidad interface + tick loop.
-    │   ├── defs.go       Clases predefinidas + spawns iniciales.
+    │   ├── mundo.go      Mundo struct + Entidad interface + tick loop + zonas.
+    │   ├── defs.go       Clases, facciones, masmoras, arenas + spawns iniciales.
     │   ├── jugador.go    Jugador (entidad + combate + snapshot + guardar).
     │   ├── enemigo.go    Enemigo (IA patrulla/aggro/ataque/respawn).
-    │   └── combate.go    Resolución de habilidades + broadcast cercano.
+    │   ├── combate.go    Resolución de habilidades + broadcast por zona.
+    │   ├── instancia.go  Instancias aisladas (masmorras PvE + arenas PvP).
+    │   └── buscador.go   Colas + matchmaking cross-faction (PvE y PvP).
     └── conexion/         TCP listener + Sesión por conexión.
         ├── servidor.go   Accept loop + goroutine por sesión.
-        └── sesion.go     State machine de sesión + escritor.
+        └── sesion.go     State machine de sesión + escritor + handlers de cola.
 ```
 
 ## Modelo de concurrencia
@@ -112,7 +114,19 @@ func (m *Mundo) step(t time.Time) {
         j.enviarSnapshot(m)
     }
 
-    // 6. Persistencia cada 200 ticks (10s).
+    // 6. Tick de instancias: comprobar fin (boss muerto, wipe, timeout).
+    for id, inst := range m.instancias {
+        if inst.tick(m, t) {
+            delete(m.instancias, id) // terminó y limpió sus entidades
+        }
+    }
+
+    // 7. Buscador de masmorras/PvP cada ~1 s (20 ticks).
+    if m.tick % 20 == 0 {
+        m.buscador.procesar(t)
+    }
+
+    // 8. Persistencia cada 200 ticks (10s).
     if m.tick % 200 == 0 {
         m.guardarJugadores()
     }
@@ -122,10 +136,12 @@ func (m *Mundo) step(t time.Time) {
 ### Interest management
 
 Cada snapshot incluye solo las entidades dentro de `RadioInteresMetros = 60`
-del jugador. Esto reduce el tamaño de los snapshots en mundos grandes. La
-función `entidadesCercanas(pos, excluir)` itera todas las entidades y filtra
-por distancia 2D (ignora Y). Para MVP con 5 mobs y pocos jugadores esto es
-trivial; en producción se reemplazaría por una grilla espacial.
+del jugador **y en la misma zona** (mismo `instanciaID`). Esto aísla
+visualmente el mundo abierto de cada masmora/arena: dos instancias nunca
+se ven entre sí. La función `entidadesCercanasZona(pos, excluir, instanciaID)`
+itera todas las entidades y filtra por distancia 2D + tag de zona. Para MVP
+con pocas entidades esto es trivial; en producción se reemplazaría por una
+grilla espacial por zona.
 
 ## Combate híbrido
 
@@ -145,6 +161,72 @@ puro tab-target.
 5. Resolución: aplicar daño/buff/curación/carga.
 6. Broadcast de evento `dano`/`buff` a jugadores cercanos.
 7. Cooldown y costo se aplican (o se reembolsan si falló la validación).
+
+## Facciones, instancias y buscador
+
+### Facciones (cross-faction)
+
+Existen dos facciones: **Forjasol** y **Lunagris**. La facción se elige al
+crear el personaje y se persiste. **Por diseño, la facción no restringe el
+agupamiento**: el buscador de masmorras y las arenas PvP mezclan jugadores
+de cualquier facción en el mismo grupo o equipo. La facción es
+principalmente narrativa y de identidad visual para el cliente.
+
+### Roles
+
+Cada clase tiene un rol derivado que el buscador usa para formar grupos PvE:
+
+| Clase     | Rol       | Energía | Función                       |
+|-----------|-----------|---------|-------------------------------|
+| Guerrero  | tanque    | ira     | Cuerpo a cuerpo, aguanta      |
+| Mago      | dps       | maná    | Rango, daño AoE               |
+| Sacerdote | soporte   | maná    | Curación de aliados, buffs    |
+
+### Instancias
+
+Una instancia es una zona aislada con su propio set de entidades. Hay dos
+tipos:
+
+- **Masmora (PvE)**: se puebla con mobs definidos en `DefMasmora`. Victoria
+  al matar al boss. Derrota si todo el grupo muere. Los muertos respawnean
+  en el spawn de la masmora tras `RespawnJugadorMs`.
+- **Arena (PvP)**: dos equipos (cross-faction). Victoria cuando un equipo
+  queda sin vivos. Timeout a los 5 min: gana el equipo con más vivos.
+  Los muertos **no respawnean** hasta el fin de la partida.
+
+Las instancias comparten los mapas planos del mundo (`entidades`,
+`enemigos`, `jugadores`) pero cada entidad lleva un `instanciaID`. Las
+consultas (`entidadesCercanasZona`, `broadcastCercanoZona`) filtran por ese
+tag, aislando cada instancia. Coordenadas: las masmorras usan offset X ≥
+1000, las arenas X ≥ 5000, para evitar colisiones visuales con el mundo
+abierto en caso de un bug de filtrado.
+
+Ciclo de vida de una instancia:
+1. El buscador forma un grupo → `nuevaInstanciaMasmora`/`nuevaInstanciaArena`.
+2. `inst.iniciar(m)`: registra la instancia, puebla mobs (masmora), mueve a
+   los jugadores adentro (set `instanciaID`, `equipo`, teleport al spawn),
+   envía `buscador_match` a todos.
+3. Cada tick: `inst.tick(m, t)` comprueba condiciones de fin.
+4. Al terminar: `finalizar`/`finalizarEquipos` envía `instancia_fin` a cada
+   jugador (con su resultado), los devuelve al mundo abierto y limpia los
+   mobs de la instancia.
+
+### Buscador (matchmaking)
+
+`Buscador` mantiene dos conjuntos de colas:
+
+- **PvE**: `colaPvE[masmoraID]` map de solicitudes. Matchmaking:
+  - Fase estricta: 1 tanque + 1 soporte + (tamano-2) dps.
+  - Fase relajada (tras 60 s en cola): cualquier N jugadores sin importar
+    roles. Evita esperas eternas cuando falta un rol.
+- **PvP**: `colaPvP[arenaID]` map de solicitudes. Cuando hay
+  `2*TamanoEquipo` jugadores, se reparten en dos equipos cross-faction
+  (sin respetar facción — cualquier mezcla vale).
+
+El buscador corre una vez por segundo desde `step()` (bajo el lock del
+mundo). Los métodos `EntrarCola*`/`SalirCola*` (llamados desde la sesión)
+adquieren el lock ellos mismos. `Cancelar` no lo adquiere (lo llama
+`QuitarJugador` que ya lo tiene).
 
 ## Persistencia
 
@@ -218,12 +300,21 @@ MessagePack o un schema custom).
 
 ## Limitaciones conocidas
 
-- **PvE only**: los jugadores no pueden dañarse entre sí.
-- **Una sola zona**: el mundo es un plano de 200×200 m sin transiciones.
-- **5 mobs fijos**: no hay sistema de spawn dinámico ni tablas de loot.
+- **PvP solo en arenas**: el combate entre jugadores está habilitado
+  únicamente dentro de instancias de arena (equipos 2v2 cross-faction). En
+  el mundo abierto no hay PvP.
+- **Mundo abierto + instancias**: el mundo abierto es un plano reducido con
+  5 mobs fijos; las masmorras (2 definidas) y la arena (1 definida) son
+  instancias aisladas creadas por el buscador.
+- **Sin loot ni experiencia formal**: los mobs no dropean items ni otorgan
+  XP trackeada (placeholder para futuro).
+- **Matchmaking simple**: la fase relajada del buscador PvE se activa a los
+  60 s sin respetar roles; no hay backfill tras abandono.
 - **JSON persistence**: no escala más allá de unos pocos cientos de
   personajes. Postgres es el siguiente paso.
-- **Sin anti-cheat avanzado**: solo validación de velocidad de movimiento.
+- **Sin anti-cheat avanzado**: validación de velocidad de movimiento +
+  validación de zona/instancia en combate. No hay detección de speedhacks
+  finos ni de botting.
 - **Sin threading en el cliente**: el polling del socket corre en
   `_process`, lo que puede causar lag si el frame rate cae. Para producción
   se movería a un Thread con `call_deferred` para emitir signals.

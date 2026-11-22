@@ -33,6 +33,11 @@ func _ready() -> void:
 		_cargar_personaje(propio)
 	# Configurar slots del HUD.
 	hud.set_slots(_slots_habilidad[0], _slots_habilidad[1])
+	# Instanciar el panel del buscador como hijo del HUD.
+	var buscador_scene = load("res://escenas/buscador.tscn")
+	if buscador_scene:
+		var buscador = buscador_scene.instantiate()
+		hud.add_child(buscador)
 
 func _cargar_personaje(propio: Dictionary) -> void:
 	if _personaje_cargado:
@@ -44,6 +49,8 @@ func _cargar_personaje(propio: Dictionary) -> void:
 	var clase = propio.get("clase", "guerrero")
 	if clase == "mago":
 		_slots_habilidad = ["flecha_de_hielo", "nova_de_escarcha"]
+	elif clase == "sacerdote":
+		_slots_habilidad = ["sanacion_rapida", "escudo_de_fe"]
 	hud.set_slots(_slots_habilidad[0], _slots_habilidad[1])
 
 func _on_mensaje(msg: Dictionary) -> void:
@@ -63,6 +70,13 @@ func _on_mensaje(msg: Dictionary) -> void:
 			hud.mostrar_mensaje("+%d HP" % int(msg.get("cantidad", 0)), 1.5)
 		"error":
 			hud.mostrar_mensaje(msg.get("mensaje", "error"), 2.0)
+		"buscador_match":
+			var destino = msg.get("mensaje", "")
+			hud.mostrar_mensaje("¡Match encontrado: %s!" % destino, 3.0)
+		"instancia_fin":
+			var res = msg.get("resultado", "")
+			var razon = msg.get("razon", "")
+			hud.mostrar_mensaje("Instancia terminada: %s (%s)" % [res, razon], 4.0)
 
 func _procesar_snapshot(msg: Dictionary) -> void:
 	if not _personaje_cargado:

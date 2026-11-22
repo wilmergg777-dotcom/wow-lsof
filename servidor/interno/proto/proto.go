@@ -38,11 +38,14 @@ type MensajeCliente struct {
 	Password  string          `json:"password,omitempty"`
 	Nombre    string          `json:"nombre,omitempty"`
 	Clase     string          `json:"clase,omitempty"`
+	Faccion   string          `json:"faccion,omitempty"`   // "forjasol" | "lunagris" (crear_pj)
 	Pos       *Vec3           `json:"pos,omitempty"`
 	Rot       *Vec4           `json:"rot,omitempty"`
 	Objetivo  string          `json:"objetivo,omitempty"`   // ID del objetivo (tab-target)
 	Habilidad string          `json:"habilidad,omitempty"`  // ID de la habilidad
 	Activo    bool            `json:"activo,omitempty"`     // Para toggles como auto-ataque
+	MasmoraID string          `json:"masmora_id,omitempty"` // cola_pve_entrar
+	ArenaID   string          `json:"arena_id,omitempty"`   // cola_pvp_entrar
 }
 
 // ─── Mensajes servidor → cliente ────────────────────────────────────────
@@ -62,6 +65,43 @@ type MensajeServidor struct {
 	Critico         bool              `json:"critico,omitempty"`
 	EntidadID       string            `json:"entidad_id,omitempty"`
 	Mensaje         string            `json:"mensaje,omitempty"`
+	// Facciones / clases / masmoras / arenas (metadata enviada al cliente)
+	Facciones       []FaccionRes      `json:"facciones,omitempty"`
+	Masmoras        []MasmoraRes      `json:"masmoras,omitempty"`
+	Arenas          []ArenaRes        `json:"arenas,omitempty"`
+	// Buscador de masmorras / PvP
+	InstanciaID     string            `json:"instancia_id,omitempty"`
+	InstanciaTipo   string            `json:"instancia_tipo,omitempty"` // "masmora" | "arena_pvp"
+	Equipo          int               `json:"equipo,omitempty"`        // 0 | 1 (PvP)
+	Grupo           []string          `json:"grupo,omitempty"`         // nombres en el grupo
+	EnCola          bool              `json:"en_cola,omitempty"`
+	TiempoColaMs    int               `json:"tiempo_cola_ms,omitempty"`
+	JugadoresEnCola int               `json:"jugadores_en_cola,omitempty"`
+	MasmoraID       string            `json:"masmora_id,omitempty"`
+	ArenaID         string            `json:"arena_id,omitempty"`
+	Resultado       string            `json:"resultado,omitempty"` // "victoria" | "derrota" | "empate"
+	Razon           string            `json:"razon,omitempty"`     // por qué terminó la instancia
+}
+
+// FaccionRes es la representación de una facción jugable para el cliente.
+type FaccionRes struct {
+	ID     string `json:"id"`
+	Nombre string `json:"nombre"`
+}
+
+// MasmoraRes es el resumen de una masmora para el panel del buscador.
+type MasmoraRes struct {
+	ID          string `json:"id"`
+	Nombre      string `json:"nombre"`
+	NivelMin    int    `json:"nivel_min"`
+	TamanoGrupo int    `json:"tamano_grupo"`
+}
+
+// ArenaRes es el resumen de una arena PvP para el panel del buscador.
+type ArenaRes struct {
+	ID           string `json:"id"`
+	Nombre       string `json:"nombre"`
+	TamanoEquipo int    `json:"tamano_equipo"`
 }
 
 // PersonajeRes es la información resumida de un personaje para la pantalla de selección.
@@ -86,6 +126,9 @@ type EntidadSnapshot struct {
 	ObjetivoID  string `json:"objetivo_id,omitempty"`
 	EnCombate   bool   `json:"en_combate,omitempty"`
 	Canalizando string `json:"canalizando,omitempty"` // ID de habilidad en cooldown
+	Faccion     string `json:"faccion,omitempty"`     // "forjasol" | "lunagris"
+	Rol         string `json:"rol,omitempty"`         // "tanque" | "dps" | "soporte"
+	Equipo      int    `json:"equipo,omitempty"`      // 0 | 1 en PvP; omitido en PvE/mundo
 }
 
 // EstadoCombate es el estado propio del personaje del cliente (no visible para otros).
@@ -102,6 +145,11 @@ type EstadoCombate struct {
 	BuffsActivos       map[string]int `json:"buffs_activos,omitempty"` // buff_id → ms restantes
 	Muerto             bool           `json:"muerto,omitempty"`
 	RespawnMs          int            `json:"respawn_ms,omitempty"` // ms hasta respawn si muerto
+	Faccion            string         `json:"faccion,omitempty"`
+	Rol                string         `json:"rol,omitempty"`
+	InstanciaID        string         `json:"instancia_id,omitempty"` // vacío = mundo abierto
+	InstanciaTipo      string         `json:"instancia_tipo,omitempty"`
+	Equipo             int            `json:"equipo,omitempty"` // -1 = sin equipo; 0|1 = PvP
 }
 
 // ─── Codificación de frames ─────────────────────────────────────────────

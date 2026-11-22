@@ -11,6 +11,7 @@ extends Control
 @onready var lista: ItemList = $Centro/Panel/Margen/VBox/ListaPersonajes
 @onready var nombre_edit: LineEdit = $Centro/Panel/Margen/VBox/FilaCrear/Nombre
 @onready var clase_opt: OptionButton = $Centro/Panel/Margen/VBox/FilaCrear/Clase
+@onready var faccion_opt: OptionButton = $Centro/Panel/Margen/VBox/FilaCrear/Faccion
 @onready var estado_lbl: Label = $Centro/Panel/Margen/VBox/Estado
 
 var _personajes: Array = []  # Array de dicts {nombre, clase, nivel}
@@ -62,12 +63,18 @@ func _on_crear() -> void:
 	if nombre.length() < 3 or nombre.length() > 16:
 		_estado("El nombre debe tener 3-16 caracteres.")
 		return
-	var clase_texto = clase_opt.get_item_text(clase_opt.selected)
+	var clase_texto = clase_opt.get_item_text(clase_opt.selected).to_lower()
 	var clase_id = "guerrero"
-	if clase_texto.to_lower() == "mago":
+	if clase_texto == "mago":
 		clase_id = "mago"
-	Red.enviar_crear_pj(nombre, clase_id)
-	_estado("Creando %s (%s)…" % [nombre, clase_texto])
+	elif clase_texto == "sacerdote":
+		clase_id = "sacerdote"
+	var faccion_texto = faccion_opt.get_item_text(faccion_opt.selected).to_lower()
+	var faccion_id = "forjasol"
+	if faccion_texto == "lunagris":
+		faccion_id = "lunagris"
+	Red.enviar_crear_pj(nombre, clase_id, faccion_id)
+	_estado("Creando %s (%s, %s)…" % [nombre, clase_texto, faccion_texto])
 
 func _on_logout() -> void:
 	Red.enviar_logout()

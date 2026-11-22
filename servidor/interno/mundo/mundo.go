@@ -33,6 +33,11 @@ const RadioInteresMetros = 60.0
 // A 20 Hz, 200 ticks = 10 segundos.
 const IntervaloGuardadoTicks = 200
 
+// IntervaloBuscadorTicks es cada cuántos ticks el buscador intenta formar
+// grupos. A 20 Hz, 20 ticks = 1 segundo. Suficiente para que el match se
+// sienta rápido sin consumir CPU de más.
+const IntervaloBuscadorTicks = 20
+
 // Entidad es la interfaz común a todo lo que vive en el mundo.
 type Entidad interface {
 	ID() string
@@ -54,14 +59,30 @@ type Entidad interface {
 }
 
 // Mundo es el estado autoritativo del juego.
+//
+// Coordina dos capas:
+//   - El mundo abierto: entidades con instanciaID == "" que todos ven
+//     por proximidad (jugadores en campo libre, mobs patrullando).
+//   - Las instancias: masmorras PvE y arenas PvP aisladas, cada una con
+//     su propio set de entidades etiquetadas con un instanciaID único.
+//
+// Los mapas son planos (una sola entidades/enemigos/jugadores) pero
+// cada entidad lleva un instanciaID; las consultas (snapshot, agro,
+// broadcasts) filtran por ese tag para que dos instancias nunca se vean
+// entre sí ni con el mundo abierto.
 type Mundo struct {
 	mu          sync.RWMutex
 	entidades   map[string]Entidad
 	jugadores   map[string]*Jugador
 	enemigos    map[string]*Enemigo
+	instancias  map[string]*Instancia
+	buscador    *Buscador
 	persist     *persistencia.Gestor
 	authGestor  *auth.Gestor
 	clases      map[string]DefClase
+	facciones   map[string]DefFaccion
+	masmoras    map[string]DefMasmora
+	arenas      map[string]DefArena
 	tick        uint64
 	tickInterval time.Duration
 	parar       chan struct{}
@@ -72,6 +93,7 @@ type Mundo struct {
 type DefClase struct {
 	ID              string        `json:"id"`
 	Nombre          string        `json:"nombre"`
+	Rol             string        `json:"rol"` // "tanque" | "dps" | "soporte"
 	HPBase          int           `json:"hp_base"`
 	HPPorNivel      int           `json:"hp_por_nivel"`
 	EnergiaBase     int           `json:"energia_base"`
@@ -118,13 +140,18 @@ func NuevoMundo(cfg ConfigMundo) *Mundo {
 		entidades:     make(map[string]Entidad),
 		jugadores:     make(map[string]*Jugador),
 		enemigos:      make(map[string]*Enemigo),
+		instancias:    make(map[string]*Instancia),
 		persist:       cfg.Persist,
 		authGestor:    cfg.Auth,
 		clases:        clasesPredefinidas(),
+		facciones:     faccionesPredefinidas(),
+		masmoras:      masmorasPredefinidas(),
+		arenas:        arenasPredefinidas(),
 		tickInterval:  time.Duration(1000/hz) * time.Millisecond,
 		parar:         make(chan struct{}),
 		hecho:         make(chan struct{}),
 	}
+	m.buscador = nuevoBuscador(m)
 	m.spawnEnemigosIniciales()
 	return m
 }
@@ -138,6 +165,44 @@ func (m *Mundo) Clases() map[string]DefClase {
 		out[k] = v
 	}
 	return out
+}
+
+// Facciones devuelve las facciones jugables.
+func (m *Mundo) Facciones() map[string]DefFaccion {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := make(map[string]DefFaccion, len(m.facciones))
+	for k, v := range m.facciones {
+		out[k] = v
+	}
+	return out
+}
+
+// Masmoras devuelve las definiciones de masmoras disponibles.
+func (m *Mundo) Masmoras() map[string]DefMasmora {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := make(map[string]DefMasmora, len(m.masmoras))
+	for k, v := range m.masmoras {
+		out[k] = v
+	}
+	return out
+}
+
+// Arenas devuelve las definiciones de arenas PvP disponibles.
+func (m *Mundo) Arenas() map[string]DefArena {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := make(map[string]DefArena, len(m.arenas))
+	for k, v := range m.arenas {
+		out[k] = v
+	}
+	return out
+}
+
+// Buscador devuelve el buscador de masmorras/PvP.
+func (m *Mundo) Buscador() *Buscador {
+	return m.buscador
 }
 
 // Iniciar arranca el bucle de tick en una goroutine.
@@ -187,7 +252,9 @@ func (m *Mundo) step(t time.Time) {
 		j.procesarIntentsPendientes(m)
 	}
 
-	// 2. IA de mobs.
+	// 2. IA de mobs (mundo abierto + instancias; el filtrado por
+	// instanciaID dentro de actualizar() garantiza que cada mob solo
+	// agroa jugadores de su propia zona).
 	for _, e := range m.enemigos {
 		e.actualizar(m, t)
 	}
@@ -199,12 +266,26 @@ func (m *Mundo) step(t time.Time) {
 
 	// 4-5. Cooldowns, buffs, muertes y respawns se manejan inline arriba.
 
-	// 6. Snapshots.
+	// 6. Snapshots (filtrados por instanciaID).
 	for _, j := range m.jugadores {
 		j.enviarSnapshot(m)
 	}
 
-	// 7. Persistencia periódica.
+	// 7. Tick de instancias: comprobar condiciones de fin (boss muerto,
+	// equipo wipeado, timeout). Las que terminen limpian sus entidades
+	// y devuelven a los jugadores al mundo abierto.
+	for id, inst := range m.instancias {
+		if inst.tick(m, t) {
+			delete(m.instancias, id)
+		}
+	}
+
+	// 8. Buscador de masmorras / PvP (cada segundo aprox).
+	if m.tick%IntervaloBuscadorTicks == 0 {
+		m.buscador.procesar(t)
+	}
+
+	// 9. Persistencia periódica.
 	if m.tick%IntervaloGuardadoTicks == 0 {
 		m.guardarJugadores()
 	}
@@ -238,12 +319,25 @@ func (m *Mundo) AgregarJugador(j *Jugador) {
 }
 
 // QuitarJugador elimina un jugador del mundo y persiste su estado.
+// Si estaba en una instancia, lo saca de ella (posiblemente finalizando
+// la instancia si queda vacía o un equipo sin vivos). También lo saca
+// de cualquier cola del buscador.
 func (m *Mundo) QuitarJugador(id string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	j, ok := m.jugadores[id]
 	if !ok {
 		return
+	}
+	// Sacar de la cola del buscador si estaba encolado.
+	m.buscador.Cancelar(j)
+	// Sacar de la instancia si estaba en una.
+	if j.instanciaID != "" {
+		if inst, ok := m.instancias[j.instanciaID]; ok {
+			if inst.sacarJugador(m, j.id, time.Now().UnixMilli()) {
+				delete(m.instancias, j.instanciaID)
+			}
+		}
 	}
 	if err := j.guardar(m.persist); err != nil {
 		log.Printf("[mundo] error guardando %s al salir: %v", j.nombre, err)
@@ -268,13 +362,17 @@ func (m *Mundo) entidadPorID(id string) (Entidad, bool) {
 	return e, ok
 }
 
-// entidadesCercanas devuelve las entidades dentro de RadioInteresMetros de pos.
-// Útil para generar snapshots y para IA de agro.
+// entidadesCercanasZona devuelve las entidades dentro de RadioInteresMetros
+// de pos Y que pertenezcan a la misma zona (instanciaID). instanciaID == ""
+// significa mundo abierto. Útil para generar snapshots y para IA de agro.
 // Debe llamarse con el lock tomado (RLock o Lock).
-func (m *Mundo) entidadesCercanas(pos proto.Vec3, excluirID string) []Entidad {
+func (m *Mundo) entidadesCercanasZona(pos proto.Vec3, excluirID, instanciaID string) []Entidad {
 	var out []Entidad
 	for _, e := range m.entidades {
 		if e.ID() == excluirID {
+			continue
+		}
+		if !mismaZona(e, instanciaID) {
 			continue
 		}
 		if distancia2D(e.Pos(), pos) <= RadioInteresMetros {
@@ -282,6 +380,26 @@ func (m *Mundo) entidadesCercanas(pos proto.Vec3, excluirID string) []Entidad {
 		}
 	}
 	return out
+}
+
+// mismaZona devuelve true si la entidad pertenece a la zona indicada.
+// Las entidades tienen un método InstanciaID() que devuelve "" para
+// el mundo abierto o el ID de su instancia.
+func mismaZona(e Entidad, instanciaID string) bool {
+	return instanciaDe(e) == instanciaID
+}
+
+// instanciaDe extrae el instanciaID de una Entidad sin depender de la
+// interfaz (que no lo expone para mantenerla mínima). Devuelve "" para
+// entidades del mundo abierto.
+func instanciaDe(e Entidad) string {
+	if j, ok := e.(*Jugador); ok {
+		return j.instanciaID
+	}
+	if en, ok := e.(*Enemigo); ok {
+		return en.instanciaID
+	}
+	return ""
 }
 
 // distancia2D es distancia euclídea en el plano XZ (ignorando Y).

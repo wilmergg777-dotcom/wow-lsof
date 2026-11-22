@@ -46,7 +46,7 @@ func usarHabilidad(m *Mundo, j *Jugador, habID, objetivoID string, ahora int64) 
 	case "dano":
 		aplicarDañoHabilidad(m, j, def, objetivoID, ahora)
 	case "curacion":
-		aplicarCuracion(m, j, def, ahora)
+		aplicarCuracion(m, j, def, objetivoID, ahora)
 	case "carga":
 		aplicarCarga(m, j, def, objetivoID, ahora)
 	default:
@@ -74,21 +74,32 @@ func aplicarBuff(m *Mundo, j *Jugador, def DefHabilidad, ahora int64) {
 }
 
 // aplicarDañoHabilidad valida objetivo, rango y aplica daño.
+// Daño a mobs: siempre que estén en la misma zona que el caster.
+// Daño a jugadores: solo en arena PvP, al equipo contrario.
 func aplicarDañoHabilidad(m *Mundo, j *Jugador, def DefHabilidad, objetivoID string, ahora int64) {
 	obj, ok := m.entidadPorID(objetivoID)
 	if !ok || !obj.EstaVivo() {
 		j.enviarNoBloqueante(proto.MensajeServidor{Tipo: "error", Mensaje: "objetivo inválido"})
-		// Reembolsar: no cobramos cooldown ni energía.
 		delete(j.cooldowns, def.ID)
 		j.energiaActual += def.CostoEnergia
 		return
 	}
-	// MVP: solo se puede dañar mobs.
-	if obj.EsJugador() {
-		j.enviarNoBloqueante(proto.MensajeServidor{Tipo: "error", Mensaje: "PvP no disponible en MVP"})
+	// Filtro de zona.
+	if instanciaDe(obj) != j.instanciaID {
+		j.enviarNoBloqueante(proto.MensajeServidor{Tipo: "error", Mensaje: "objetivo en otra zona"})
 		delete(j.cooldowns, def.ID)
 		j.energiaActual += def.CostoEnergia
 		return
+	}
+	if obj.EsJugador() {
+		// PvP: solo si es enemigo (misma arena, equipo opuesto).
+		otro, ok := obj.(*Jugador)
+		if !ok || !j.esEnemigoDe(otro) {
+			j.enviarNoBloqueante(proto.MensajeServidor{Tipo: "error", Mensaje: "no puedes dañar a ese jugador"})
+			delete(j.cooldowns, def.ID)
+			j.energiaActual += def.CostoEnergia
+			return
+		}
 	}
 	d := distancia2D(j.pos, obj.Pos())
 	if d > def.RangoMetros {
@@ -104,25 +115,77 @@ func aplicarDañoHabilidad(m *Mundo, j *Jugador, def DefHabilidad, objetivoID st
 	}
 	if e, ok := obj.(*Enemigo); ok {
 		e.recibirDaño(j.id, dano, critico, m, ahora)
+	} else if otro, ok := obj.(*Jugador); ok {
+		otro.recibirDaño(j.id, dano, critico, m, ahora)
 	}
 	j.ultimoDanoMs = ahora
 	j.enCombate = true
 }
 
-// aplicarCuracion restaura HP al propio jugador.
-func aplicarCuracion(m *Mundo, j *Jugador, def DefHabilidad, ahora int64) {
-	antes := j.hpActual
-	j.hpActual += def.DañoBase // reusamos DañoBase como magnitud de curación
-	if j.hpActual > j.hpMax {
-		j.hpActual = j.hpMax
+// aplicarCuracion restaura HP al objetivo. Si objetivoID está vacío o es
+// el propio caster, se cura a sí mismo. Si apunta a otro jugador, debe
+// ser aliado (misma instancia y mismo equipo, o ambos en masmora PvE)
+// y estar dentro de rango. No se puede curar a mobs.
+func aplicarCuracion(m *Mundo, j *Jugador, def DefHabilidad, objetivoID string, ahora int64) {
+	objetivo := j // por defecto, self
+	if objetivoID != "" && objetivoID != j.id {
+		obj, ok := m.entidadPorID(objetivoID)
+		if !ok || !obj.EstaVivo() {
+			j.enviarNoBloqueante(proto.MensajeServidor{Tipo: "error", Mensaje: "objetivo inválido"})
+			delete(j.cooldowns, def.ID)
+			j.energiaActual += def.CostoEnergia
+			return
+		}
+		otro, ok := obj.(*Jugador)
+		if !ok {
+			j.enviarNoBloqueante(proto.MensajeServidor{Tipo: "error", Mensaje: "no puedes curar a un mob"})
+			delete(j.cooldowns, def.ID)
+			j.energiaActual += def.CostoEnergia
+			return
+		}
+		if !j.esAliadoDe(otro) {
+			j.enviarNoBloqueante(proto.MensajeServidor{Tipo: "error", Mensaje: "objetivo no es aliado"})
+			delete(j.cooldowns, def.ID)
+			j.energiaActual += def.CostoEnergia
+			return
+		}
+		if distancia2D(j.pos, otro.pos) > def.RangoMetros {
+			j.enviarNoBloqueante(proto.MensajeServidor{Tipo: "error", Mensaje: "fuera de rango"})
+			delete(j.cooldowns, def.ID)
+			j.energiaActual += def.CostoEnergia
+			return
+		}
+		objetivo = otro
 	}
-	curado := j.hpActual - antes
-	j.enviarNoBloqueante(proto.MensajeServidor{
+	antes := objetivo.hpActual
+	objetivo.hpActual += def.DañoBase
+	if objetivo.hpActual > objetivo.hpMax {
+		objetivo.hpActual = objetivo.hpMax
+	}
+	curado := objetivo.hpActual - antes
+	// Notificar al objetivo (si es otro) y al caster.
+	objetivo.enviarNoBloqueante(proto.MensajeServidor{
 		Tipo:       "curacion",
 		OrigenID:   j.id,
-		ObjetivoID: j.id,
+		ObjetivoID: objetivo.id,
 		Cantidad:   curado,
 	})
+	if objetivo != j {
+		j.enviarNoBloqueante(proto.MensajeServidor{
+			Tipo:       "curacion",
+			OrigenID:   j.id,
+			ObjetivoID: objetivo.id,
+			Cantidad:   curado,
+		})
+	}
+	// Broadcast a la zona del evento de curación.
+	m.broadcastCercanoZona(proto.MensajeServidor{
+		Tipo:       "curacion",
+		OrigenID:   j.id,
+		ObjetivoID: objetivo.id,
+		Cantidad:   curado,
+	}, j.pos, j.instanciaID)
+	_ = ahora
 }
 
 // aplicarCarga teletransporta al jugador junto al objetivo (MVP simplificado).
@@ -164,10 +227,14 @@ func buscarHabilidad(d DefClase, id string) (DefHabilidad, bool) {
 	return DefHabilidad{}, false
 }
 
-// broadcastCercano envía un mensaje a todos los jugadores cuyo personaje
-// está dentro de RadioInteresMetros de pos. Debe llamarse con el lock tomado.
-func (m *Mundo) broadcastCercano(msg proto.MensajeServidor, pos proto.Vec3) {
+// broadcastCercanoZona envía un mensaje a todos los jugadores cuyo personaje
+// está dentro de RadioInteresMetros de pos Y en la misma zona (instanciaID).
+// Debe llamarse con el lock tomado.
+func (m *Mundo) broadcastCercanoZona(msg proto.MensajeServidor, pos proto.Vec3, instanciaID string) {
 	for _, j := range m.jugadores {
+		if j.instanciaID != instanciaID {
+			continue
+		}
 		if distancia2D(j.pos, pos) <= RadioInteresMetros {
 			j.enviarNoBloqueante(msg)
 		}

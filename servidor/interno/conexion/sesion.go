@@ -118,6 +118,7 @@ func (s *Sesion) handleLogin(msg MensajeCliente) error {
 			Tipo:       "login_resp",
 			OK:         true,
 			Personajes: pjs,
+			Facciones:  faccionesRes(s.mundo),
 		})
 
 	case "registro":
@@ -158,8 +159,8 @@ func (s *Sesion) handleSeleccion(msg MensajeCliente) error {
 	}
 }
 
-// crearPersonaje valida el nombre y la clase, persiste el personaje nuevo
-// y lo asocia a la cuenta.
+// crearPersonaje valida el nombre, la clase y la facción, persiste el
+// personaje nuevo y lo asocia a la cuenta.
 func (s *Sesion) crearPersonaje(msg MensajeCliente) error {
 	nombre := msg.Nombre
 	if len(nombre) < 3 || len(nombre) > 16 {
@@ -179,6 +180,12 @@ func (s *Sesion) crearPersonaje(msg MensajeCliente) error {
 			Tipo: "sel_resp", OK: false, Error: "clase inválida",
 		})
 	}
+	facciones := s.mundo.Facciones()
+	if _, ok := facciones[msg.Faccion]; !ok {
+		return EscribirMensaje(s.conn, MensajeServidor{
+			Tipo: "sel_resp", OK: false, Error: "facción inválida",
+		})
+	}
 	if s.persist.Existe(nombre) {
 		return EscribirMensaje(s.conn, MensajeServidor{
 			Tipo: "sel_resp", OK: false, Error: "nombre ya existe",
@@ -196,6 +203,7 @@ func (s *Sesion) crearPersonaje(msg MensajeCliente) error {
 		Nombre:       nombre,
 		Cuenta:       s.cuentaActual,
 		Clase:        msg.Clase,
+		Faccion:      msg.Faccion,
 		Nivel:        1,
 		PosMundo:     Vec3{},
 		Habilidad:    habilidades,
@@ -242,13 +250,16 @@ func (s *Sesion) seleccionarPersonaje(msg MensajeCliente) error {
 	// Confirmar al cliente.
 	own := snapshotPropio(j)
 	return EscribirMensaje(s.conn, MensajeServidor{
-		Tipo:           "sel_resp",
-		OK:             true,
+		Tipo:            "sel_resp",
+		OK:              true,
 		PersonajePropio: &own,
+		Masmoras:        masmorasRes(s.mundo),
+		Arenas:          arenasRes(s.mundo),
 	})
 }
 
-// handleEnJuego encola el intent al jugador.
+// handleEnJuego encola el intent al jugador, o maneja directamente los
+// mensajes del buscador de masmorras/PvP (que no son intents de tick).
 func (s *Sesion) handleEnJuego(msg MensajeCliente) error {
 	s.mu.Lock()
 	j := s.jugador
@@ -256,12 +267,43 @@ func (s *Sesion) handleEnJuego(msg MensajeCliente) error {
 	if j == nil {
 		return fmt.Errorf("jugador nil en estado en_juego")
 	}
-	if msg.Tipo == "logout" {
+	switch msg.Tipo {
+	case "logout":
 		// El cliente pide salir al selection screen.
 		s.logoutAlSeleccion()
 		return nil
+	case "cola_pve_entrar":
+		return s.colaPvEEntrar(j, msg)
+	case "cola_pve_salir":
+		s.mundo.Buscador().SalirColaPvE(j)
+		return nil
+	case "cola_pvp_entrar":
+		return s.colaPvPEntrar(j, msg)
+	case "cola_pvp_salir":
+		s.mundo.Buscador().SalirColaPvP(j)
+		return nil
 	}
 	j.EncolarIntent(msg)
+	return nil
+}
+
+// colaPvEEntrar mete al jugador en la cola de una masmora.
+func (s *Sesion) colaPvEEntrar(j *mundo.Jugador, msg MensajeCliente) error {
+	if err := s.mundo.Buscador().EntrarColaPvE(j, msg.MasmoraID); err != nil {
+		return EscribirMensaje(s.conn, MensajeServidor{
+			Tipo: "error", Mensaje: err.Error(),
+		})
+	}
+	return nil
+}
+
+// colaPvPEntrar mete al jugador en la cola de una arena.
+func (s *Sesion) colaPvPEntrar(j *mundo.Jugador, msg MensajeCliente) error {
+	if err := s.mundo.Buscador().EntrarColaPvP(j, msg.ArenaID); err != nil {
+		return EscribirMensaje(s.conn, MensajeServidor{
+			Tipo: "error", Mensaje: err.Error(),
+		})
+	}
 	return nil
 }
 
@@ -391,5 +433,46 @@ func snapshotPropio(j *mundo.Jugador) EntidadSnapshot {
 		HPActual:  j.HPActual(),
 		HPMax:     j.HPMax(),
 		EsJugador: true,
+		Faccion:   j.Faccion(),
+		Rol:       j.Rol(),
 	}
+}
+
+// faccionesRes convierte las facciones del mundo a la lista del protocolo.
+func faccionesRes(m *mundo.Mundo) []FaccionRes {
+	facs := m.Facciones()
+	out := make([]FaccionRes, 0, len(facs))
+	for _, f := range facs {
+		out = append(out, FaccionRes{ID: f.ID, Nombre: f.Nombre})
+	}
+	return out
+}
+
+// masmorasRes convierte las masmoras del mundo a la lista del protocolo.
+func masmorasRes(m *mundo.Mundo) []MasmoraRes {
+	ms := m.Masmoras()
+	out := make([]MasmoraRes, 0, len(ms))
+	for _, d := range ms {
+		out = append(out, MasmoraRes{
+			ID:          d.ID,
+			Nombre:      d.Nombre,
+			NivelMin:    d.NivelMin,
+			TamanoGrupo: d.TamanoGrupo,
+		})
+	}
+	return out
+}
+
+// arenasRes convierte las arenas del mundo a la lista del protocolo.
+func arenasRes(m *mundo.Mundo) []ArenaRes {
+	as := m.Arenas()
+	out := make([]ArenaRes, 0, len(as))
+	for _, d := range as {
+		out = append(out, ArenaRes{
+			ID:           d.ID,
+			Nombre:       d.Nombre,
+			TamanoEquipo: d.TamanoEquipo,
+		})
+	}
+	return out
 }

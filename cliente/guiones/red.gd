@@ -26,6 +26,10 @@ var _puerto: int = 0
 # Cache del último personaje propio recibido en sel_resp. Lo leen las escenas
 # al cargarse (mundo.gd lo usa para setear el nombre del jugador local).
 var ultimo_personaje_propio: Dictionary = {}
+# Cachés de facciones/masmoras/arenas (vienen en login_resp/sel_resp).
+var facciones_disponibles: Array = []
+var masmoras_disponibles: Array = []
+var arenas_disponibles: Array = []
 
 func _ready() -> void:
 	mensaje_recibido.connect(_on_mensaje_recibido)
@@ -36,8 +40,17 @@ func _on_mensaje_recibido(msg: Dictionary) -> void:
 		"sel_resp":
 			if msg.get("ok", false):
 				ultimo_personaje_propio = msg.get("personaje_propio", {})
+				if msg.has("masmoras"):
+					masmoras_disponibles = msg.get("masmoras", [])
+				if msg.has("arenas"):
+					arenas_disponibles = msg.get("arenas", [])
+		"login_resp":
+			if msg.has("facciones"):
+				facciones_disponibles = msg.get("facciones", [])
 		"logout":
 			ultimo_personaje_propio = {}
+			masmoras_disponibles = []
+			arenas_disponibles = []
 
 func conectar(host: String, puerto: int) -> bool:
 	if _estado == "conectado" or _estado == "conectando":
@@ -155,8 +168,8 @@ func enviar_login(usuario: String, password: String) -> void:
 func enviar_registro(usuario: String, password: String) -> void:
 	enviar({"tipo": "registro", "usuario": usuario, "password": password})
 
-func enviar_crear_pj(nombre: String, clase: String) -> void:
-	enviar({"tipo": "crear_pj", "nombre": nombre, "clase": clase})
+func enviar_crear_pj(nombre: String, clase: String, faccion: String) -> void:
+	enviar({"tipo": "crear_pj", "nombre": nombre, "clase": clase, "faccion": faccion})
 
 func enviar_sel_pj(nombre: String) -> void:
 	enviar({"tipo": "sel_pj", "nombre": nombre})
@@ -179,3 +192,17 @@ func enviar_auto_ataque(activo: bool) -> void:
 
 func enviar_logout() -> void:
 	enviar({"tipo": "logout"})
+
+# ─── Buscador de masmorras / PvP ──────────────────────────────────────────
+
+func enviar_cola_pve_entrar(masmora_id: String) -> void:
+	enviar({"tipo": "cola_pve_entrar", "masmora_id": masmora_id})
+
+func enviar_cola_pve_salir() -> void:
+	enviar({"tipo": "cola_pve_salir"})
+
+func enviar_cola_pvp_entrar(arena_id: String) -> void:
+	enviar({"tipo": "cola_pvp_entrar", "arena_id": arena_id})
+
+func enviar_cola_pvp_salir() -> void:
+	enviar({"tipo": "cola_pvp_salir"})

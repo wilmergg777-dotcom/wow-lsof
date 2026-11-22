@@ -44,10 +44,17 @@ type Jugador struct {
 	nombre string
 	clase  string
 	nivel  int
+	faccion string // "forjasol" | "lunagris"
+	rol    string // "tanque" | "dps" | "soporte"
 
 	// Estado espacial
 	pos proto.Vec3
 	rot proto.Vec4
+
+	// Zona actual ("" = mundo abierto; inst.id = masmora/arena)
+	instanciaID    string
+	equipo         int  // -1 = sin equipo; 0|1 = equipo PvP
+	posPreInstancia proto.Vec3 // posición guardada antes de entrar a instancia
 
 	// Estado de combate
 	hpActual          int
@@ -82,6 +89,10 @@ func (j *Jugador) ID() string           { return j.id }
 func (j *Jugador) Nombre() string       { return j.nombre }
 func (j *Jugador) Clase() string        { return j.clase }
 func (j *Jugador) Nivel() int           { return j.nivel }
+func (j *Jugador) Faccion() string      { return j.faccion }
+func (j *Jugador) Rol() string          { return j.rol }
+func (j *Jugador) InstanciaID() string  { return j.instanciaID }
+func (j *Jugador) Equipo() int          { return j.equipo }
 func (j *Jugador) Pos() proto.Vec3        { return j.pos }
 func (j *Jugador) SetPos(p proto.Vec3)    { j.pos = p }
 func (j *Jugador) Rot() proto.Vec4        { return j.rot }
@@ -94,6 +105,30 @@ func (j *Jugador) EstaVivo() bool       { return j.muertoDesdeMs == 0 }
 func (j *Jugador) EsJugador() bool      { return true }
 func (j *Jugador) ObjetivoID() string   { return j.objetivoID }
 func (j *Jugador) SetObjetivo(id string) { j.objetivoID = id }
+
+// EnPvP devuelve true si el jugador está en una instancia de arena PvP
+// (tiene equipo 0 o 1 asignado). En ese caso puede dañar y ser dañado
+// por otros jugadores del equipo contrario.
+func (j *Jugador) EnPvP() bool { return j.equipo >= 0 }
+
+// esEnemigoDe devuelve true si ambos jugadores están en la misma
+// instancia PvP y en equipos opuestos.
+func (j *Jugador) esEnemigoDe(otro *Jugador) bool {
+	if j.instanciaID == "" || j.instanciaID != otro.instanciaID {
+		return false
+	}
+	return j.equipo != otro.equipo
+}
+
+// esAliadoDe devuelve true si están en la misma instancia y mismo equipo
+// (o ambos en una masmora PvE, donde todos son aliados).
+func (j *Jugador) esAliadoDe(otro *Jugador) bool {
+	if j.instanciaID == "" || j.instanciaID != otro.instanciaID {
+		return false
+	}
+	// En masmora (equipo -1) todos son aliados. En arena, mismo equipo.
+	return j.equipo == otro.equipo
+}
 
 // ─── Construcción ──────────────────────────────────────────────────────
 
@@ -111,12 +146,23 @@ func NuevoJugadorDesdePersistencia(
 	hpMax := def.HPBase + def.HPPorNivel*(p.Nivel-1)
 	energiaMax := def.EnergiaBase + def.EnergiaPorNivel*(p.Nivel-1)
 
+	// Facción: si el personaje persistido no trae facción (personajes
+	// viejos pre-sistema de facciones), asignar Forjasol por defecto.
+	fac := p.Faccion
+	if fac == "" {
+		fac = FaccionForjasol
+	}
+
 	j := &Jugador{
 		id:                "pj_" + p.Nombre,
 		cuenta:            cuenta,
 		nombre:            p.Nombre,
 		clase:             p.Clase,
 		nivel:             p.Nivel,
+		faccion:           fac,
+		rol:               def.Rol,
+		instanciaID:       "",
+		equipo:            -1,
 		pos:               p.PosMundo,
 		rot:               p.RotMundo,
 		hpActual:          hpMax,
@@ -140,13 +186,17 @@ func NuevoJugadorDesdePersistencia(
 }
 
 // NuevoJugadorCreado construye un Jugador recién creado (nivel 1, spawn).
+// faccion debe ser FaccionForjasol o FaccionLunagris.
 func NuevoJugadorCreado(
-	nombre, claseID, cuenta string,
+	nombre, claseID, faccion, cuenta string,
 	m *Mundo,
 ) *Jugador {
 	def, ok := m.clases[claseID]
 	if !ok {
 		def = m.clases["guerrero"]
+	}
+	if faccion == "" {
+		faccion = FaccionForjasol
 	}
 	j := &Jugador{
 		id:                "pj_" + nombre,
@@ -154,6 +204,10 @@ func NuevoJugadorCreado(
 		nombre:            nombre,
 		clase:             claseID,
 		nivel:             1,
+		faccion:           faccion,
+		rol:               def.Rol,
+		instanciaID:       "",
+		equipo:            -1,
 		pos:               proto.Vec3{X: 0, Y: 0, Z: 0},
 		rot:               proto.Vec4{X: 0, Y: 0, Z: 0, W: 1},
 		hpActual:          def.HPBase,
@@ -270,7 +324,13 @@ func (j *Jugador) aplicarMovimiento(msg proto.MensajeCliente) {
 	}
 }
 
-// aplicarCambiarObjetivo valida que el objetivo exista y sea atacable.
+// aplicarCambiarObjetivo valida que el objetivo exista, esté vivo y sea
+// atacable según el contexto (mundo abierto, masmora o arena PvP).
+//
+// Reglas:
+//   - Mobs: se pueden targetear si están en la misma zona que el jugador.
+//   - Jugadores: solo se pueden targetear en arena PvP, y solo si son
+//     del equipo contrario (enemigos). En masmora o mundo abierto, no.
 func (j *Jugador) aplicarCambiarObjetivo(m *Mundo, msg proto.MensajeCliente) {
 	if msg.Objetivo == "" {
 		j.objetivoID = ""
@@ -285,10 +345,21 @@ func (j *Jugador) aplicarCambiarObjetivo(m *Mundo, msg proto.MensajeCliente) {
 		j.objetivoID = ""
 		return
 	}
-	// MVP: solo se puede targetear mobs (no otros jugadores).
-	if e.EsJugador() {
+	// Filtro de zona: el objetivo debe estar en la misma instancia (o
+	// ambos en mundo abierto).
+	if instanciaDe(e) != j.instanciaID {
 		j.objetivoID = ""
 		return
+	}
+	if e.EsJugador() {
+		// En mundo abierto no se puede targetear a otros jugadores.
+		// En instancia (masmora o arena) sí: aliados para curar,
+		// enemigos para atacar. Las reglas de daño/curación las impone
+		// combate.go al ejecutar la habilidad.
+		if j.instanciaID == "" {
+			j.objetivoID = ""
+			return
+		}
 	}
 	j.objetivoID = msg.Objetivo
 }
@@ -297,9 +368,14 @@ func (j *Jugador) aplicarCambiarObjetivo(m *Mundo, msg proto.MensajeCliente) {
 // Debe llamarse con el lock del mundo tomado.
 func (j *Jugador) actualizarCombate(m *Mundo, t time.Time) {
 	if !j.EstaVivo() {
-		// ¿Es hora de respawn?
+		// En arena PvP, los muertos NO respawnean hasta que la partida
+		// termina (condición de victoria por wipe). En masmora y mundo
+		// abierto sí hay respawn automático.
+		if j.EnPvP() {
+			return
+		}
 		if j.muertoDesdeMs > 0 && (t.UnixMilli()-j.muertoDesdeMs) >= RespawnJugadorMs {
-			j.respawn()
+			j.respawn(m)
 		}
 		return
 	}
@@ -346,11 +422,33 @@ func (j *Jugador) actualizarCombate(m *Mundo, t time.Time) {
 	}
 }
 
-// respawn revive al jugador en su punto de aparición con HP/energía al máximo.
-func (j *Jugador) respawn() {
+// respawn revive al jugador con HP/energía al máximo. La posición de
+// respawn depende de la zona: masmora → spawn de la masmora; mundo
+// abierto → spawnPos default. En arena PvP no se llama (los muertos
+// esperan al fin de la partida).
+func (j *Jugador) respawn(m *Mundo) {
 	j.hpActual = j.hpMax
 	j.energiaActual = j.energiaMax
-	j.pos = j.spawnPos
+	// Posición de respawn según zona.
+	if j.instanciaID != "" {
+		if inst, ok := m.instancias[j.instanciaID]; ok {
+			switch inst.tipo {
+			case InstanciaMasmora:
+				j.pos = inst.defMasmora.PosSpawn
+			case InstanciaArenaPvP:
+				// Salvaguarda: al spawn del equipo.
+				if j.equipo == 0 {
+					j.pos = inst.defArena.PosEquipoA
+				} else {
+					j.pos = inst.defArena.PosEquipoB
+				}
+			}
+		} else {
+			j.pos = j.spawnPos
+		}
+	} else {
+		j.pos = j.spawnPos
+	}
 	j.rot = proto.Vec4{X: 0, Y: 0, Z: 0, W: 1}
 	j.muertoDesdeMs = 0
 	j.objetivoID = ""
@@ -359,14 +457,15 @@ func (j *Jugador) respawn() {
 	j.cooldowns = make(map[string]int64)
 	j.buffs = make(map[string]int64)
 	j.enviarNoBloqueante(proto.MensajeServidor{
-		Tipo:    "respawn",
+		Tipo:      "respawn",
 		EntidadID: j.id,
-		Mensaje: "has reaparecido",
+		Mensaje:   "has reaparecido",
 	})
 }
 
 // ejecutarAutoAtaque aplica daño al objetivo y propaga el evento.
-// Genera ira si la clase es guerrero.
+// Genera ira si la clase es guerrero. En arena PvP también daña a
+// jugadores del equipo contrario.
 func (j *Jugador) ejecutarAutoAtaque(m *Mundo, obj Entidad, ahora int64) {
 	if !obj.EsJugador() {
 		// Es un mob.
@@ -378,7 +477,14 @@ func (j *Jugador) ejecutarAutoAtaque(m *Mundo, obj Entidad, ahora int64) {
 		e.recibirDaño(j.id, dano, false, m, ahora)
 		j.postDañoAnotado(dano, ahora)
 	} else {
-		// MVP: sin PvP. Auto-ataque a otro jugador no hace nada.
+		// PvP: solo si el objetivo es enemigo (misma arena, equipo opuesto).
+		otro, ok := obj.(*Jugador)
+		if !ok || !j.esEnemigoDe(otro) {
+			return
+		}
+		dano := j.calcularDaño(j.claseDef.DañoAutoAtaque)
+		otro.recibirDaño(j.id, dano, false, m, ahora)
+		j.postDañoAnotado(dano, ahora)
 	}
 }
 
@@ -428,17 +534,17 @@ func (j *Jugador) recibirDaño(origenID string, cantidad int, critico bool, m *M
 	}
 }
 
-// morir pone al jugador en estado muerto y notifica.
+// morir pone al jugador en estado muerto y notifica a su zona.
 func (j *Jugador) morir(m *Mundo, ahora int64) {
 	j.muertoDesdeMs = ahora
 	j.autoAtaqueActivo = false
 	j.objetivoID = ""
-	// Broadcast death event a jugadores cercanos.
-	m.broadcastCercano(proto.MensajeServidor{
+	// Broadcast death event a jugadores cercanos en la misma zona.
+	m.broadcastCercanoZona(proto.MensajeServidor{
 		Tipo:      "muerte",
 		EntidadID: j.id,
 		OrigenID:  j.id,
-	}, j.pos)
+	}, j.pos, j.instanciaID)
 }
 
 // aplicarHabilidad valida y dispara una habilidad. Ver combate.go para
@@ -456,24 +562,34 @@ func (j *Jugador) aplicarHabilidad(m *Mundo, msg proto.MensajeCliente) {
 // enviarSnapshot construye y envía el snapshot del tick al cliente.
 // Debe llamarse con el lock del mundo tomado.
 func (j *Jugador) enviarSnapshot(m *Mundo) {
-	cercanas := m.entidadesCercanas(j.pos, j.id)
+	cercanas := m.entidadesCercanasZona(j.pos, j.id, j.instanciaID)
 	entidades := make([]proto.EntidadSnapshot, 0, len(cercanas))
 	for _, e := range cercanas {
 		entidades = append(entidades, snapshotDeEntidad(e))
 	}
 
 	estado := proto.EstadoCombate{
-		HPActual:           j.hpActual,
-		HPMax:              j.hpMax,
-		EnergiaActual:      j.energiaActual,
-		EnergiaMax:         j.energiaMax,
-		Pos:                j.pos,
-		Rot:                j.rot,
-		ObjetivoID:         j.objetivoID,
-		AutoAtaqueActivo:   j.autoAtaqueActivo,
-		Cooldowns:          cooldownsRestantes(j.cooldowns, time.Now().UnixMilli()),
-		BuffsActivos:       cooldownsRestantes(j.buffs, time.Now().UnixMilli()),
-		Muerto:             !j.EstaVivo(),
+		HPActual:         j.hpActual,
+		HPMax:            j.hpMax,
+		EnergiaActual:    j.energiaActual,
+		EnergiaMax:       j.energiaMax,
+		Pos:              j.pos,
+		Rot:              j.rot,
+		ObjetivoID:       j.objetivoID,
+		AutoAtaqueActivo: j.autoAtaqueActivo,
+		Cooldowns:        cooldownsRestantes(j.cooldowns, time.Now().UnixMilli()),
+		BuffsActivos:     cooldownsRestantes(j.buffs, time.Now().UnixMilli()),
+		Muerto:           !j.EstaVivo(),
+		Faccion:          j.faccion,
+		Rol:              j.rol,
+		InstanciaID:      j.instanciaID,
+		Equipo:           j.equipo,
+	}
+	// Tipo de instancia para que el cliente sepa en qué modo está.
+	if j.instanciaID != "" {
+		if inst, ok := m.instancias[j.instanciaID]; ok {
+			estado.InstanciaTipo = inst.tipo
+		}
 	}
 	if !j.EstaVivo() && j.muertoDesdeMs > 0 {
 		restante := RespawnJugadorMs - (time.Now().UnixMilli() - j.muertoDesdeMs)
@@ -495,19 +611,22 @@ func (j *Jugador) enviarSnapshot(m *Mundo) {
 // snapshotDeEntidad convierte cualquier Entidad a su representación de red.
 func snapshotDeEntidad(e Entidad) proto.EntidadSnapshot {
 	s := proto.EntidadSnapshot{
-		ID:        e.ID(),
-		Nombre:    e.Nombre(),
-		Clase:     e.Clase(),
-		Nivel:     e.Nivel(),
-		Pos:       e.Pos(),
-		Rot:       e.Rot(),
-		HPActual:  e.HPActual(),
-		HPMax:     e.HPMax(),
-		EsJugador: e.EsJugador(),
+		ID:         e.ID(),
+		Nombre:     e.Nombre(),
+		Clase:      e.Clase(),
+		Nivel:      e.Nivel(),
+		Pos:        e.Pos(),
+		Rot:        e.Rot(),
+		HPActual:   e.HPActual(),
+		HPMax:      e.HPMax(),
+		EsJugador:  e.EsJugador(),
 		ObjetivoID: e.ObjetivoID(),
 	}
 	if j, ok := e.(*Jugador); ok {
 		s.EnCombate = j.enCombate
+		s.Faccion = j.faccion
+		s.Rol = j.rol
+		s.Equipo = j.equipo
 	}
 	if en, ok := e.(*Enemigo); ok {
 		s.EnCombate = en.enCombate
@@ -533,14 +652,22 @@ func cooldownsRestantes(m map[string]int64, ahora int64) map[string]int {
 // ─── Persistencia ───────────────────────────────────────────────────────
 
 // guardar serializa el jugador a persistencia.Personaje y lo escribe a disco.
+// Si el jugador está en una instancia, se persiste su posición pre-instancia
+// (la del mundo abierto), no la posición efímera dentro de la masmora/arena.
 func (j *Jugador) guardar(p *persistencia.Gestor) error {
+	// Posición a persistir: si está en instancia, usar la pre-instancia.
+	posAGuardar := j.pos
+	if j.instanciaID != "" && j.posPreInstancia != (proto.Vec3{}) {
+		posAGuardar = j.posPreInstancia
+	}
 	pj := persistencia.Personaje{
 		Nombre:      j.nombre,
 		Cuenta:      j.cuenta,
 		Clase:       j.clase,
+		Faccion:     j.faccion,
 		Nivel:       j.nivel,
 		Experiencia: 0,
-		PosMundo:    j.pos,
+		PosMundo:    posAGuardar,
 		RotMundo:    j.rot,
 		Habilidad:   idsHabilidades(j.claseDef),
 		Inventario:  []string{},
