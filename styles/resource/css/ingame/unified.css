@@ -1,0 +1,240 @@
+/* =========================================================
+   MÓDULO UNIFICADO ASTROIO - ESTILO MAPA CASUAL
+   ========================================================= */
+
+#unified-module-wrapper {
+    font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+    padding: 15px;
+    background: #a4c98a; 
+    background-image: radial-gradient(#93be78 20%, transparent 20%), radial-gradient(#93be78 20%, transparent 20%);
+    background-position: 0 0, 10px 10px;
+    background-size: 20px 20px;
+    border-radius: 15px;
+    color: #4a3b32;
+    box-sizing: border-box;
+    width: 100%;
+    border: 4px solid #7c5a3e;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+}
+
+/* ENCABEZADO */
+.ub-header { 
+    margin-bottom: 20px; 
+    text-align: center; 
+    background: #fdf5e6;
+    border: 3px solid #b88d5e;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 4px 0 #9a744c;
+}
+.ub-header h1 { margin: 0; font-size: 1.8rem; color: #8b4513; text-shadow: 1px 1px 0 #fff; font-weight: 900; }
+.ub-header p { margin: 5px 0 0 0; color: #7c5a3e; font-size: 0.95rem; font-weight: bold; }
+
+/* =========================================================
+   PESTAÑAS (TABS)
+   ========================================================= */
+.ub-tabs-header {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+    background: #7c5a3e;
+    padding: 8px;
+    border-radius: 12px;
+    border: 3px solid #5c3d24;
+    flex-wrap: wrap;
+}
+
+.ub-tab-btn {
+    flex: 1;
+    min-width: 100px;
+    padding: 12px;
+    text-align: center;
+    color: #d1c0a5;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.ub-tab-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.ub-tab-btn.active { 
+    background: #fdf5e6; 
+    color: #8b4513; 
+    box-shadow: 0 3px 0 #b88d5e;
+    border: 1px solid #b88d5e;
+}
+
+/* =========================================================
+   CONTENIDO (FONDO PERGAMINO)
+   ========================================================= */
+.ub-tab-content {
+    display: none;
+    background: #fdf5e6;
+    border-radius: 12px;
+    padding: 15px;
+    border: 3px solid #b88d5e;
+    box-shadow: inset 0 0 10px rgba(184, 141, 94, 0.2);
+}
+.ub-tab-content.active { display: block; }
+
+.ub-section-title { 
+    font-size: 1.3rem; 
+    color: #8b4513; 
+    margin: 0 0 15px 0; 
+    border-bottom: 2px dashed #b88d5e; 
+    padding-bottom: 8px; 
+    text-align: center;
+}
+
+/* =========================================================
+   EL MAPA DE EDIFICIOS (NUEVO)
+   ========================================================= */
+.ub-map-container {
+    position: relative;
+    width: 100%;
+    height: 600px; /* Altura del mapa */
+    /* Aquí puedes poner un background-image real de pasto si quieres */
+    background: #b5d696; 
+    border-radius: 8px;
+    border: 2px dashed #8ba86f;
+    overflow: hidden;
+}
+
+/* Cada edificio en el mapa */
+.ub-map-node {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+    /* Efecto de sombra en el suelo */
+    filter: drop-shadow(0px 10px 5px rgba(0,0,0,0.3));
+}
+
+.ub-map-node:hover {
+    transform: scale(1.15) translateY(-5px);
+}
+
+/* El icono grande del edificio */
+.ub-map-icon {
+    font-size: 4rem;
+    line-height: 1;
+    text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff;
+}
+
+/* La etiqueta flotante (Madera) */
+.ub-map-label {
+    background: #5c3d24;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-top: 5px;
+    border: 2px solid #3a2514;
+    box-shadow: 0 3px 0 #3a2514;
+}
+
+.ub-map-level {
+    background: #fbbf24;
+    color: #5c3d24;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-weight: 900;
+    font-size: 0.75rem;
+}
+
+/* El globo de tiempo (como el de la foto) */
+.ub-map-timer {
+    background: #fff;
+    color: #5c3d24;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    border: 2px solid #b88d5e;
+    margin-bottom: 5px;
+    box-shadow: 0 2px 0 #b88d5e;
+    animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+    100% { transform: translateY(0); }
+}
+
+/* =========================================================
+   TARJETAS (Para las otras pestañas)
+   ========================================================= */
+.ub-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 15px;
+}
+.ub-card {
+    background: #fff8eb;
+    border-radius: 12px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border: 2px solid #d1b89c;
+    box-shadow: 0 4px 0 #c2a68a;
+}
+.ub-card-image {
+    width: 100%;
+    height: 90px;
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    font-size: 3rem;
+    background: #e6d5c3;
+    border-bottom: 2px solid #d1b89c;
+    border-radius: 10px 10px 0 0;
+}
+.ub-level-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #8b4513;
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #fff;
+    border: 2px solid #fdf5e6;
+    box-shadow: 0 2px 0 #5c3d24;
+}
+.ub-card-content { padding: 12px; display: flex; flex-direction: column; flex-grow: 1; }
+.ub-card-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 8px; color: #5c3d24; text-align: center; }
+.ub-card-time { font-size: 0.85rem; color: #2e7d32; margin-bottom: 15px; font-weight: bold; text-align: center; }
+.ub-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    transition: all 0.1s;
+    margin-top: auto;
+    font-family: inherit;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+}
+.blue-btn   { background: #4a90e2; box-shadow: 0 4px 0 #2c6bb2; }
+.purple-btn { background: #9b59b6; box-shadow: 0 4px 0 #713f87; }
+.green-btn  { background: #2ecc71; box-shadow: 0 4px 0 #20994f; }
+.red-btn    { background: #e74c3c; box-shadow: 0 4px 0 #b03a2e; }
+.ub-btn:active { transform: translateY(4px); box-shadow: none; }
