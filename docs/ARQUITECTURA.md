@@ -250,6 +250,18 @@ profesión nueva es solo añadir otra `DefProfesion` al registro.
   anterior como material (cobre → plata → dorada → veraplata → arcanita →
   hierro vil → adamantita → eternio → titanio), de modo que deben craftearse
   en orden.
+- **Alquimia** (WoW 3.3.5): 6 rangos y 30 recetas (Classic 1-300, TBC
+  300-350, WotLK 350-450) con las hierbas de la guía (16 Classic, 4 TBC,
+  7 WotLK + barra de saronita y gemas/eternos para transmutaciones).
+  Produce pociones (tipo `poción`), elixires (`elixir`), frascos (`frasco`),
+  transmutaciones (materiales) y la Investigación de alquimia de Rasganorte.
+  Tiene **cadenas de productos intermedios**: la Poción de curación menor
+  (receta 1) se consume al craftear la Poción de curación inferior (receta
+  2), y el Aceite de pigmeo (375) se consume en la Investigación (400).
+  Además tiene **3 especializaciones** (Maestro en pociones, elixires y
+  transmutación) que se aprenden a partir de skill 325 — la guía indica
+  nivel 68; en WoW real es alquimia 325 + nivel 68, y el framework válida
+  skill.
 - **Especializaciones**: `DefEspecializacion` (id, nombre, skill_req,
   descripción, materiales para aprenderla). `AprenderEspecializacion()`
   valida skill >= req, que no haya ya una elegida, y consume los materiales.

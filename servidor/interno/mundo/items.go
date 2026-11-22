@@ -32,6 +32,10 @@ const (
 	TipoEncantamiento = "encantamiento" // pergaminos de encantamiento aplicables a ranuras
 	TipoVara          = "vara"           // varas rúnicas encantadoras (herramienta + material encadenado)
 	TipoAceite        = "aceite"         // aceites de zahorí (recubrimiento temporal de arma)
+	// Tipos de Alquimia
+	TipoPoción = "poción" // consumibles de un solo uso (sanación, maná, efectos)
+	TipoElixir = "elixir" // consumibles con efecto duradero (batalla/guardián)
+	TipoFrasco = "frasco" // consumibles potentes que cuentan como elixir de batalla y guardián
 )
 
 // Calidades.
@@ -473,6 +477,115 @@ func itemsPredefinidos() map[string]DefItem {
 	}
 	for _, c := range craftedEncantamiento {
 		m[c.id] = def(c.id, c.nombre, c.tipo, c.calidad)
+	}
+
+	// ─── Hierbas y materiales de Alquimia (Classic) ───
+	for id, n := range map[string]string{
+		"flor_de_paz":             "Flor de paz",
+		"hojaplata":               "Hojaplata",
+		"brezospina":              "Brezospina",
+		"hierba_cardenal":         "Hierba cardenal",
+		"marregal":                "Marregal",
+		"alga_estranguladora":     "Alga estranguladora",
+		"vidarraíz":               "Vidarraíz",
+		"sangrerregia":            "Sangrerregia",
+		"espina_de_oro":           "Espina de oro",
+		"acérita_salvaje":         "Acérita salvaje",
+		"solea":                   "Solea",
+		"mostacho_de_khadgar":     "Mostacho de Khadgar",
+		"lágrimas_de_arthas":      "Lágrimas de Arthas",
+		"carolina":                "Carolina",
+		"sansam_dorado":           "Sansam dorado",
+		"salviargenta_de_montaña": "Salviargenta de montaña",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+	// ─── Hierbas y materiales de Alquimia (TBC) ───
+	for id, n := range map[string]string{
+		"hierba_vil":          "Hierba vil",
+		"velada":              "Velada",
+		"flor_abisal":         "Flor abisal",
+		"gloria_de_ensueño":   "Gloria de ensueño",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+	// ─── Hierbas y materiales de Alquimia (WotLK) ───
+	for id, n := range map[string]string{
+		"rosa_de_talandra": "Rosa de Talandra",
+		"rémora_pigmea":    "Rémora pigmea",
+		"trébol_de_oro":    "Trébol de oro",
+		"lirio_atigrado":   "Lirio atigrado",
+		"lengua_de_víboris": "Lengua de víporis",
+		"espina_de_hielo":  "Espina de hielo",
+		"flor_exánime":     "Flor exánime",
+		"barra_de_saronita": "Barra de saronita",
+		"jade_oscuro":      "Jade oscuro",
+		"citrino_enorme":   "Citrino enorme",
+		"fuego_eterno":     "Fuego eterno",
+		"sangrita":         "Sangrita",
+		"calcedonia":       "Calcedonia",
+		"aire_eterno":      "Aire eterno",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+
+	// ─── Productos crafteados de Alquimia (1-450) ───
+	// 30 recetas: pociones, elixires, un frasco, transmutaciones, un aceite
+	// (cadena) y la Investigación de alquimia de Rasganorte. Las pociones
+	// intermedias (poción de curación menor, aceite de pigmeo) se consumen
+	// en recetas posteriores.
+	craftedAlquimia := []struct {
+		id, nombre, tipo, calidad string
+	}{
+		// Pociones intermedias y de sanación/maná Classic
+		{"poción_curación_menor", "Poción de curación menor", TipoPoción, CalidadComun},
+		{"poción_curación_inferior", "Poción de curación inferior", TipoPoción, CalidadComun},
+		{"poción_curación", "Poción de curación", TipoPoción, CalidadComun},
+		{"poción_maná_inferior", "Poción de maná inferior", TipoPoción, CalidadComun},
+		{"poción_curación_superior", "Poción de curación superior", TipoPoción, CalidadComun},
+		{"elixir_agilidad", "Elixir de agilidad", TipoElixir, CalidadComun},
+		{"elixir_defensa_superior", "Elixir de defensa superior", TipoElixir, CalidadComun},
+		{"poción_curación_excelente", "Poción de curación excelente", TipoPoción, CalidadComun},
+		{"elixir_detectar_muertos", "Elixir de detención de muertos", TipoElixir, CalidadComun},
+		{"elixir_agilidad_superior", "Elixir de agilidad superior", TipoElixir, CalidadRaro},
+		{"poción_maná_excelente", "Poción de maná excelente", TipoPoción, CalidadComun},
+		{"poción_curación_sublime", "Poción de curación sublime", TipoPoción, CalidadRaro},
+		// TBC 300-350
+		{"poción_sanación_volátil", "Poción de sanación volátil", TipoPoción, CalidadRaro},
+		{"poción_maná_inestable", "Poción de maná inestable", TipoPoción, CalidadRaro},
+		{"poción_alquimista_loco", "Poción de alquimista loco", TipoPoción, CalidadRaro},
+		{"superpoción_sanación", "Superpoción de sanación", TipoPoción, CalidadRaro},
+		{"superpoción_maná", "Superpoción de maná", TipoPoción, CalidadRaro},
+		// WotLK 350-450
+		{"poción_sanación_resurgente", "Poción de sanación resurgente", TipoPoción, CalidadRaro},
+		{"poción_maná_helada", "Poción de maná helada", TipoPoción, CalidadRaro},
+		{"elixir_poder_hechizos", "Elixir de poder con hechizos", TipoElixir, CalidadRaro},
+		{"aceite_pigmeo", "Aceite de pigmeo", TipoAceite, CalidadComun},
+		{"poción_pesadillas", "Poción de pesadillas", TipoPoción, CalidadRaro},
+		{"elixir_fuerza_poderosa", "Elixir de fuerza poderosa", TipoElixir, CalidadRaro},
+		{"elixir_agilidad_poderosa", "Elixir de agilidad poderosa", TipoElixir, CalidadRaro},
+		{"investigación_alquimia_norte", "Investigación de alquimia de Rasganorte", TipoMaterial, CalidadRaro},
+		{"poción_indestructible", "Poción indestructible", TipoPoción, CalidadRaro},
+		{"poción_maná_rúnica", "Poción de maná rúnica", TipoPoción, CalidadRaro},
+		{"titanio", "Barra de titanio", TipoMaterial, CalidadRaro},
+		{"diamante_llama_celeste", "Diamante de llama celeste", TipoMaterial, CalidadEpico},
+		{"frasco_ira_infinita", "Frasco de ira infinita", TipoFrasco, CalidadEpico},
+	}
+	for _, c := range craftedAlquimia {
+		m[c.id] = def(c.id, c.nombre, c.tipo, c.calidad)
+	}
+	// ─── Materiales de las especializaciones de Alquimia ───
+	// Pociones/elixires no incluidos en el camino 1-450 y objetos de misión
+	// (drops) necesarios para aprender cada maestría.
+	for id, n := range map[string]string{
+		"poción_letargo_sin_sueños_sublime": "Poción de letargo sin sueños sublime",
+		"elixir_defensa_sublime":            "Elixir de defensa sublime",
+		"elixir_maestría":                   "Elixir de maestría",
+		"elixir_agilidad_sublime":           "Elixir de agilidad sublime",
+		"esencia_de_infinidad":              "Esencia de infinidad",
+		"guía_de_campo_botánicos":           "Guía de Campo para Botánicos",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadRaro)
 	}
 	return m
 }
