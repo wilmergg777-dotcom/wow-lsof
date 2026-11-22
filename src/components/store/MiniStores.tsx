@@ -84,11 +84,20 @@ export function StoreLogo({
   )
 }
 
-// Foto del producto: foto real subida o un recuadro con icono
-function ProductPhoto({ product, className = '' }: { product: MiniProduct; className?: string }) {
+// Foto del producto: foto real subida o, si no tiene, un fondo
+// elegante con el color de la marca y la inicial del producto
+// (se acabaron los dibujos pobres: siempre se ve bien)
+function ProductPhoto({
+  product,
+  color = '#5B21B6',
+  className = '',
+}: {
+  product: MiniProduct
+  color?: string
+  className?: string
+}) {
   if (product.photo) {
     return (
-       
       <img
         src={product.photo}
         alt={product.name}
@@ -96,13 +105,54 @@ function ProductPhoto({ product, className = '' }: { product: MiniProduct; class
       />
     )
   }
+  const initial = (product.name || '?').trim().charAt(0).toUpperCase()
   return (
     <div
-      className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-[#f7fafa] to-[#eceff1] ${className}`}
+      className={`w-full h-full flex items-center justify-center relative overflow-hidden ${className}`}
+      style={{ background: `linear-gradient(135deg, ${color}14, ${color}30)` }}
+      role="img"
       aria-label={product.name}
     >
-      <Package className="w-10 h-10 text-[#c8cdcd]" strokeWidth={1.3} />
+      <span
+        className="font-black select-none leading-none"
+        style={{ color: `${color}4D`, fontSize: 'clamp(48px, 40%, 96px)' }}
+      >
+        {initial}
+      </span>
+      <Package
+        className="absolute bottom-2 right-2 w-5 h-5"
+        style={{ color: `${color}59` }}
+        strokeWidth={1.6}
+      />
     </div>
+  )
+}
+
+// Flores decorativas para los encabezados (igual que el icono de
+// Violetero: una flor de 5 pétalos) sobre el color de la tienda
+function HeroFlowers({ tall = false }: { tall?: boolean }) {
+  const Flower = ({ x, y, r, o }: { x: number; y: number; r: number; o: number }) => (
+    <g transform={`translate(${x} ${y})`} opacity={o}>
+      <circle cx="0" cy={-r} r={r * 0.62} fill="#fff" />
+      <circle cx={r * 0.95} cy={-r * 0.31} r={r * 0.62} fill="#fff" />
+      <circle cx={r * 0.59} cy={r * 0.81} r={r * 0.62} fill="#fff" />
+      <circle cx={-r * 0.59} cy={r * 0.81} r={r * 0.62} fill="#fff" />
+      <circle cx={-r * 0.95} cy={-r * 0.31} r={r * 0.62} fill="#fff" />
+      <circle cx="0" cy="0" r={r * 0.5} fill="#fff" opacity="0.9" />
+    </g>
+  )
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full"
+      viewBox={`0 0 800 ${tall ? 170 : 96}`}
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+    >
+      <Flower x={700} y={tall ? 46 : 28} r={tall ? 26 : 16} o={0.16} />
+      <Flower x={756} y={tall ? 128 : 72} r={tall ? 18 : 12} o={0.12} />
+      <Flower x={624} y={tall ? 138 : 80} r={tall ? 14 : 10} o={0.1} />
+      <Flower x={44} y={tall ? 148 : 84} r={tall ? 22 : 13} o={0.1} />
+    </svg>
   )
 }
 
@@ -230,13 +280,26 @@ export function HomeMiniStores() {
               <button
                 key={s.id}
                 onClick={() => openMiniStore(s.id)}
-                className="border border-[#e3e6e6] rounded-lg p-3 text-left hover:shadow-md transition-shadow cursor-pointer"
+                className="border border-[#e3e6e6] rounded-lg overflow-hidden text-left hover:shadow-md transition-shadow cursor-pointer group"
               >
-                <StoreLogo store={s} size={44} />
-                <p className="text-[14px] font-bold text-[#0F1111] truncate mt-2">{s.name}</p>
-                <p className="text-[12px] text-[#565959]">
-                  {s.products.length} {s.products.length === 1 ? 'producto' : 'productos'}
-                </p>
+                {/* Tapa con el color de la marca y logotipo superpuesto */}
+                <div
+                  className="relative h-11"
+                  style={{ background: `linear-gradient(115deg, ${s.color}, ${s.color}B3)` }}
+                >
+                  <HeroFlowers />
+                  <div className="absolute -bottom-4 left-3 rounded-lg border-2 border-white shadow-sm">
+                    <StoreLogo store={s} size={40} />
+                  </div>
+                </div>
+                <div className="pt-6 px-3 pb-3">
+                  <p className="text-[14px] font-bold text-[#0F1111] truncate group-hover:underline">
+                    {s.name}
+                  </p>
+                  <p className="text-[12px] text-[#565959]">
+                    {s.products.length} {s.products.length === 1 ? 'producto' : 'productos'}
+                  </p>
+                </div>
               </button>
             ))}
           </div>
@@ -314,20 +377,27 @@ export function MiniStoresView() {
               onClick={() => openMiniStore(store.id)}
               className="bg-white rounded-lg border border-[#e3e6e6] text-left hover:shadow-lg transition-shadow cursor-pointer overflow-hidden group"
             >
-              {/* Franja de color de la tienda */}
-              <div className="h-2" style={{ backgroundColor: store.color }} />
-              <div className="p-5">
-                <div className="flex items-start gap-3">
+              {/* Tapa con el color de marca y flores, logotipo superpuesto */}
+              <div
+                className="relative h-16"
+                style={{
+                  background: `linear-gradient(115deg, ${store.color}, ${store.color}B3)`,
+                }}
+              >
+                <HeroFlowers />
+                <div className="absolute -bottom-6 left-4 rounded-xl border-[3px] border-white shadow-md">
                   <StoreLogo store={store} size={56} />
-                  <div className="min-w-0">
-                    <h3 className="text-[17px] font-bold text-[#0F1111] truncate">{store.name}</h3>
-                    <p className="text-[12px] text-[#565959]">
-                      De {store.ownerName} · {store.category}
-                    </p>
-                  </div>
                 </div>
-                <p className="text-[13px] text-[#565959] mt-3 line-clamp-2">{store.description}</p>
-                <p className="text-[13px] text-[#007600] font-bold mt-3 group-hover:underline">
+              </div>
+              <div className="px-4 pb-4 pt-8">
+                <h3 className="text-[17px] font-bold text-[#0F1111] truncate group-hover:underline">
+                  {store.name}
+                </h3>
+                <p className="text-[12px] text-[#565959] mt-0.5">
+                  De {store.ownerName} · {store.category}
+                </p>
+                <p className="text-[13px] text-[#565959] mt-2 line-clamp-2">{store.description}</p>
+                <p className="text-[13px] text-[#007600] font-bold mt-3">
                   {store.products.length}{' '}
                   {store.products.length === 1 ? 'producto' : 'productos'} a la venta · Ver tienda →
                 </p>
@@ -364,23 +434,43 @@ export function MiniStoreDetail() {
 
   return (
     <div className="p-4 max-w-[1300px] mx-auto">
-      {/* Portada de la tienda con su color de marca */}
-      <div className="rounded-lg overflow-hidden border border-[#e3e6e6] mb-4">
-        <div className="h-20" style={{ background: `linear-gradient(120deg, ${store.color}, ${store.color}B3)` }} />
-        <div className="bg-white px-6 pb-5 -mt-8 flex flex-col sm:flex-row gap-4 items-start">
-          <div className="rounded-xl border-4 border-white shadow-sm -mt-2">
-            <StoreLogo store={store} size={72} rounded="rounded-lg" />
+      {/* Encabezado tipo héroe con el color de la marca */}
+      <div className="rounded-lg overflow-hidden border border-[#e3e6e6] mb-4 bg-white">
+        <div
+          className="relative h-[150px] sm:h-[170px]"
+          style={{
+            background: `linear-gradient(115deg, ${store.color}, ${store.color}CC 55%, ${store.color}99)`,
+          }}
+        >
+          <HeroFlowers tall />
+          {/* Nombre y etiquetas elevados para no chocar con el logotipo */}
+          <div className="absolute inset-x-0 bottom-0 px-4 sm:px-6 pb-12 sm:pb-14 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <h1 className="text-[30px] sm:text-[34px] font-black text-white leading-tight drop-shadow-sm truncate max-w-full">
+              {store.name}
+            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="bg-white/20 backdrop-blur-sm text-white text-[12px] font-bold rounded-full px-3 py-1">
+                {store.category}
+              </span>
+              <span className="bg-white/20 backdrop-blur-sm text-white text-[12px] font-bold rounded-full px-3 py-1">
+                Mini tienda de {store.ownerName}
+              </span>
+            </div>
           </div>
-          <div className="flex-1 min-w-0 pt-6">
-            <h1 className="text-[26px] font-bold text-[#0F1111]">{store.name}</h1>
-            <p className="text-[13px] text-[#565959]">
-              Mini tienda de <span className="font-bold">{store.ownerName}</span> · {store.category}
+        </div>
+        <div className="px-5 sm:px-6 pb-5 flex flex-col sm:flex-row gap-4 items-start">
+          <div className="rounded-xl border-4 border-white shadow-md -mt-10 relative z-10">
+            <StoreLogo store={store} size={84} rounded="rounded-xl" />
+          </div>
+          <p className="flex-1 text-[14px] text-[#0F1111] sm:mt-2">{store.description}</p>
+          <div className="bg-[#f7fafa] border border-[#d5d9d9] rounded-lg px-4 py-3 text-[13px] shrink-0 sm:mt-2">
+            <p className="font-bold text-[#0F1111]">
+              {store.products.length}{' '}
+              {store.products.length === 1 ? 'producto publicado' : 'productos publicados'}
             </p>
-            <p className="text-[14px] text-[#0F1111] mt-2">{store.description}</p>
-          </div>
-          <div className="bg-[#f7fafa] border border-[#d5d9d9] rounded-lg px-4 py-3 text-[13px] sm:mt-8">
-            <p className="font-bold text-[#0F1111]">Productos: {store.products.length}</p>
-            <p className="text-[#007600] font-bold">Envío por repartidor de {STORE_NAME}</p>
+            <p className="text-[#007600] font-bold mt-0.5">
+              Envío por repartidor de {STORE_NAME}
+            </p>
           </div>
         </div>
       </div>
@@ -396,53 +486,74 @@ export function MiniStoreDetail() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {store.products.map((p: MiniProduct) => (
-            <div key={p.id} className="bg-white rounded-lg border border-[#e3e6e6] p-3 flex flex-col">
-              <div className="aspect-square rounded-md overflow-hidden">
-                <ProductPhoto product={p} />
+            <div
+              key={p.id}
+              className="group bg-white rounded-lg border border-[#e3e6e6] overflow-hidden flex flex-col hover:shadow-lg transition-shadow"
+            >
+              <div className="relative aspect-square overflow-hidden">
+                <ProductPhoto
+                  product={p}
+                  color={store.color}
+                  className="group-hover:scale-105 transition-transform duration-300"
+                />
+                {p.stock <= 0 && (
+                  <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                    <span className="bg-[#0F1111] text-white text-[12px] font-bold rounded px-3 py-1">
+                      Agotado
+                    </span>
+                  </div>
+                )}
+                {p.stock > 0 && p.stock <= 5 && (
+                  <span className="absolute top-2 left-2 bg-[#C7511F] text-white text-[11px] font-bold rounded px-2 py-0.5 shadow-sm">
+                    ¡Últimas {p.stock}!
+                  </span>
+                )}
               </div>
-              <h3 className="text-[15px] font-bold text-[#0F1111] mt-3 line-clamp-2 px-1">{p.name}</h3>
-              <p className="text-[12px] text-[#565959] line-clamp-2 mt-1 flex-1 px-1">
-                {p.description}
-              </p>
-              <div className="px-1">
-                <DualPrice cash={p.price} coins={p.priceCoins} />
+              <div className="p-3 flex flex-col flex-1">
+                <h3 className="text-[15px] font-bold text-[#0F1111] line-clamp-2">{p.name}</h3>
+                <p className="text-[12px] text-[#565959] line-clamp-2 mt-1 flex-1">
+                  {p.description}
+                </p>
+                <div className="mt-2">
+                  <DualPrice cash={p.price} coins={p.priceCoins} />
+                </div>
+                <p
+                  className={`text-[12px] font-bold mt-1 ${
+                    p.stock <= 0 ? 'text-[#C7511F]' : 'text-[#007600]'
+                  }`}
+                >
+                  {p.stock <= 0
+                    ? 'Sin unidades por ahora'
+                    : p.stock <= 5
+                      ? `¡Solo quedan ${p.stock}!`
+                      : `Hay ${p.stock} en el almacén`}
+                </p>
+                <button
+                  onClick={() => {
+                    if (p.stock <= 0) {
+                      toast.error(`"${p.name}" está agotado: no hay unidades disponibles`)
+                      return
+                    }
+                    addToCart(`mini-${p.id}`, 1, {
+                      name: p.name,
+                      price: p.price,
+                      priceCoins: p.priceCoins,
+                      photo: p.photo ?? undefined,
+                      storeName: store.name,
+                      productId: p.id,
+                      kind: 'mini',
+                      stock: p.stock,
+                    })
+                    toast.success(`"${p.name}" se agregó al carrito`)
+                  }}
+                  disabled={p.stock <= 0}
+                  className={`mt-3 w-full bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full py-2 ${
+                    p.stock <= 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
+                >
+                  {p.stock <= 0 ? 'Agotado' : 'Agregar al carrito'}
+                </button>
               </div>
-              <p
-                className={`px-1 text-[12px] font-bold mt-1 ${
-                  p.stock <= 0 ? 'text-[#C7511F]' : 'text-[#007600]'
-                }`}
-              >
-                {p.stock <= 0
-                  ? 'Agotado'
-                  : p.stock <= 5
-                    ? `¡Últimas ${p.stock} unidades!`
-                    : `Hay ${p.stock} en el almacén`}
-              </p>
-              <button
-                onClick={() => {
-                  if (p.stock <= 0) {
-                    toast.error(`"${p.name}" está agotado: no hay unidades disponibles`)
-                    return
-                  }
-                  addToCart(`mini-${p.id}`, 1, {
-                    name: p.name,
-                    price: p.price,
-                    priceCoins: p.priceCoins,
-                    photo: p.photo ?? undefined,
-                    storeName: store.name,
-                    productId: p.id,
-                    kind: 'mini',
-                    stock: p.stock,
-                  })
-                  toast.success(`"${p.name}" se agregó al carrito`)
-                }}
-                disabled={p.stock <= 0}
-                className={`mt-3 w-full bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full py-2 ${
-                  p.stock <= 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                }`}
-              >
-                {p.stock <= 0 ? 'Agotado' : 'Agregar al carrito'}
-              </button>
             </div>
           ))}
         </div>
@@ -682,7 +793,7 @@ export function ManageStoreView() {
           <h1 className="text-[26px] font-bold text-[#0F1111]">Crea tu mini tienda</h1>
           <p className="text-[14px] text-[#565959] mt-1 mb-5">
             Abre tu propio espacio dentro de {STORE_NAME}: sube un logotipo, publica productos con
-            foto y cobra en efectivo o en monedas de la tienda.
+            foto y cobra en CUP o en monedas de la tienda.
           </p>
 
           <div className="mb-4">
@@ -759,14 +870,22 @@ export function ManageStoreView() {
   // ---------- CON TIENDA: panel de gestión ----------
   return (
     <div className="p-4 max-w-[1300px] mx-auto flex flex-col gap-4">
-      {/* Cabecera */}
+      {/* Cabecera tipo héroe compacta */}
       <div className="bg-white rounded-lg border border-[#e3e6e6] overflow-hidden">
-        <div className="h-14" style={{ background: `linear-gradient(120deg, ${store.color}, ${store.color}B3)` }} />
-        <div className="px-6 pb-5 -mt-7 flex items-center gap-3 flex-wrap">
-          <div className="rounded-xl border-4 border-white shadow-sm">
-            <StoreLogo store={store} size={60} rounded="rounded-lg" />
+        <div
+          className="relative h-24"
+          style={{ background: `linear-gradient(115deg, ${store.color}, ${store.color}B3)` }}
+        >
+          <HeroFlowers />
+          <span className="absolute top-2.5 right-4 text-white/40 text-[12px] font-bold tracking-wide">
+            PANEL DEL DUEÑO
+          </span>
+        </div>
+        <div className="px-6 pb-5 -mt-8 flex items-center gap-3 flex-wrap relative z-10">
+          <div className="rounded-xl border-4 border-white shadow-md">
+            <StoreLogo store={store} size={64} rounded="rounded-lg" />
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 pt-4">
             <h1 className="text-[24px] font-bold text-[#0F1111]">Mi mini tienda: {store.name}</h1>
             <p className="text-[13px] text-[#565959]">
               {store.category} · Dueño: {store.ownerName}
@@ -786,7 +905,7 @@ export function ManageStoreView() {
           </h2>
           <p className="text-[13px] text-[#565959] mb-4">
             Sube una foto de lo que vendes (o elige una de las fotos guardadas en la tienda si no
-            tienes) y pon el precio en las dos monedas: dinero ($) y monedas de la tienda.
+            tienes) y pon el precio en CUP y en monedas de la tienda.
           </p>
 
           <div className="mb-4">
@@ -944,8 +1063,8 @@ export function ManageStoreView() {
               type="number"
               min="0.5"
               step="0.5"
-              placeholder="USD por entrega"
-              aria-label="Pago por entrega"
+              placeholder="CUP por entrega"
+              aria-label="Pago por entrega en CUP"
               className="w-36 border border-[#888c8c] rounded px-3 py-2 text-[14px] outline-none focus:border-[#e77600]"
             />
           </div>
