@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import { API_URL, SOCKET_PRACTICE_URL, SOCKET_REAL_URL } from './config';
+import { getSoundPrefs, setSoundPref, subscribeSoundPrefs } from './soundPrefs';
 
 // ============================================================
 // 🔥 EVALUADOR DE MANOS PARA EL FRONTEND 🔥
@@ -362,7 +363,10 @@ const betPositions = [
 // ============================================================
 // 🎯 COMPONENTE PRINCIPAL
 // ============================================================
-export default function PokerTable({ user, onExit, tableConfig, onMinimize }) {
+// 🔥 MULTIMESA: isFocused = esta mesa es la visible (sonido completo).
+// Las mesas en segundo plano NO reproducen efectos, solo aviso de turno
+// si "Alertas multimesa" está activado (Ajustes → Sonido).
+export default function PokerTable({ user, onExit, tableConfig, onMinimize, isFocused = true, onTurnStatus }) {
   const socketRef = useRef(null);
   const table = tableConfig?.tableData ?? tableConfig ?? {};
   const isPractice = table.isPractice === true;
@@ -373,6 +377,10 @@ export default function PokerTable({ user, onExit, tableConfig, onMinimize }) {
   const tableId = table.id || 'omaha-05-1';
   const onExitRef = useRef(onExit);
   useEffect(() => { onExitRef.current = onExit; }, [onExit]);
+  const isFocusedRef = useRef(isFocused);
+  useEffect(() => { isFocusedRef.current = isFocused; }, [isFocused]);
+  const onTurnStatusRef = useRef(onTurnStatus);
+  useEffect(() => { onTurnStatusRef.current = onTurnStatus; }, [onTurnStatus]);
 
   // 🔥 MÓVIL: detección responsive para rediseñar la mesa en pantallas pequeñas
   const [isMobile, setIsMobile] = useState(() =>
@@ -396,24 +404,14 @@ export default function PokerTable({ user, onExit, tableConfig, onMinimize }) {
   const soundStateRef = useRef({ communityCount: 0, currentTurn: null, totalBets: 0, phase: 'waiting' });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    const g = readRoyalSettings();
-    return g.efectosSonoros !== false;
-  });
-  const [volume, setVolume] = useState(() => {
-    try {
-      const v = localStorage.getItem('poker_volume');
-      return v !== null ? Number(v) : 0.7;
-    } catch { return 0.7; }
-  });
-  const [animationsEnabled, setAnimationsEnabled] = useState(() => {
-    try {
-      const v = localStorage.getItem('poker_animations');
-      return v !== null ? v === 'true' : true;
-    } catch { return true; }
-  });
+  // 🔊 SONIDO: estado inicial desde la fuente única (soundPrefs)
+  const [soundPrefs, setSoundPrefs] = useState(() => getSoundPrefs());
+  const { efectosSonoros: soundEnabled, volume, alertasMultimesa } = soundPrefs;
+  const [animationsEnabled, setAnimationsEnabled] = useState(() => getSoundPrefs().animations);
   const soundEnabledRef = useRef(soundEnabled);
   useEffect(() => { soundEnabledRef.current = soundEnabled; }, [soundEnabled]);
+  const alertasMultimesaRef = useRef(alertasMultimesa);
+  useEffect(() => { alertasMultimesaRef.current = alertasMultimesa; }, [alertasMultimesa]);
 
   const [state, setState] = useState({
     seats: Array(SEAT_COUNT).fill(null),
@@ -466,18 +464,16 @@ export default function PokerTable({ user, onExit, tableConfig, onMinimize }) {
     if (soundEngineRef.current) soundEngineRef.current.setVolume(soundEnabled ? volume : 0);
   }, [volume, soundEnabled]);
 
-  // Persistencia: soundEnabled se guarda en royalbet_settings (compartido con Settings.jsx)
+  // 🔊 SUSCRIPCIÓN a la fuente única de sonido: los cambios hechos en
+  // Ajustes (o en otra mesa) se aplican al instante aquí, sin recargar.
   useEffect(() => {
-    writeRoyalSettings({ efectosSonoros: soundEnabled });
-  }, [soundEnabled]);
-
-  // Persistencia: volume y animations en claves separadas (no las pisa Settings.jsx)
-  useEffect(() => {
-    try { localStorage.setItem('poker_volume', String(volume)); } catch {}
-  }, [volume]);
-  useEffect(() => {
-    try { localStorage.setItem('poker_animations', String(animationsEnabled)); } catch {}
-  }, [animationsEnabled]);
+    const unsub = subscribeSoundPrefs((prefs) => {
+      setSoundPrefs(prefs);
+      try { localStorage.setItem('poker_animations', String(prefs.animations)); } catch (e) {}
+      setAnimationsEnabled(prefs.animations);
+    });
+    return unsub;
+  }, []);
 
   // Desbloqueo del AudioContext en el primer gesto del usuario
   useEffect(() => {
@@ -502,12 +498,32 @@ export default function PokerTable({ user, onExit, tableConfig, onMinimize }) {
   }, []);
 
   // 🎯 Disparadores de sonido basados en cambios de estado
+  // 🔥 MULTIMESA: solo la mesa ENFOCADA suena; una mesa en segundo plano
+  // únicamente avisa con turnAlert si "Alertas multimesa" está activado.
   useEffect(() => {
     const totalBets = state.seats.reduce((s, p) => s + (p?.currentBet || 0), 0);
     const foldedCount = state.seats.filter(p => p?.status === 'folded').length;
     const allInCount = state.seats.filter(p => p?.status === 'all-in').length;
     const prev = soundStateRef.current;
     const eng = soundEngineRef.current;
+
+    const myTurnStarted = state.currentTurn === mySocketId && prev.currentTurn !== mySocketId && state.currentTurn !== null;
+
+    // Mesa en SEGUNDO PLANO: solo alerta de turno (si el usuario la tiene activada)
+    if (!isFocusedRef.current) {
+      if (myTurnStarted && soundEnabled && alertasMultimesa && eng) {
+        try { eng.turnAlert(); } catch (e) {}
+      }
+      soundStateRef.current = {
+        communityCount: state.communityCards.length,
+        currentTurn: state.currentTurn,
+        totalBets,
+        phase: state.phase,
+        foldedCount,
+        allInCount,
+      };
+      return;
+    }
 
     if (soundEnabled && eng) {
       // Cartas comunitarias nuevas
@@ -522,7 +538,7 @@ export default function PokerTable({ user, onExit, tableConfig, onMinimize }) {
       // 🔊 NUEVO: alguien se fue all-in
       if (allInCount > prev.allInCount) eng.allIn();
       // Es mi turno
-      if (state.currentTurn === mySocketId && prev.currentTurn !== mySocketId && state.currentTurn !== null) eng.turnAlert();
+      if (myTurnStarted) eng.turnAlert();
       // Showdown: fanfarria SI gano, tono descendente si no (🔥 FIX del bug que sonaba igual)
       if (state.phase === 'showdown' && prev.phase !== 'showdown') {
         const winners = showdownData?.winners || [];
@@ -555,18 +571,17 @@ export default function PokerTable({ user, onExit, tableConfig, onMinimize }) {
     }));
   }, [state.blindLevel, state.smallBlind, state.bigBlind]);
 
-  // Toggles y helpers
+  // Toggles y helpers — 🔊 ahora escriben en la fuente única (soundPrefs)
+  // para que Ajustes y las demás mesas se sincronicen al instante.
   const toggleSound = () => {
-    setSoundEnabled(prev => {
-      const next = !prev;
-      if (next && soundEngineRef.current) setTimeout(() => soundEngineRef.current.turnAlert(), 120);
-      return next;
-    });
+    const next = !soundEnabled;
+    setSoundPref('efectosSonoros', next);
+    if (next && soundEngineRef.current) setTimeout(() => soundEngineRef.current.turnAlert(), 120);
   };
-  const toggleAnimations = () => setAnimationsEnabled(prev => !prev);
+  const toggleAnimations = () => setSoundPref('animations', !animationsEnabled);
   const handleVolumeChange = (v) => {
-    setVolume(v);
-    if (soundEngineRef.current) soundEngineRef.current.setVolume(v);
+    setSoundPref('volume', v);
+    if (soundEngineRef.current) soundEngineRef.current.setVolume(soundEnabled ? v : 0);
   };
   const playSound = (key) => {
     if (soundEnabled && soundEngineRef.current && soundEngineRef.current[key]) {
@@ -590,6 +605,11 @@ export default function PokerTable({ user, onExit, tableConfig, onMinimize }) {
   const me = mySeatIndex !== -1 ? state.seats[mySeatIndex] : null;
   const isMyTurn = state.currentTurn === mySocketId && me?.status === 'playing';
   const toCall = me ? Math.max(0, state.currentBet - me.currentBet) : 0;
+
+  // 🔊 MULTIMESA: avisar a la barra multimesa cuando es (o deja de ser) mi turno
+  useEffect(() => {
+    onTurnStatusRef.current && onTurnStatusRef.current(isMyTurn);
+  }, [isMyTurn]);
 
   const minValidRaise = Math.max(state.currentBet + state.minRaise, state.bigBlind);
   const actualRaiseAmount = Math.max(raiseAmount, minValidRaise);
@@ -632,7 +652,8 @@ export default function PokerTable({ user, onExit, tableConfig, onMinimize }) {
       setMySocketId(socket.id);
       if (isTournament) {
         // 🔥 MTT: conectar a mi mesa de torneo asignada por el servidor
-        socket.emit('join_tournament_table', { gameId: tournamentGameId });
+        // 🔥 MULTIMESA: enviamos también tableId para apuntar a la mesa correcta
+        socket.emit('join_tournament_table', { gameId: tournamentGameId, tableId });
       } else {
         socket.emit('joinTableRoom', tableId);
         if (isPractice) {
@@ -690,7 +711,7 @@ export default function PokerTable({ user, onExit, tableConfig, onMinimize }) {
     socket.on('countdown_cancel', (msg) => setError(msg));
     socket.on('game_started', () => setWinnerMsg('¡EL JUEGO HA COMENZADO!'));
     socket.on('error_mesa', (msg) => setError(msg));
-    socket.on('leaveSuccess', () => onExitRef.current && onExitRef.current());
+    socket.on('leaveSuccess', () => onExitRef.current && onExitRef.current(tableId));
 
     // 🔥 MTT: podio final del torneo con premios
     socket.on('tournamentFinished', (data) => {
@@ -732,13 +753,13 @@ export default function PokerTable({ user, onExit, tableConfig, onMinimize }) {
     // 🔥 MTT: salir del torneo = abandono (sin cash-out)
     if (isTournament) {
       socketRef.current?.emit('leave_tournament_table');
-      onExitRef.current && onExitRef.current();
+      onExitRef.current && onExitRef.current(tableId);
       return;
     }
-    if (isPractice) { socketRef.current?.emit('leave_practice_table'); onExitRef.current && onExitRef.current(); return; }
-    if (state.phase === 'waiting' || state.phase === 'showdown') { onExitRef.current && onExitRef.current(); return; }
+    if (isPractice) { socketRef.current?.emit('leave_practice_table'); onExitRef.current && onExitRef.current(tableId); return; }
+    if (state.phase === 'waiting' || state.phase === 'showdown') { onExitRef.current && onExitRef.current(tableId); return; }
     const seated = state.seats.findIndex(p => p !== null && p.socketId === mySocketId);
-    if (seated === -1) onExitRef.current && onExitRef.current();
+    if (seated === -1) onExitRef.current && onExitRef.current(tableId);
     else socketRef.current?.emit('leaveTable', { tableId });
   };
 

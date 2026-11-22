@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { setSoundPref } from './soundPrefs';
 
 const Toggle = ({ active, onClick }) => (
   <div className={`toggle-switch ${active ? 'active' : ''}`} onClick={onClick}>
@@ -25,9 +26,9 @@ export default function Settings({ settingsTab, setSettingsTab, settings, handle
     } catch { return true; }
   });
 
-  // 💾 Persistencia inmediata (igual que en PokerTable.jsx)
+  // 💾 Persistencia inmediata + aviso a las mesas abiertas (PokerTable se sincroniza al instante)
   useEffect(() => {
-    try { localStorage.setItem('poker_volume', String(volume)); } catch {}
+    setSoundPref('volume', volume);
   }, [volume]);
 
   useEffect(() => {

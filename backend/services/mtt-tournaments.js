@@ -204,13 +204,20 @@ function getMTTByGame(gameId) {
 }
 
 function findTableByUser(userId) {
+  return findTablesByUser(userId)[0] || null;
+}
+
+// 🔥 MULTIMESA: TODAS las mesas de torneo donde el usuario tiene silla
+// (un jugador puede estar en hasta 2 mesas a la vez)
+function findTablesByUser(userId) {
+  const out = [];
   for (const mtt of activeMTTs.values()) {
     for (const table of mtt.tables) {
       const seat = table.seats.find(p => p !== null && p.userId === userId);
-      if (seat) return { mtt, table, seat };
+      if (seat) out.push({ mtt, table, seat });
     }
   }
-  return null;
+  return out;
 }
 
 function findTableBySocket(socketId) {
@@ -230,15 +237,32 @@ function findMTTByTableId(tableId) {
   return null;
 }
 
-// Conectar el socket de un jugador a su mesa de torneo (reconexión)
-function attachPlayer(socket, userId) {
-  const found = findTableByUser(userId);
-  if (!found) return null;
-  const { table, seat: player } = found;
-  if (player.socketId && player.socketId !== socket.id) {
-    // cancelar grace period del socket viejo si existe
-    player.socketId = socket.id;
+// Conectar el socket de un jugador a su mesa de torneo (reconexión).
+// 🔥 MULTIMESA: si el jugador tiene silla en varias mesas, cada socket se
+// asigna a UNA mesa distinta. tableId opcional para forzar la mesa concreta.
+function attachPlayer(socket, userId, tableId = null) {
+  const all = findTablesByUser(userId);
+  if (all.length === 0) return null;
+
+  let candidates = all;
+  if (tableId) {
+    // Acepta el tableId exacto o un prefijo (el frontend puede enviar 'mtt-<gameId>'
+    // sin sufijo de mesa; el reparto inteligente elige la mesa concreta)
+    candidates = all.filter(f => f.table.tableId === tableId || f.table.tableId.startsWith(tableId));
+    if (candidates.length === 0) candidates = all;
   }
+
+  // Preferir una mesa cuyo asiento aún no esté reclamado por otro socket VIVO
+  // del mismo usuario (asi 2 pestañas = 2 mesas simultáneas).
+  let chosen = null;
+  for (const f of candidates) {
+    const sid = f.seat.socketId;
+    const pendingOrFree = !sid || String(sid).startsWith('pending-') || !io?.sockets?.sockets?.get(sid);
+    if (pendingOrFree) { chosen = f; break; }
+  }
+  if (!chosen) chosen = candidates[0];
+
+  const { table, seat: player } = chosen;
   const r = table.reconnectPlayer(socket.id, userId);
   if (!r.ok) return null;
   socket.join(table.tableId);
@@ -273,6 +297,7 @@ module.exports = {
   startTournament,
   getMTTByGame,
   findTableByUser,
+  findTablesByUser,
   findTableBySocket,
   findMTTByTableId,
   attachPlayer,

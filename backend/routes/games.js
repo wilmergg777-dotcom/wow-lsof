@@ -5,7 +5,7 @@ const fetch = require('node-fetch');
 const pool = require('../db');
 const { verifyToken } = require('../middlewares/auth');
 const { getGames, getGameById, LATE_REG_MS } = require('../services/futures');
-const { getSeats } = require('../services/practice-table');
+const { getSeats, getTable } = require('../services/practice-table');
 const mtt = require('../services/mtt-tournaments');
 // ===========================================================
 // VALIDADOR
@@ -233,6 +233,52 @@ router.get('/futures-games/my-seat', verifyToken, (req, res) => {
         chips: found.seat.chips,
         title: found.mtt.game.title,
     });
+});
+
+// 🔥 MULTIMESA / RECONEXIÓN: todas las mesas activas de este jugador
+// (práctica + todas las mesas de torneo). El frontend usa esto para
+// restaurar la partida automáticamente al abrir la app o volver al lobby.
+router.get('/poker/my-tables', verifyToken, async (req, res) => {
+    try {
+        const out = [];
+
+        // Mesas de TORNEO (todas las que tenga)
+        for (const f of mtt.findTablesByUser(req.user.id)) {
+            out.push({
+                tableId: f.table.tableId,
+                kind: 'tournament',
+                gameId: f.mtt.game.id,
+                title: f.mtt.game.title,
+                chips: f.seat.chips,
+                blindLevel: f.table.blindLevel,
+                smallBlind: f.table.smallBlind,
+                bigBlind: f.table.bigBlind,
+                phase: f.table.phase,
+                myTurn: f.table.currentTurn === f.seat.socketId,
+            });
+        }
+
+        // Mesa de PRÁCTICA (silla viva)
+        const practice = getTable();
+        const pSeat = practice?.seats.find(p => p !== null && p.userId === req.user.id);
+        if (pSeat) {
+            out.push({
+                tableId: 'sala-practica-400',
+                kind: 'practice',
+                title: 'Sala de Práctica',
+                chips: pSeat.chips,
+                smallBlind: practice.smallBlind,
+                bigBlind: practice.bigBlind,
+                phase: practice.phase,
+                myTurn: practice.currentTurn === pSeat.socketId,
+            });
+        }
+
+        res.json(out);
+    } catch (err) {
+        console.error('[my-tables] Error:', err);
+        res.status(500).json({ error: 'Error obteniendo mesas activas' });
+    }
 });
 
 router.post('/futures-games/register', verifyToken, validateGameRegister, async (req, res) => {

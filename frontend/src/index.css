@@ -1306,3 +1306,88 @@ body {
   line-height: 1.4;
 }
 .mtt-structure-card b { color: #00e676; }
+/* ============================================================
+   🔥 BARRA MULTIMESA (estilo MTT, móvil primero) 🔥
+   Píldoras flotantes para saltar entre las mesas activas desde
+   el lobby, con aviso "¡TU TURNO!" cuando una mesa espera acción.
+   ============================================================ */
+.multitable-bar {
+  position: fixed;
+  bottom: 70px; /* encima de la barra de navegación móvil */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(18, 22, 31, 0.96);
+  border: 1px solid #232836;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  z-index: 99998;
+  max-width: calc(100vw - 20px);
+  overflow-x: auto;
+  backdrop-filter: blur(6px);
+}
+@media (min-width: 769px) {
+  .multitable-bar { bottom: 16px; }
+}
+.mtb-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #1a202c;
+  border: 1px solid #2d3748;
+  border-radius: 12px;
+  padding: 7px 12px;
+  cursor: pointer;
+  color: #e2e8f0;
+  white-space: nowrap;
+  transition: border-color 0.2s, background 0.2s, transform 0.1s;
+  font-family: inherit;
+}
+.mtb-chip:active { transform: scale(0.97); }
+.mtb-chip:hover { border-color: #00e676; }
+.mtb-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00e676;
+  flex-shrink: 0;
+}
+.mtb-name {
+  font-weight: 700;
+  font-size: 0.85rem;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mtb-sub {
+  font-size: 0.68rem;
+  color: #a0aec0;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.mtb-turn {
+  background: #00e676;
+  color: #04140a;
+  font-size: 0.62rem;
+  font-weight: 900;
+  padding: 3px 7px;
+  border-radius: 999px;
+  animation: mtbPulse 1s ease-in-out infinite;
+}
+.mtb-chip.my-turn {
+  border-color: #00e676;
+  background: #0e2a1b;
+}
+@keyframes mtbPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(1.06); }
+}
+.mtb-count {
+  font-size: 0.7rem;
+  color: #718096;
+  padding-right: 4px;
+  white-space: nowrap;
+}

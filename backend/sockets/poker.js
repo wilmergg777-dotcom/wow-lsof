@@ -6,7 +6,9 @@ const mtt = require('../services/mtt-tournaments');
 const db = require('../db'); 
 
 const disconnectTimeouts = {};
-const GRACE_PERIOD_MS = 15000;
+// 🔥 RECONEXIÓN: 90s de gracia para recuperar la sesión sin perder la silla
+// (antes 15s: con una simple recarga de página se perdía el asiento y el bote)
+const GRACE_PERIOD_MS = 90000;
 const MAX_CHAT_LENGTH = 280;
 
 // ?? CONSTANTE DE REGLA DE NEGOCIO
@@ -21,11 +23,12 @@ function cancelDisconnectTimeout(socketId) {
 }
 
 // ?? FUNCIoN AUXILIAR: Eliminar registro de mesa activa
-async function removeActiveTable(userId, socketId) {
+// ?? FIX MULTIMESA: usar el tableId REAL (antes borraba siempre la fila de práctica)
+async function removeActiveTable(userId, tableId, socketId) {
     try {
         await db.query(
             'DELETE FROM active_player_tables WHERE user_id = ? AND table_id = ? AND socket_id = ?',
-            [userId, PRACTICE_TABLE_ID, socketId]
+            [userId, tableId || PRACTICE_TABLE_ID, socketId]
         );
     } catch (err) {
         console.error('[DB Error] No se pudo eliminar la mesa activa:', err);
@@ -233,14 +236,58 @@ module.exports = function setupPokerSockets(io) {
         });
 
         // ?? MTT NUEVO: unirse a la mesa de TORNEO donde el jugador tiene silla asignada
+        // ?? MULTIMESA: acepta tableId para elegir la mesa concreta (hasta 2 mesas por jugador)
         socket.on('join_tournament_table', (data) => {
             if (!user) return socket.emit('error_mesa', 'Debes iniciar sesion');
-            const gameId = data?.gameId || null;
-            const table = mtt.attachPlayer(socket, user.id);
+            const tableId = data?.tableId || data?.tableData?.id || null;
+            const table = mtt.attachPlayer(socket, user.id, tableId);
             if (!table) {
                 return socket.emit('error_mesa', 'No tienes silla en ningún torneo en juego.');
             }
             console.log(`[MTT] ${user.username} conectado a su mesa de torneo ${table.tableId}.`);
+        });
+
+        // ?? MULTIMESA / RECONEXIÓN: lista de mesas activas del jugador
+        // (práctica + todas las mesas de torneo) para retomar donde se quedó.
+        socket.on('get_my_tables', async () => {
+            if (!user) return socket.emit('my_tables', []);
+            const out = [];
+
+            // Mesas de TORNEO (todas las que tenga)
+            for (const f of mtt.findTablesByUser(user.id)) {
+                out.push({
+                    tableId: f.table.tableId,
+                    kind: 'tournament',
+                    gameId: f.mtt.game.id,
+                    title: f.mtt.game.title,
+                    chips: f.seat.chips,
+                    blindLevel: f.table.blindLevel,
+                    smallBlind: f.table.smallBlind,
+                    bigBlind: f.table.bigBlind,
+                    phase: f.table.phase,
+                    myTurn: f.table.currentTurn === f.seat.socketId,
+                });
+            }
+
+            // Mesa de PRÁCTICA (silla viva)
+            try {
+                const practice = getTable();
+                const pSeat = practice?.seats.find(p => p !== null && p.userId === user.id);
+                if (pSeat) {
+                    out.push({
+                        tableId: PRACTICE_TABLE_ID,
+                        kind: 'practice',
+                        title: 'Sala de Práctica',
+                        chips: pSeat.chips,
+                        smallBlind: practice.smallBlind,
+                        bigBlind: practice.bigBlind,
+                        phase: practice.phase,
+                        myTurn: practice.currentTurn === pSeat.socketId,
+                    });
+                }
+            } catch (e) { /* mesa no inicializada */ }
+
+            socket.emit('my_tables', out);
         });
 
         socket.on('playerAction', (data) => {
@@ -309,8 +356,9 @@ module.exports = function setupPokerSockets(io) {
                 return;
             }
 
-            // Limpiamos la DB (solo práctica/torneo en servidor principal)
-            await removeActiveTable(player.userId, player.socketId);
+            // Limpiamos la DB con la mesa correcta
+            const resolvedKind = resolved?.kind || 'practice';
+            await removeActiveTable(player.userId, resolvedKind === 'tournament' ? table.tableId : PRACTICE_TABLE_ID, player.socketId);
 
             // ?? IMPORTANTE: NO emitimos leaveSuccess. El jugador se queda en la sala.
             console.log(`[Mesa] ${player.username} se levanto para ver de espectador.`);
@@ -335,8 +383,11 @@ module.exports = function setupPokerSockets(io) {
                 return;
             }
 
-            // Solo borrar de la DB si el motor confirmo la salida
-            if (player) await removeActiveTable(player.userId, player.socketId);
+            // Solo borrar de la DB si el motor confirmo la salida (con la mesa correcta)
+            if (player) {
+                const resolvedKind = resolved?.kind || 'practice';
+                await removeActiveTable(player.userId, resolvedKind === 'tournament' ? table.tableId : PRACTICE_TABLE_ID, player.socketId);
+            }
 
             // ?? Emitir leaveSuccess para que el frontend vuelva al lobby
             socket.emit('leaveSuccess');
@@ -360,8 +411,11 @@ module.exports = function setupPokerSockets(io) {
                 return;
             }
 
-            // Solo borrar de la DB si el motor confirmo la salida
-            if (player) await removeActiveTable(player.userId, player.socketId);
+            // Solo borrar de la DB si el motor confirmo la salida (con la mesa correcta)
+            if (player) {
+                const resolvedKind = resolved?.kind || 'practice';
+                await removeActiveTable(player.userId, resolvedKind === 'tournament' ? table.tableId : PRACTICE_TABLE_ID, player.socketId);
+            }
 
             // ?? Emitir leaveSuccess para que el frontend vuelva al lobby
             socket.emit('leaveSuccess');
@@ -396,11 +450,9 @@ module.exports = function setupPokerSockets(io) {
                 : practiceTable?.seats.find(p => p !== null && p.socketId === socket.id);
 
             if (player) {
-                if (!tFound) {
-                    // ?? IMPORTANTE: Quitamos la mesa de la DB inmediatamente al desconectar (solo práctica)
-                    await removeActiveTable(player.userId, player.socketId);
-                }
-
+                // ?? FIX RECONEXIÓN: NO borrar la fila de la DB al desconectar.
+                // La fila queda como "sesión activa" para poder retomar la partida
+                // automáticamente al volver al lobby / recargar la página.
                 const room = tFound ? tFound.table.tableId : PRACTICE_TABLE_ID;
                 socket.to(room).emit('player_disconnected', {
                     userId: player.userId,
@@ -410,11 +462,17 @@ module.exports = function setupPokerSockets(io) {
             }
 
             disconnectTimeouts[socket.id] = setTimeout(() => {
-                console.log('[Sockets] Tiempo de gracia agotado. Eliminando:', socket.id);
-                // ?? En disconnect no hay token valido para cash-out (socket ya cerrado).
-                // Práctica y torneo no hacen cash-out, null es seguro.
-                if (tFound) tFound.table.leave(socket.id, true, null);
-                else if (practiceTable) practiceTable.leave(socket.id, true, null);
+                console.log('[Sockets] Tiempo de gracia agotado:', socket.id);
+                if (tFound) {
+                    // ?? TORNEO: NUNCA se elimina la silla por desconexión.
+                    // El jugador conserva sus fichas y puede reconectar cuando quiera;
+                    // si le llega el turno, el temporizador le hace fold/check automático.
+                    console.log(`[MTT] ${player?.username || '?'} desconectado: silla conservada en ${tFound.table.tableId}`);
+                } else if (practiceTable) {
+                    // Práctica: liberar la silla tras la gracia y limpiar la DB
+                    practiceTable.leave(socket.id, true, null);
+                    if (player) removeActiveTable(player.userId, PRACTICE_TABLE_ID, player.socketId);
+                }
                 delete disconnectTimeouts[socket.id];
             }, GRACE_PERIOD_MS);
         });

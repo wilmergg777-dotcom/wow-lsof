@@ -17,7 +17,8 @@ import Login from './Login';
 import Profile from './Profile';
 import Mailbox from './Mailbox';
 import ActivityCenter from './ActivityCenter';
-import { API_URL } from './config'; 
+import { API_URL } from './config';
+import { setSoundPref, readRoyalSettings } from './soundPrefs'; 
 
 const SHOW_CLUB_MODULE = false;
 
@@ -157,16 +158,26 @@ function App() {
   const [loading, setLoading] = useState(true);
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [inGame, setInGame] = useState(() => {
-    const saved = localStorage.getItem('royalbet_in_game');
-    return saved ? JSON.parse(saved) : false;
+  // 🔥 MULTIMESA: hasta 2 mesas activas a la vez. Cada mesa permanece
+  // MONTADA (socket vivo) aunque el jugador navegue por el lobby, así la
+  // partida continúa y se puede retomar exactamente donde se quedó.
+  const [activeTables, setActiveTables] = useState(() => {
+    try {
+      const saved = localStorage.getItem('royalbet_active_tables');
+      if (saved) return JSON.parse(saved);
+      // Migración del formato antiguo (una sola mesa)
+      const old = localStorage.getItem('royalbet_table_config');
+      const oldInGame = localStorage.getItem('royalbet_in_game');
+      if (old && oldInGame === 'true') return [JSON.parse(old)];
+      return [];
+    } catch { return []; }
   });
-  const [tableConfig, setTableConfig] = useState(() => {
-    const saved = localStorage.getItem('royalbet_table_config');
-    return saved ? JSON.parse(saved) : null;
+  // null = todas las mesas minimizadas (se ve el lobby)
+  const [focusedTableId, setFocusedTableId] = useState(() => {
+    return localStorage.getItem('royalbet_focused_table') || null;
   });
-
-  const [isMinimized, setIsMinimized] = useState(false);
+  // 🔊 Barras multimesa: qué mesas están esperando MI acción
+  const [turnTables, setTurnTables] = useState({});
   
   const [selectedTable, setSelectedTable] = useState(null);
   const [activeTournament, setActiveTournament] = useState(null);
@@ -215,10 +226,18 @@ function App() {
     };
   });
 
-  const handleSettingChange = (key, value) => setSettings(prev => ({ ...prev, [key]: value }));
-  const handleSaveSettings = () => { 
-    localStorage.setItem('royalbet_settings', JSON.stringify(settings)); 
-    showToast('Ajustes guardados correctamente', 'success'); 
+  const handleSettingChange = (key, value) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+    // 🔊 SONIDO FUNCIONAL: las claves de sonido se aplican AL INSTANTE
+    // (se persisten y se notifican a todas las mesas abiertas, sin pulsar Ahorrar)
+    if (key === 'efectosSonoros' || key === 'alertasMultimesa') setSoundPref(key, value);
+  };
+  const handleSaveSettings = () => {
+    // 🔥 FIX: fusionar con lo que las mesas hayan cambiado (efectos/volumen)
+    // para NO pisar las preferencias vivas con valores desactualizados
+    const live = readRoyalSettings();
+    localStorage.setItem('royalbet_settings', JSON.stringify({ ...settings, ...live }));
+    showToast('Ajustes guardados correctamente', 'success');
   };
 
   const fetchBalance = async (token) => {
@@ -243,11 +262,10 @@ function App() {
     }
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.removeItem('royalbet_in_game');
-    localStorage.removeItem('royalbet_table_config');
-    setInGame(false);
-    setIsMinimized(false);
-    setTableConfig(null);
+    // 🔥 MULTIMESA: limpiar mesas locales (el servidor las restaurará con /poker/my-tables)
+    setActiveTables([]);
+    setFocusedTableId(null);
+    setTurnTables({});
     setUser(userData);
     setHasPin(userData.has_pin || false);
     setPinEnabled(userData.pin_enabled || false);
@@ -269,11 +287,9 @@ function App() {
               setSessionExpired(true);
               localStorage.removeItem('token');
               localStorage.removeItem('user');
-              localStorage.removeItem('royalbet_in_game');
-              localStorage.removeItem('royalbet_table_config');
-              setInGame(false);
-              setIsMinimized(false);
-              setTableConfig(null);
+              setActiveTables([]);
+              setFocusedTableId(null);
+              setTurnTables({});
               setUser(null);
               setCurrentPage('lobby');
             }
@@ -340,6 +356,24 @@ function App() {
   }, [user?.id]);
 
   useEffect(() => { localStorage.setItem('royalbet_currentPage', currentPage); }, [currentPage]);
+
+  // 🔥 MULTIMESA: persistencia de las mesas activas y de la mesa enfocada
+  useEffect(() => { try { localStorage.setItem('royalbet_active_tables', JSON.stringify(activeTables)); } catch (e) {} }, [activeTables]);
+  useEffect(() => {
+    try {
+      if (focusedTableId) localStorage.setItem('royalbet_focused_table', focusedTableId);
+      else localStorage.removeItem('royalbet_focused_table');
+      // compatibilidad con el formato antiguo
+      const focused = activeTables.find(t => (t.tableData?.id || t.id) === focusedTableId);
+      if (focused) {
+        localStorage.setItem('royalbet_in_game', 'true');
+        localStorage.setItem('royalbet_table_config', JSON.stringify(focused));
+      } else {
+        localStorage.removeItem('royalbet_in_game');
+        localStorage.removeItem('royalbet_table_config');
+      }
+    } catch (e) {}
+  }, [focusedTableId, activeTables]);
   useEffect(() => { if (!SHOW_CLUB_MODULE && currentPage === 'club') setCurrentPage('lobby'); }, [currentPage]);
 
   useEffect(() => {
@@ -478,30 +512,97 @@ function App() {
     setIsMenuOpen(false); 
     setIsSidebarOpen(false); 
     setCurrentPage('lobby'); 
-    setInGame(false); 
-    setIsMinimized(false);
-    setTableConfig(null); 
+    setActiveTables([]); 
+    setFocusedTableId(null);
+    setTurnTables({});
     setSelectedTable(null); 
     setActiveTournament(null);
     setLoading(false);
     setSessionExpired(false);
   };
 
+  // ============================================================
+  // 🔥 MULTIMESA (máximo 2 mesas) + RETOMAR AUTOMÁTICAMENTE
+  // ============================================================
+  const inGame = activeTables.length > 0;
+
+  // Abrir/focalizar una mesa (si ya está abierta, solo se retoma)
   const joinTable = (config) => {
-    setTableConfig(config);
-    setInGame(true);
-    setIsMinimized(false); 
-    localStorage.setItem('royalbet_in_game', 'true');
-    localStorage.setItem('royalbet_table_config', JSON.stringify(config));
+    const id = config?.tableData?.id || config?.id;
+    if (!id) return;
+    const exists = activeTables.some(c => (c.tableData?.id || c.id) === id);
+    if (exists) { setFocusedTableId(id); return; } // retomar donde se quedó
+    if (activeTables.length >= 2) {
+      showToast('Máximo 2 mesas a la vez. Sal de una mesa para abrir otra.', 'error');
+      return;
+    }
+    setFocusedTableId(id);
+    setActiveTables(prev => [...prev, config]);
   };
 
-  const handleExitGame = () => {
-    setInGame(false);
-    setIsMinimized(false);
-    setTableConfig(null);
-    localStorage.removeItem('royalbet_in_game');
-    localStorage.removeItem('royalbet_table_config');
+  // Volver al lobby dejando las mesas vivas en segundo plano
+  const minimizeTables = () => setFocusedTableId(null);
+
+  // Focalizar una mesa concreta desde la barra multimesa
+  const focusTable = (id) => setFocusedTableId(id);
+
+  // Cerrar UNA mesa concreta (después de leaveSuccess del servidor)
+  const removeTable = (id) => {
+    const next = activeTables.filter(c => (c.tableData?.id || c.id) !== id);
+    setActiveTables(next);
+    setFocusedTableId(cur => (cur === id ? (next[0]?.tableData?.id || next[0]?.id || null) : cur));
   };
+
+  const handleExitGame = (tableId) => {
+    if (tableId) removeTable(tableId);
+    else { setActiveTables([]); setFocusedTableId(null); }
+  };
+
+  // 🔊 Estado de turno por mesa (para los badges "¡TU TURNO!")
+  const handleTurnStatus = (tableId, isMyTurn) => {
+    setTurnTables(prev => (!!prev[tableId] === isMyTurn ? prev : { ...prev, [tableId]: isMyTurn }));
+  };
+
+  // 🔥 RETOMAR AUTOMÁTICAMENTE: al abrir la app preguntamos al servidor
+  // qué mesas siguen vivas (práctica + torneos) y las restauramos solas.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      try {
+        const res = await fetch(`${API_URL}/api/poker/my-tables`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok || cancelled) return;
+        const tables = await res.json();
+        if (!Array.isArray(tables) || tables.length === 0 || cancelled) return;
+        setActiveTables(prev => {
+          const existing = new Set(prev.map(c => c.tableData?.id || c.id));
+          const restored = [...prev];
+          for (const t of tables) {
+            const id = t.tableId || t.gameId;
+            if (!id || existing.has(id) || restored.length >= 2) continue;
+            restored.push({
+              isActive: true,
+              tableData: {
+                id,
+                name: t.title || 'Mesa',
+                isTournament: t.kind === 'tournament',
+                isPractice: t.kind === 'practice',
+                gameId: t.gameId || null,
+                blinds: t.smallBlind != null ? `${t.smallBlind}/${t.bigBlind}` : 'MTT',
+                maxPlayers: 9,
+                startingStack: 3000,
+              },
+            });
+          }
+          return restored;
+        });
+        showToast('Partida restaurada: tienes mesas activas. Retoma donde te quedaste.', 'success');
+      } catch (e) { console.error('Error restaurando mesas:', e); }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   if (loading) {
     return (
@@ -528,16 +629,48 @@ function App() {
     <SessionExpiredModal isOpen={sessionExpired} onAccept={() => setSessionExpired(false)} />
   );
 
+  // 🔥 MULTIMESA: TODAS las mesas activas permanecen montadas (sockets vivos);
+  // solo la enfocada es visible. El resto sigue jugando en segundo plano.
   const renderPokerTable = () => {
-    if (!inGame || !user) return null;
+    if (activeTables.length === 0 || !user) return null;
+    return activeTables.map((config) => {
+      const id = config.tableData?.id || config.id;
+      const focused = focusedTableId === id;
+      return (
+        <div key={id} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 99999, display: focused ? 'block' : 'none' }}>
+          <PokerTable
+            user={user}
+            tableConfig={config}
+            onExit={handleExitGame}
+            onMinimize={minimizeTables}
+            isFocused={focused}
+            onTurnStatus={(turn) => handleTurnStatus(id, turn)}
+          />
+        </div>
+      );
+    });
+  };
+
+  // 🔥 BARRA MULTIMESA (estilo MTT): píldoras flotantes para saltar entre
+  // las mesas activas desde el lobby, con aviso cuando es mi turno.
+  const renderTablesBar = () => {
+    if (activeTables.length === 0 || focusedTableId !== null) return null;
     return (
-      <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 99999, display: isMinimized ? 'none' : 'block' }}>
-        <PokerTable 
-          user={user} 
-          tableConfig={tableConfig} 
-          onExit={handleExitGame} 
-          onMinimize={() => setIsMinimized(true)} 
-        />
+      <div className="multitable-bar">
+        {activeTables.map((config) => {
+          const id = config.tableData?.id || config.id;
+          const t = config.tableData || config;
+          const myTurn = !!turnTables[id];
+          return (
+            <button key={id} className={`mtb-chip ${myTurn ? 'my-turn' : ''}`} onClick={() => focusTable(id)}>
+              <span className="mtb-dot" />
+              <span className="mtb-name">{t.name || 'Mesa'}</span>
+              <span className="mtb-sub">{t.isTournament ? 'Torneo' : (t.isPractice ? 'Práctica' : (t.blinds || 'Cash'))}</span>
+              {myTurn && <span className="mtb-turn">¡TU TURNO!</span>}
+            </button>
+          );
+        })}
+        <span className="mtb-count">{activeTables.length}/2 mesas</span>
       </div>
     );
   };
@@ -547,6 +680,7 @@ function App() {
       <>
         {renderSessionModal()}
         {renderPokerTable()}
+        {renderTablesBar()}
         <TournamentDetails tournament={selectedTable} onBack={() => setSelectedTable(null)} onJoin={() => { setSelectedTable(null); joinTable({ isActive: true, tableData: { name: "Torneo", blinds: "10/20", maxPlayers: 9 } }); }} />
       </>
     );
@@ -557,6 +691,7 @@ function App() {
       <>
         {renderSessionModal()}
         {renderPokerTable()}
+        {renderTablesBar()}
         <TournamentLobby tournament={activeTournament} onBack={() => setActiveTournament(null)} />
       </>
     );
@@ -591,6 +726,7 @@ function App() {
 
       {renderSessionModal()}
       {renderPokerTable()}
+      {renderTablesBar()}
       
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <ConfirmDialog 
