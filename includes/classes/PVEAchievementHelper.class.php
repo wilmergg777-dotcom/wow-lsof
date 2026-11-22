@@ -700,7 +700,7 @@ class PVEAchievementHelper
 
 			PlayerUtil::sendMessage(
 				$userId, 0, 'Comando Central PvE', 3, $title, $body,
-				TIMESTAMP, null, 1, Universe::current()
+				TIMESTAMP, null, 1, PVEHelper::getUniverseForUser($userId)
 			);
 		} catch (Exception $e) {
 			// Silencioso

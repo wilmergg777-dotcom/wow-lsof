@@ -628,7 +628,7 @@ class PVEBossTournamentHelper
             $winnerMembers = $db->select(
                 "SELECT id FROM %%USERS%%
                  WHERE ally_id = :aid AND bana = 0 AND universe = :uni;",
-                array(':aid' => (int) $winner['ally_id'], ':uni' => Universe::current())
+                array(':aid' => (int) $winner['ally_id'], ':uni' => PVEHelper::getUniverseForAlly((int) $winner['ally_id']))
             );
             if (is_array($winnerMembers)) {
                 foreach ($winnerMembers as $m) {
@@ -2011,8 +2011,7 @@ class PVEBossTournamentHelper
         $db = Database::get();
         $allies = $db->select(
             "SELECT id, ally_name, ally_owner FROM %%ALLIANCE%%
-             WHERE ally_universe = :uni AND ally_members > 0;",
-            array(':uni' => Universe::current())
+             WHERE ally_members > 0;"
         );
         if (!is_array($allies)) return;
 
@@ -2115,9 +2114,8 @@ class PVEBossTournamentHelper
         $db = Database::get();
         $users = $db->select(
             "SELECT id FROM %%USERS%%
-             WHERE universe = :uni AND authlevel >= 1 AND bana = 0
-             LIMIT 500;",
-            array(':uni' => Universe::current())
+             WHERE authlevel >= 1 AND bana = 0
+             LIMIT 500;"
         );
         if (!is_array($users)) return;
 
@@ -2290,7 +2288,7 @@ class PVEBossTournamentHelper
         try {
             PlayerUtil::sendMessage(
                 $userId, 0, 'Torneo del Devorador', 3, $title, $body,
-                TIMESTAMP, null, 1, Universe::current()
+                TIMESTAMP, null, 1, PVEHelper::getUniverseForUser($userId)
             );
             return true;
         } catch (Throwable $e) {
@@ -2306,7 +2304,7 @@ class PVEBossTournamentHelper
         $members = $db->select(
             "SELECT id FROM %%USERS%%
              WHERE ally_id = :aid AND bana = 0 AND universe = :uni;",
-            array(':aid' => $allyId, ':uni' => Universe::current())
+            array(':aid' => $allyId, ':uni' => PVEHelper::getUniverseForAlly($allyId))
         );
         if (!is_array($members)) return 0;
 

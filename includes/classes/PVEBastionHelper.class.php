@@ -2130,8 +2130,7 @@ class PVEBastionHelper
         $db = Database::get();
         $allies = $db->select(
             "SELECT id, ally_name, ally_owner FROM %%ALLIANCE%%
-             WHERE ally_universe = :uni AND ally_members > 0;",
-            array(':uni' => Universe::current())
+             WHERE ally_members > 0;"
         );
         if (!is_array($allies)) return;
 
@@ -2211,9 +2210,8 @@ class PVEBastionHelper
         $db = Database::get();
         $users = $db->select(
             "SELECT id FROM %%USERS%%
-             WHERE universe = :uni AND authlevel >= 1 AND bana = 0
-             LIMIT 500;",
-            array(':uni' => Universe::current())
+             WHERE authlevel >= 1 AND bana = 0
+             LIMIT 500;"
         );
         if (!is_array($users)) return;
 
@@ -2386,7 +2384,7 @@ class PVEBastionHelper
         try {
             PlayerUtil::sendMessage(
                 $userId, 0, 'Bastión Asediado', 3, $title, $body,
-                TIMESTAMP, null, 1, Universe::current()
+                TIMESTAMP, null, 1, PVEHelper::getUniverseForUser($userId)
             );
             return true;
         } catch (Throwable $e) {
@@ -2402,7 +2400,7 @@ class PVEBastionHelper
         $members = $db->select(
             "SELECT id FROM %%USERS%%
              WHERE ally_id = :aid AND bana = 0 AND universe = :uni;",
-            array(':aid' => $allyId, ':uni' => Universe::current())
+            array(':aid' => $allyId, ':uni' => PVEHelper::getUniverseForAlly($allyId))
         );
         if (!is_array($members)) return 0;
 

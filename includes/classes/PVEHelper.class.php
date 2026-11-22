@@ -915,4 +915,53 @@ class PVEHelper
 			return false;
 		}
 	}
+
+	/* ============================================================
+	 *  ✅ v3.4 — MULTIVERSO: resolver el universo del objetivo
+	 * ------------------------------------------------------------
+	 * El código PVE corre en gran parte desde CRON (crisis, bastión,
+	 * torneos, contraataques), donde Universe::current() es el universo
+	 * por defecto y NO el del destinatario. Estas dos funciones dan el
+	 * universo correcto de cada usuario / alianza.
+	 * ============================================================ */
+
+	/**
+	 * Universo de un usuario (para mensajes y flotas desde cron).
+	 */
+	public static function getUniverseForUser($userId): int
+	{
+		$userId = (int) $userId;
+		if ($userId <= 0) return 1;
+
+		try {
+			$uni = Database::get()->selectSingle(
+				"SELECT universe FROM %%USERS%% WHERE id = :id LIMIT 1;",
+				array(':id' => $userId),
+				'universe'
+			);
+			return (int) ($uni ?: 1);
+		} catch (Exception $e) {
+			return 1;
+		}
+	}
+
+	/**
+	 * Universo de una alianza (columna ally_universe).
+	 */
+	public static function getUniverseForAlly($allyId): int
+	{
+		$allyId = (int) $allyId;
+		if ($allyId <= 0) return 1;
+
+		try {
+			$uni = Database::get()->selectSingle(
+				"SELECT ally_universe FROM %%ALLIANCE%% WHERE id = :id LIMIT 1;",
+				array(':id' => $allyId),
+				'ally_universe'
+			);
+			return (int) ($uni ?: 1);
+		} catch (Exception $e) {
+			return 1;
+		}
+	}
 }

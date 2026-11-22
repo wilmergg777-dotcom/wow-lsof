@@ -386,15 +386,17 @@ class PVECrisisHelper
 		$db = Database::get();
 
 		// ✅ Excluir fantasmas (is_pve = 1) de los objetivos de Crisis
+		// ✅ v3.4 — La Crisis ataca a TODO EL MUNDO, incluidos mods/ops/admins
+		//          (antes se excluyía con u.authlevel < 3). Se mantienen las
+		//          exclusiones razonables: vacaciones, baneados y fantasmas.
 		$sql = "SELECT u.id AS user_id, u.username, u.urlaubs_modus, u.bana,
-		               p.id AS planet_id, p.galaxy, p.system, p.planet, p.planet_type
+		       p.id AS planet_id, p.galaxy, p.system, p.planet, p.planet_type, p.universe
 				FROM %%USERS%% u
 				INNER JOIN %%PLANETS%% p ON p.id_owner = u.id
 				WHERE p.planet_type = 1
 				  AND p.destruyed = 0
 				  AND u.urlaubs_modus = 0
 				  AND u.bana = 0
-				  AND u.authlevel < 3
 				  AND (u.is_pve = 0 OR u.is_pve IS NULL);";
 
 		$players = $db->select($sql);

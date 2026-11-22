@@ -124,7 +124,7 @@ class PveFleetHelper
 			':mission'          => MISSION_PVE_CRISIS,
 			':fleetAmount'      => $fleetAmount,
 			':fleetArray'       => $fleetArrayStr,
-			':universe'         => Universe::current(),
+			':universe'         => (int) $targetPlanet['universe'],
 			':fleetStartTime'   => $fleetStartTime,
 			':fleetStayTime'    => $fleetStayTime,
 			':fleetEndTime'     => $fleetEndTime,
@@ -185,7 +185,7 @@ class PveFleetHelper
 			':mission'          => MISSION_PVE_CRISIS,
 			':fleetAmount'      => $fleetAmount,
 			':fleetArray'       => $fleetArrayStr,
-			':universe'         => Universe::current(),
+			':universe'         => (int) $targetPlanet['universe'],
 			':fleetStartTime'   => $fleetStartTime,
 			':fleetStayTime'    => $fleetStayTime,
 			':fleetEndTime'     => $fleetEndTime,
@@ -497,7 +497,7 @@ class PveFleetHelper
 			':mission'          => MISSION_PVE_EMPIRE,
 			':fleetAmount'      => $fleetAmount,
 			':fleetArray'       => $fleetArrayStr,
-			':universe'         => Universe::current(),
+			':universe'         => (int) $planet['universe'],
 			':fleetStartTime'   => $fleetStartTime,
 			':fleetStayTime'    => $fleetStayTime,
 			':fleetEndTime'     => $fleetEndTime,
@@ -559,7 +559,7 @@ class PveFleetHelper
 			':mission'          => MISSION_PVE_EMPIRE,
 			':fleetAmount'      => $fleetAmount,
 			':fleetArray'       => $fleetArrayStr,
-			':universe'         => Universe::current(),
+			':universe'         => (int) $planet['universe'],
 			':fleetStartTime'   => $fleetStartTime,
 			':fleetStayTime'    => $fleetStayTime,
 			':fleetEndTime'     => $fleetEndTime,
@@ -1046,7 +1046,7 @@ class PveFleetHelper
 			':mission'          => MISSION_PVE_COUNTER,
 			':fleetAmount'      => $fleetAmount,
 			':fleetArray'       => $fleetArrayStr,
-			':universe'         => Universe::current(),
+			':universe'         => (int) $targetPlanet['universe'],
 			':fleetStartTime'   => $fleetStartTime,
 			':fleetStayTime'    => $fleetStayTime,
 			':fleetEndTime'     => $fleetEndTime,
@@ -1107,7 +1107,7 @@ class PveFleetHelper
 			':mission'          => MISSION_PVE_COUNTER,
 			':fleetAmount'      => $fleetAmount,
 			':fleetArray'       => $fleetArrayStr,
-			':universe'         => Universe::current(),
+			':universe'         => (int) $targetPlanet['universe'],
 			':fleetStartTime'   => $fleetStartTime,
 			':fleetStayTime'    => $fleetStayTime,
 			':fleetEndTime'     => $fleetEndTime,
@@ -1136,9 +1136,20 @@ class PveFleetHelper
 	private static function sendMessage($userId, $title, $body)
 	{
 		try {
+			// ✅ v3.4 — Multiverso: el mensaje usa el universo del DESTINATARIO,
+			// no el de la sesión (esto corre en cron y puede notificar a
+			// jugadores de cualquier universo).
+			$db = Database::get();
+			$userUni = $db->selectSingle(
+				"SELECT universe FROM %%USERS%% WHERE id = :id LIMIT 1;",
+				array(':id' => (int) $userId),
+				'universe'
+			);
+			$userUni = (int) ($userUni ?: 1);
+
 			PlayerUtil::sendMessage(
 				(int) $userId, 0, 'Comando Central PvE', 3, $title, $body,
-				TIMESTAMP, null, 1, Universe::current()
+				TIMESTAMP, null, 1, $userUni
 			);
 			return true;
 		} catch (Exception $e) {

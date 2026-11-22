@@ -919,7 +919,9 @@ class PVEBastionWaveHelper
         $now        = TIMESTAMP;
         $startTime  = $now;
         $endTime    = $arrivalTime;
-        $universe   = Universe::current();
+        // ✅ v3.4 — Multiverso: el universo lo dicta el dueño del fantasma
+        // (esto corre desde cron para cualquier universo).
+        $universe   = PVEHelper::getUniverseForUser($ghost['ghost_user_id']);
 
         try {
             // Insertar la flota
@@ -1054,7 +1056,7 @@ class PVEBastionWaveHelper
         $members = $db->select(
             "SELECT id FROM %%USERS%%
              WHERE ally_id = :aid AND bana = 0 AND universe = :uni;",
-            array(':aid' => $allyId, ':uni' => Universe::current())
+            array(':aid' => $allyId, ':uni' => PVEHelper::getUniverseForAlly($allyId))
         );
         if (!is_array($members)) return 0;
 
@@ -1063,7 +1065,7 @@ class PVEBastionWaveHelper
             try {
                 PlayerUtil::sendMessage(
                     (int) $m['id'], 0, 'Bastión Asediado', 3, $title, $body,
-                    TIMESTAMP, null, 1, Universe::current()
+                    TIMESTAMP, null, 1, PVEHelper::getUniverseForUser((int) $m['id'])
                 );
                 $count++;
             } catch (Throwable $e) {}
