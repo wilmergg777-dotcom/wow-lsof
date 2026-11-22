@@ -240,6 +240,16 @@ profesión nueva es solo añadir otra `DefProfesion` al registro.
   que producen el material que consumen las recetas posteriores. Además
   tiene **3 especializaciones** (tela lunar, fuego de hechizo, tejido de
   sombra) que se aprenden a partir de 350.
+- **Encantamiento** (WoW 3.3.5): 6 rangos y 43 recetas (Classic 1-300, TBC
+  300-350, WotLK 350-450) con los materiales de desencantamiento de la guía
+  (polvos, esencias, fragmentos y gemas/perlas Classic; polvo arcano +
+  esencia bidimensional + fragmentos TBC; polvo infinito + esencia cósmica +
+  tierra eterna WotLK). No tiene especializaciones. Produce encantamientos
+  (tipo `encantamiento`, aplicables a ranuras de equipo), aceites de zahorí
+  y **varas rúnicas encadenadas** (tipo `vara`): cada vara consume la
+  anterior como material (cobre → plata → dorada → veraplata → arcanita →
+  hierro vil → adamantita → eternio → titanio), de modo que deben craftearse
+  en orden.
 - **Especializaciones**: `DefEspecializacion` (id, nombre, skill_req,
   descripción, materiales para aprenderla). `AprenderEspecializacion()`
   valida skill >= req, que no haya ya una elegida, y consume los materiales.

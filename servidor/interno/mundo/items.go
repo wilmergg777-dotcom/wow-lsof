@@ -28,6 +28,10 @@ const (
 	TipoRefuerzo = "refuerzo" // parches/mejoras de armadura
 	// Tipos de Sastrería
 	TipoCamisa = "camisa" // prendas decorativas
+	// Tipos de Encantamiento
+	TipoEncantamiento = "encantamiento" // pergaminos de encantamiento aplicables a ranuras
+	TipoVara          = "vara"           // varas rúnicas encantadoras (herramienta + material encadenado)
+	TipoAceite        = "aceite"         // aceites de zahorí (recubrimiento temporal de arma)
 )
 
 // Calidades.
@@ -351,6 +355,123 @@ func itemsPredefinidos() map[string]DefItem {
 		{"guantes_tejido_ebano", "Guantes de tejido de ébano", TipoArmadura, CalidadEpico},
 	}
 	for _, c := range craftedSastreria {
+		m[c.id] = def(c.id, c.nombre, c.tipo, c.calidad)
+	}
+
+	// ─── Materiales de Encantamiento (Classic) ───
+	// Polvos, esencias, fragmentos y gemas/perlas obtenidos al desencantar.
+	for id, n := range map[string]string{
+		"polvo_extraño":              "Polvo extraño",
+		"esencia_mágica_inferior":    "Esencia mágica inferior",
+		"esencia_mágica_superior":    "Esencia mágica superior",
+		"esencia_astral_inferior":    "Esencia astral inferior",
+		"polvo_alma":                 "Polvo de alma",
+		"esencia_astral_superior":    "Esencia astral superior",
+		"esencia_mística_inferior":   "Esencia mística inferior",
+		"polvo_visión":               "Polvo de visión",
+		"esencia_mística_superior":   "Esencia mística superior",
+		"polvo_onírico":              "Polvo onírico",
+		"esencia_abisal_superior":    "Esencia abisal superior",
+		"polvo_ilusión":              "Polvo de ilusión",
+		"esencia_eterna_superior":    "Esencia eterna superior",
+		"fragmento_luminoso_pequeño": "Fragmento luminoso pequeño",
+		"fragmento_luminoso_grande":  "Fragmento luminoso grande",
+		"gema_sombras":               "Gema de las Sombras",
+		"perla_iridiscente":          "Perla iridiscente",
+		"perla_negra":                "Perla negra",
+		"perla_oro":                  "Perla de oro",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+	// ─── Materiales de Encantamiento (TBC) ───
+	// polvo_arcano ya existe (Sastrería). Las varas de adamantita/hierro
+	// vil/etc. son productos de herrería; aquí se registran como material.
+	for id, n := range map[string]string{
+		"esencia_bidimensional_superior":  "Esencia bidimensional superior",
+		"vid_pesadilla":                   "Vid pesadilla",
+		"fragmento_centelleante_grande":   "Fragmento centelleante grande",
+		"poderío_primigenio":              "Poderío primigenio",
+		"vara_adamantita":                 "Vara de adamantita",
+		"vara_hierro_vil":                 "Vara de hierro vil",
+		"vara_arcanita":                   "Vara de arcanita",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+	// ─── Materiales de Encantamiento (WotLK) ───
+	// polvo_infinito ya existe (Sastrería).
+	for id, n := range map[string]string{
+		"esencia_cósmica_superior": "Esencia cósmica superior",
+		"fragmento_onírico":        "Fragmento onírico",
+		"tierra_eterna":            "Tierra eterna",
+		"agua_cristalizada":        "Agua cristalizada",
+		"vara_titanio":             "Vara de titanio",
+		"vara_eternio":             "Vara de eternio",
+		"vara_veraplata":           "Vara de veraplata",
+		"vara_dorado":              "Vara dorada",
+		"vara_plata":               "Vara de plata",
+		"vara_cobre":               "Vara de cobre",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+	// fragmento_abisal es un material de alto nivel que también se craftea
+	// (receta 445-447); se registra como material aquí.
+	m["fragmento_abisal"] = def("fragmento_abisal", "Fragmento abisal", TipoMaterial, CalidadRaro)
+
+	// ─── Productos crafteados de Encantamiento (1-450) ───
+	// 9 varas rúnicas (encadenadas: cada una consume la anterior) + 32
+	// encantamientos + 1 aceite de zahorí.
+	craftedEncantamiento := []struct {
+		id, nombre, tipo, calidad string
+	}{
+		// Varas rúnicas (cadena)
+		{"vara_cobre_rúnico", "Vara de cobre rúnico", TipoVara, CalidadComun},
+		{"vara_rúnica_plateada", "Vara rúnica plateada", TipoVara, CalidadComun},
+		{"vara_rúnica_dorada", "Vara rúnica dorada", TipoVara, CalidadComun},
+		{"vara_veraplata_runas", "Vara de veraplata con runas", TipoVara, CalidadRaro},
+		{"vara_arcanita_rúnica", "Vara de arcanita rúnica", TipoVara, CalidadRaro},
+		{"vara_hierro_vil_rúnica", "Vara rúnica de hierro vil", TipoVara, CalidadRaro},
+		{"vara_adamantita_rúnica", "Vara rúnica de adamantita", TipoVara, CalidadRaro},
+		{"vara_eternio_rúnica", "Vara rúnica de eternio", TipoVara, CalidadRaro},
+		{"vara_titanio_rúnica", "Vara rúnica de titanio", TipoVara, CalidadEpico},
+		// Aceite de zahorí
+		{"aceite_zahorí_excelente", "Aceite de zahorí excelente", TipoAceite, CalidadComun},
+		// Encantamientos Classic 1-300
+		{"encanto_brazal_salud_menor", "Encantar brazal: salud menor", TipoEncantamiento, CalidadComun},
+		{"encanto_brazal_desvío_menor", "Encantar brazal: desvío menor", TipoEncantamiento, CalidadComun},
+		{"encanto_brazal_aguante_menor", "Encantar brazal: aguante menor", TipoEncantamiento, CalidadComun},
+		{"encanto_brazal_agilidad_menor", "Encantar brazal: agilidad menor", TipoEncantamiento, CalidadComun},
+		{"encanto_escudo_aguante_menor", "Encantar escudo: aguante menor", TipoEncantamiento, CalidadComun},
+		{"encanto_brazal_aguante_inferior", "Encantar brazal: aguante inferior", TipoEncantamiento, CalidadComun},
+		{"encanto_escudo_aguante_inferior", "Encantar escudo: aguante inferior", TipoEncantamiento, CalidadComun},
+		{"encanto_brazal_espíritu", "Encantar brazal: espíritu", TipoEncantamiento, CalidadComun},
+		{"encanto_brazal_fuerza", "Encantar brazal: fuerza", TipoEncantamiento, CalidadComun},
+		{"encanto_capa_defensa_superior", "Encantar capa: defensa superior", TipoEncantamiento, CalidadComun},
+		{"encanto_guantes_agilidad", "Encantar guantes: agilidad", TipoEncantamiento, CalidadComun},
+		{"encanto_pechera_salud_excelente", "Encantar pechera: salud excelente", TipoEncantamiento, CalidadComun},
+		{"encanto_brazal_fuerza_superior", "Encantar brazal: fuerza superior", TipoEncantamiento, CalidadRaro},
+		{"encanto_escudo_aguante_superior", "Encantar escudo: aguante superior", TipoEncantamiento, CalidadRaro},
+		{"encanto_capa_defensa_excelente", "Encantar capa: defensa excelente", TipoEncantamiento, CalidadRaro},
+		// Encantamientos TBC 300-350
+		{"encanto_brazal_asalto", "Encantar brazal: asalto", TipoEncantamiento, CalidadRaro},
+		{"encanto_brazal_lozanía", "Encantar brazal: lozanía", TipoEncantamiento, CalidadRaro},
+		{"encanto_capa_armadura_sublime", "Encantar capa: armadura sublime", TipoEncantamiento, CalidadRaro},
+		{"encanto_pechera_espíritu_sublime", "Encantar pechera: espíritu sublime", TipoEncantamiento, CalidadRaro},
+		{"encanto_escudo_aguante_sublime", "Encantar escudo: aguante sublime", TipoEncantamiento, CalidadRaro},
+		{"encanto_guantes_fuerza_sublime", "Encantar guantes: fuerza sublime", TipoEncantamiento, CalidadRaro},
+		// Encantamientos WotLK 350-450
+		{"encanto_capa_velocidad", "Encantar capa: velocidad", TipoEncantamiento, CalidadRaro},
+		{"encanto_brazales_golpear", "Encantar brazales: golpear", TipoEncantamiento, CalidadRaro},
+		{"encanto_brazales_intelecto_excepcional", "Encantar brazales: intelecto excepcional", TipoEncantamiento, CalidadRaro},
+		{"encanto_botas_caminante_hielo", "Encantar botas: caminante de hielo", TipoEncantamiento, CalidadRaro},
+		{"encanto_capa_agilidad_excelente", "Encantar capa: agilidad excelente", TipoEncantamiento, CalidadRaro},
+		{"encanto_guantes_pericia", "Encantar guantes: pericia", TipoEncantamiento, CalidadRaro},
+		{"encanto_botas_espíritu_superior", "Encantar botas: espíritu superior", TipoEncantamiento, CalidadRaro},
+		{"encanto_escudo_defensa", "Encantar escudo: defensa", TipoEncantamiento, CalidadRaro},
+		{"encanto_capa_armadura_poderosa", "Encantar capa: Armadura poderosa", TipoEncantamiento, CalidadRaro},
+		{"encanto_guantes_armero", "Encantar guantes: armero", TipoEncantamiento, CalidadRaro},
+		{"encanto_botas_asalto_superior", "Encantar botas: asalto superior", TipoEncantamiento, CalidadEpico},
+	}
+	for _, c := range craftedEncantamiento {
 		m[c.id] = def(c.id, c.nombre, c.tipo, c.calidad)
 	}
 	return m
