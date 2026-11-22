@@ -36,6 +36,8 @@ const (
 	TipoPoción = "poción" // consumibles de un solo uso (sanación, maná, efectos)
 	TipoElixir = "elixir" // consumibles con efecto duradero (batalla/guardián)
 	TipoFrasco = "frasco" // consumibles potentes que cuentan como elixir de batalla y guardián
+	// Tipos de Herrería
+	TipoArma = "arma" // armas crafteadas (hachas, mazas, espadas, dagas)
 )
 
 // Calidades.
@@ -584,6 +586,101 @@ func itemsPredefinidos() map[string]DefItem {
 		"elixir_agilidad_sublime":           "Elixir de agilidad sublime",
 		"esencia_de_infinidad":              "Esencia de infinidad",
 		"guía_de_campo_botánicos":           "Guía de Campo para Botánicos",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadRaro)
+	}
+
+	// ─── Materiales de Herrería (Classic): lingotes y piedras ───
+	for id, n := range map[string]string{
+		"lingote_plata":     "Lingote de plata",
+		"lingote_bronce":    "Lingote de bronce",
+		"lingote_oro":       "Lingote de oro",
+		"lingote_hierro":    "Lingote de hierro",
+		"lingote_acero":     "Lingote de acero",
+		"lingote_mitril":    "Lingote de mitril",
+		"lingote_torio":     "Lingote de torio",
+		"piedra_basta":      "Piedra basta",
+		"piedra_burda":      "Piedra burda",
+		"piedra_sólida":     "Piedra sólida",
+		"piedra_densa":      "Piedra densa",
+		"tela_paño_mágico": "Tela de paño mágico",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+	// ─── Materiales de Herrería (WotLK) ───
+	for id, n := range map[string]string{
+		"barra_cobalto":     "Barra de cobalto",
+		"aire_cristalizado": "Aire cristalizado",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+
+	// ─── Productos crafteados de Herrería (1-450) ───
+	// 36 recetas: piedras de afilar/pulir, varas (de plata/oro, reutilizando
+	// los items de Encantamiento), piezas de armadura, armas, refuerzos
+	// (puntas de escudo, hebillas, cadenas) y runas. Las piedras de pulir
+	// pesadas/sólidas son a la vez producto y material de recetas posteriores.
+	craftedHerreria := []struct {
+		id, nombre, tipo, calidad string
+	}{
+		// Piedras (Classic) — productos y materiales intermedios
+		{"piedra_afilar_basta", "Piedra de afilar basta", TipoMaterial, CalidadComun},
+		{"piedra_pulir_basta", "Piedra de pulir basta", TipoMaterial, CalidadComun},
+		{"piedra_afilar_burda", "Piedra de afilar burda", TipoMaterial, CalidadComun},
+		{"piedra_pulir_burda", "Piedra de pulir burda", TipoMaterial, CalidadComun},
+		{"piedra_pulir_pesada", "Piedra de pulir pesada", TipoMaterial, CalidadComun},
+		{"piedra_pulir_sólida", "Piedra de pulir sólida", TipoMaterial, CalidadComun},
+		{"piedra_afilar_densa", "Piedra de afilar densa", TipoMaterial, CalidadComun},
+		// Armadura Classic (malla/placas)
+		{"leotardos_bronce_basto", "Leotardos de bronce basto", TipoArmadura, CalidadComun},
+		{"leotardos_hierro_verde", "Leotardos de hierro verde", TipoArmadura, CalidadComun},
+		{"brazales_hierro_verde", "Brazales de hierro verde", TipoArmadura, CalidadComun},
+		{"brazales_escamas_oro", "Brazales de escamas de oro", TipoArmadura, CalidadComun},
+		{"yelmo_placas_acero", "Yelmo de placas de acero", TipoArmadura, CalidadComun},
+		{"almofar_mitril", "Almófar de mitril", TipoArmadura, CalidadComun},
+		{"brazales_torio", "Brazales de torio", TipoArmadura, CalidadRaro},
+		{"brazales_placas_imperiales", "Brazales de placas imperiales", TipoArmadura, CalidadRaro},
+		{"botas_torio", "Botas de torio", TipoArmadura, CalidadRaro},
+		// TBC 300-350 (malla + refuerzos)
+		{"almofar_anillas_hierro_vil", "Almófar de anillas de hierro vil", TipoArmadura, CalidadRaro},
+		{"guantes_anillas_hierro_vil", "Guantes de anillas de hierro vil", TipoArmadura, CalidadRaro},
+		{"brazales_anillas_hierro_vil", "Brazales de anillas de hierro vil", TipoArmadura, CalidadRaro},
+		{"runa_amparo_inferior", "Runa de amparo inferior", TipoRefuerzo, CalidadComun},
+		{"coraza_hierro_vil", "Coraza de hierro vil", TipoArmadura, CalidadRaro},
+		{"resguardo_escudo_inferior", "Resguardo de escudo inferior", TipoRefuerzo, CalidadComun},
+		// WotLK 350-450 (placas, armas, refuerzos)
+		{"botas_cobalto", "Botas de cobalto", TipoArmadura, CalidadRaro},
+		{"escudo_triangular_cobalto", "Escudo triangular de cobalto", TipoArmadura, CalidadRaro},
+		{"quijotes_cobalto", "Quijotes de cobalto", TipoArmadura, CalidadRaro},
+		{"guantesletes_cobalto", "Guantesletes de cobalto", TipoArmadura, CalidadRaro},
+		{"botas_cobalto_con_púas", "Botas de cobalto con púas", TipoArmadura, CalidadRaro},
+		{"hombreras_cobalto_con_púas", "Hombreras de cobalto con púas", TipoArmadura, CalidadRaro},
+		{"hacha_guerra_cobalto_dentada", "Hacha de guerra de cobalto dentada", TipoArma, CalidadRaro},
+		{"cinturón_saronita_brillante", "Cinturón de saronita brillante", TipoArmadura, CalidadRaro},
+		{"yelmo_cobalto_cuernudo", "Yelmo de cobalto cuernudo", TipoArmadura, CalidadRaro},
+		{"daga_saronita_mortal", "Daga de saronita mortal", TipoArma, CalidadRaro},
+		{"hebilla_cinturón_eterna", "Hebilla de cinturón eterna", TipoRefuerzo, CalidadEpico},
+		{"cadena_arma_titanio", "Cadena de arma de titanio", TipoRefuerzo, CalidadEpico},
+		{"guampolas_imponentes", "Guampolas imponentes", TipoArmadura, CalidadEpico},
+		{"quijotes_imponentes", "Quijotes imponentes", TipoArmadura, CalidadEpico},
+	}
+	for _, c := range craftedHerreria {
+		m[c.id] = def(c.id, c.nombre, c.tipo, c.calidad)
+	}
+	// ─── Materiales de las especializaciones de Herrería ───
+	// Piezas de mitril ornamentado y armas (para Forjador de armaduras /
+	// armas) y objetos de misión (drops) para las sub-maestrías de armas.
+	for id, n := range map[string]string{
+		"yelmo_mitril_ornamentado":           "Yelmo de mitril ornamentado",
+		"botas_mitril_ornamentadas":          "Botas de mitril ornamentadas",
+		"peto_mitril_ornamentado":            "Peto de mitril ornamentado",
+		"sable_acero_lunar":                  "Sable de acero lunar",
+		"maza_negra_grande":                  "Maza negra grande",
+		"hacha_mitril_pesado":                "Hacha de mitril pesado",
+		"hacha_hierro_macizo":                "Hacha de hierro macizo",
+		"piedra_serpiente_voshgajin":         "Piedra serpiente de Vosh'gajin",
+		"delantal_herrero_martillos_carmesi": "Delantal de herrero de martillos carmesí",
+		"insignia_guarda_negra":              "Insignia de la Guarda Negra",
 	} {
 		m[id] = def(id, n, TipoMaterial, CalidadRaro)
 	}

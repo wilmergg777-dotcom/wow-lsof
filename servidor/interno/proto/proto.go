@@ -171,6 +171,9 @@ type EspecializacionRes struct {
 	SkillReq    int           `json:"skill_req"`
 	Descripcion string        `json:"descripcion"`
 	Materiales  []MaterialRes `json:"materiales"`
+	// RequiereEspecializacion es el ID del padre ("" si es de nivel
+	// superior). Permite al cliente renderizar árboles anidados (Herrería).
+	RequiereEspecializacion string `json:"requiere_especializacion,omitempty"`
 }
 
 // ProfesionRes es la representación de una profesión (catálogo) para el cliente.

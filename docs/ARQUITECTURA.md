@@ -262,9 +262,29 @@ profesión nueva es solo añadir otra `DefProfesion` al registro.
   transmutación) que se aprenden a partir de skill 325 — la guía indica
   nivel 68; en WoW real es alquimia 325 + nivel 68, y el framework válida
   skill.
+- **Herrería** (WoW 3.3.5): 6 rangos y 38 recetas (Classic 1-300, TBC
+  300-350, WotLK 350-450) con lingotes y piedras de la guía (Plata, Bronce,
+  Oro, Hierro, Acero, Mitril, Torio; Piedra basta/burda/pesada/sólida/densa;
+  Cobalto y Saronita; eternos y titanio). Produce piezas de armadura
+  (TipoArmadura), armas (TipoArma, hachas/dagas), piedras de afilar/pulir
+  (TipoMaterial, algunas son a la vez material de recetas posteriores) y
+  refuerzos (TipoRefuerzo: puntas de escudo, hebillas de cinturón, cadenas
+  de arma, runas). Reutiliza items de otras profesiones: las Varas de
+  plata/oro (de Encantamiento), la Barra de saronita y el Titanio (de
+  Alquimia), el Cuero basto (de Peletería). Tiene dos inserciones en mitad
+  de banda como la guía: la Piedra de pulir sólida dentro de los Brazales
+  de escamas de oro (185→200, piedra 200→210, brazales 210→215) y el
+  aprendizaje de artesano dentro del Yelmo de placas de acero (215→225
+  experto, artesano, 225→235).
 - **Especializaciones**: `DefEspecializacion` (id, nombre, skill_req,
-  descripción, materiales para aprenderla). `AprenderEspecializacion()`
-  valida skill >= req, que no haya ya una elegida, y consume los materiales.
+  descripción, materiales, requiere_especializacion). Soporta árboles
+  anidados de dos niveles: una especialización con `requiere_especializacion
+  != ""` solo se aprende si el jugador ya eligió ese padre, y al aprenderla
+  la hoja reemplaza al padre en el estado (siempre se guarda el ID hoja).
+  Herrería lo usa con 2 ramas superiores (Forjador de armaduras / armas,
+  skill 200) y 3 sub-maestrías bajo armas (hachas / martillos / invocador,
+  skill 225). `AprenderEspecializacion()` valida skill >= req, la relación
+  padre/hoja, y consume los materiales.
 
 El cliente abre el panel de profesiones con la tecla **P**; muestra las
 profesiones conocidas (barra de habilidad + botón para aprender el

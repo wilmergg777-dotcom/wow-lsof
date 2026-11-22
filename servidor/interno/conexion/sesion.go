@@ -614,6 +614,7 @@ func profesionesRes(m *mundo.Mundo) []ProfesionRes {
 			esps = append(esps, EspecializacionRes{
 				ID: e.ID, Nombre: e.Nombre, SkillReq: e.SkillReq,
 				Descripcion: e.Descripcion, Materiales: mats,
+				RequiereEspecializacion: e.RequiereEspecializacion,
 			})
 		}
 		out = append(out, ProfesionRes{

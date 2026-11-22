@@ -942,10 +942,13 @@ func (j *Jugador) AprenderRango(m *Mundo, profID, rangoID string) ResultadoProfe
 }
 
 // AprenderEspecializacion elige una rama de especialización de una
-// profesión (p.ej. Peletería dragontina/elemental/tribal). Requiere
-// habilidad >= SkillReq, no tener ya una especialización, y consume los
-// materiales de la misión (abstracción de la guía). Solo se puede elegir
-// una especialización por profesión.
+// profesión (p.ej. Peletería dragontina/elemental/tribal, o Herrería
+// forjador de armaduras/armas). Requiere habilidad >= SkillReq y consume
+// los materiales de la misión (abstracción de la guía). Soporta árboles
+// anidados de dos niveles (Herrería): una especialización con
+// RequiereEspecializacion != "" solo se aprende si el jugador ya eligió
+// ese padre; al aprenderla, la hoja reemplaza al padre en el estado. Una
+// especialización de nivel superior (sin padre) requiere no tener ninguna.
 // Adquiere el lock del mundo internamente (se llama desde sesion.go).
 func (j *Jugador) AprenderEspecializacion(m *Mundo, profID, espID string) ResultadoProfesion {
 	m.mu.Lock()
@@ -970,7 +973,14 @@ func (j *Jugador) AprenderEspecializacion(m *Mundo, profID, espID string) Result
 	if !encontrado {
 		return ResultadoProfesion{Error: "especialización inválida"}
 	}
-	if ep.Especializacion != "" {
+	// Comprobación de árbol: si la especialización tiene padre, el jugador
+	// debe tener exactamente ese padre elegido; si no tiene padre, no debe
+	// tener ninguna especialización aún.
+	if esp.RequiereEspecializacion != "" {
+		if ep.Especializacion != esp.RequiereEspecializacion {
+			return ResultadoProfesion{Error: "debes ser " + esp.RequiereEspecializacion + " antes de esta especialización"}
+		}
+	} else if ep.Especializacion != "" {
 		return ResultadoProfesion{Error: "ya tienes una especialización en esta profesión"}
 	}
 	if ep.Skill < esp.SkillReq {
