@@ -17,7 +17,7 @@ export async function GET() {
 }
 
 // PATCH /api/settings — el administrador activa/desactiva mini tiendas
-// y configura la tasa de cambio (monedas por $1 real)
+// y configura la tasa de cambio (monedas por 1 CUP real)
 export async function PATCH(req: Request) {
   const body = await req.json()
   if (typeof body.miniStoresEnabled !== 'boolean' && typeof body.coinRate !== 'number') {

@@ -565,16 +565,16 @@ function OffersSection({ onChanged }: { onChanged: () => void }) {
             <div className="flex gap-3 mb-3">
               <div className="flex-1">
                 <label className="block text-[12px] font-bold text-[#0F1111] mb-1">
-                  Precio en dinero ($)
+                  Precio en dinero (CUP)
                 </label>
                 <input
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   type="number"
-                  min="0.01"
-                  step="0.01"
-                  placeholder="Ej: 12.50"
-                  aria-label="Precio en dinero"
+                  min="1"
+                  step="1"
+                  placeholder="Ej: 500"
+                  aria-label="Precio en dinero (CUP)"
                   className="w-full border border-[#888c8c] rounded px-3 py-2 text-[14px] outline-none focus:border-[#e77600]"
                 />
               </div>
@@ -611,9 +611,9 @@ function OffersSection({ onChanged }: { onChanged: () => void }) {
                   value={oldPrice}
                   onChange={(e) => setOldPrice(e.target.value)}
                   type="number"
-                  min="0.01"
-                  step="0.01"
-                  placeholder="Ej: 19.99"
+                  min="1"
+                  step="1"
+                  placeholder="Ej: 750"
                   aria-label="Precio anterior"
                   className="w-full border border-[#888c8c] rounded px-3 py-2 text-[14px] outline-none focus:border-[#e77600]"
                 />

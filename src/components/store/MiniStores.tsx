@@ -7,8 +7,8 @@
 //                     precios en las dos monedas, ofertas de
 //                     trabajo y postulaciones)
 // Cada tienda tiene logotipo y color de marca. Cada producto
-// puede subir una foto real y se publica su precio en dinero
-// ($) y en monedas internas de la tienda.
+// puede subir una foto real y se publica su precio en CUP
+// y en monedas internas de la tienda.
 // ============================================================
 import { useEffect, useState } from 'react'
 import {
@@ -565,7 +565,7 @@ export function MiniStoreDetail() {
 // ============================================================
 // PANEL DEL DUEÑO DE LA MINI TIENDA
 // Crear tienda (logo + color), publicar productos (FOTO +
-// precio en $ y monedas), ofertas de trabajo y postulaciones
+// precio en CUP y monedas), ofertas de trabajo y postulaciones
 // ============================================================
 export function ManageStoreView() {
   const user = useStore((s) => s.user)
