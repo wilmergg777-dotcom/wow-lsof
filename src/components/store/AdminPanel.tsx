@@ -887,6 +887,11 @@ function PaymentMethodsSection({
   const [holder, setHolder] = useState('')
   const [phone, setPhone] = useState('')
   const [instructions, setInstructions] = useState('')
+  // Paso de confirmación: guardar los datos de cobro SIEMPRE
+  // exige revisarlos y confirmar (evita equivocaciones con el
+  // número de tarjeta que luego usan los compradores)
+  const [confirming, setConfirming] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const load = useCallback(() => {
     api<PaymentMethod[]>('/api/payment-methods?all=1')
@@ -903,11 +908,17 @@ function PaymentMethodsSection({
     setRateDraft(String(rate))
   }, [rate])
 
-  const addMethod = async () => {
+  const addMethod = () => {
     if (!label.trim() || !details.trim() || !holder.trim() || !phone.trim()) {
       toast.error('Completa el nombre de la cuenta, el número, el titular y el teléfono')
       return
     }
+    // No guarda todavía: primero muestra el resumen para confirmar
+    setConfirming(true)
+  }
+
+  const confirmSave = async () => {
+    setSaving(true)
     try {
       await api('/api/payment-methods', {
         method: 'POST',
@@ -918,10 +929,13 @@ function PaymentMethodsSection({
       setHolder('')
       setPhone('')
       setInstructions('')
+      setConfirming(false)
       load()
-      toast.success('Cuenta de cobro agregada: ya aparece en Mi Billetera')
+      toast.success('Datos de cobro guardados y confirmados: ya se usan en las recargas y pagos')
     } catch (e) {
       toast.error((e as Error).message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -1011,9 +1025,33 @@ function PaymentMethodsSection({
           transferencias
         </h2>
         <p className="text-[13px] text-[#565959] mt-1 mb-4">
-          Estas cuentas aparecen en Mi Billetera para que los usuarios te transfieran el dinero y
-          registren su recarga.
+          Estas cuentas aparecen solo en el momento de pagar: cuando un usuario elige transferencia
+          en el carrito o va a recargar su billetera. En el resto de la web no se muestran.
         </p>
+
+        {/* Aviso obligatorio: todo administrador necesita sus datos guardados */}
+        {methods.filter((m) => m.active).length === 0 ? (
+          <div className="bg-[#FEF3C7] border border-[#B45309]/40 rounded-lg p-4 mb-4">
+            <p className="text-[14px] font-bold text-[#B45309]">
+              ¡Falta configurar tus datos de cobro!
+            </p>
+            <p className="text-[13px] text-[#B45309] mt-1">
+              Todo administrador debe guardar aquí su tarjeta o cuenta, el titular y el teléfono.
+              Sin estos datos los usuarios no pueden transferir ni recargar su billetera.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-[#f0faf0] border border-[#007600]/30 rounded-lg p-3 mb-4 text-[13px]">
+            <p className="text-[#007600] font-bold flex items-center gap-1.5">
+              <Check className="w-4 h-4" /> Datos de cobro listos: las recargas y los pagos por
+              transferencia funcionan automáticamente.
+            </p>
+            <p className="text-[#565959] mt-1">
+              Recuerda: si hay más administradores, cada uno debe verificar que estos datos sean
+              correctos y estén actualizados.
+            </p>
+          </div>
+        )}
 
         {methods.length === 0 ? (
           <p className="text-[13px] text-[#565959] mb-4">
@@ -1029,6 +1067,12 @@ function PaymentMethodsSection({
                 <CreditCard className="w-5 h-5 text-[#5B21B6] mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0 text-[13px]">
                   <p className="font-bold text-[#0F1111]">{m.label}</p>
+                  {m.label.includes('ejemplo') && (
+                    <p className="text-[12px] font-bold text-[#B45309] mt-0.5">
+                      Son datos de ejemplo: quítalos y guarda tu cuenta real con el botón
+                      "Revisar y guardar".
+                    </p>
+                  )}
                   <p className="font-mono text-[#0F1111]">{m.details}</p>
                   <p className="text-[#565959]">Titular: {m.holder}</p>
                   {m.phone && <p className="text-[#565959]">Teléfono: {m.phone}</p>}
@@ -1093,10 +1137,60 @@ function PaymentMethodsSection({
         </div>
         <button
           onClick={addMethod}
-          className="mt-3 bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer"
+          disabled={confirming}
+          className="mt-3 bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer disabled:opacity-60"
         >
-          Agregar cuenta
+          Revisar y guardar
         </button>
+
+        {/* Confirmación antes de guardar los datos de cobro */}
+        {confirming && (
+          <div className="mt-4 border-2 border-[#007600]/40 bg-[#f0faf0] rounded-lg p-4">
+            <p className="text-[15px] font-bold text-[#0F1111] flex items-center gap-1.5">
+              <Check className="w-5 h-5 text-[#007600]" /> Revisa los datos antes de confirmar
+            </p>
+            <p className="text-[13px] text-[#565959] mt-1">
+              Estos datos se mostrarán a los usuarios SOLO al pagar por transferencia o al recargar
+              su billetera. Confirma que todo esté correcto:
+            </p>
+            <ul className="mt-3 bg-white border border-[#e3e6e6] rounded-lg p-3 text-[13px] flex flex-col gap-1">
+              <li>
+                <b>Nombre de la cuenta:</b> {label}
+              </li>
+              <li>
+                <b>Número de tarjeta o cuenta:</b>{' '}
+                <span className="font-mono select-all">{details}</span>
+              </li>
+              <li>
+                <b>Titular:</b> {holder}
+              </li>
+              <li>
+                <b>Teléfono:</b> {phone}
+              </li>
+              {instructions.trim() && (
+                <li>
+                  <b>Instrucciones:</b> {instructions}
+                </li>
+              )}
+            </ul>
+            <div className="flex gap-2 mt-3 flex-wrap">
+              <button
+                onClick={confirmSave}
+                disabled={saving}
+                className="bg-[#007600] hover:bg-[#005e00] text-white text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer disabled:opacity-60"
+              >
+                {saving ? 'Guardando…' : 'Confirmar y guardar'}
+              </button>
+              <button
+                onClick={() => setConfirming(false)}
+                disabled={saving}
+                className="border border-[#d5d9d9] rounded-full px-6 py-2 text-[13px] hover:bg-[#f7fafa] cursor-pointer disabled:opacity-60"
+              >
+                Editar los datos
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )
