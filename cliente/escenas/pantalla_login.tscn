@@ -1,0 +1,126 @@
+[gd_scene load_steps=3 format=3 uid="uid://b1login1234"]
+
+[ext_resource type="Script" path="res://guiones/login.gd" id="1_login"]
+[ext_resource type="Theme" path="res://recursos/tema.tres" id="2_tema"]
+
+[node name="Login" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_tema")
+script = ExtResource("1_login")
+
+[node name="Fondo" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08, 0.09, 0.14, 1)
+
+[node name="Centro" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Centro"]
+layout_mode = 2
+custom_minimum_size = Vector2(420, 0)
+
+[node name="Margen" type="MarginContainer" parent="Centro/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="Centro/Panel/Margen"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Titulo" type="Label" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+text = "AETHELGARD"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 36
+theme_override_colors/font_color = Color(0.91, 0.27, 0.38, 1)
+
+[node name="Subtitulo" type="Label" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+text = "Reino de Aethelgard — Cliente MVP"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+
+[node name="Sep1" type="HSeparator" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+
+[node name="LblServidor" type="Label" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+text = "Servidor"
+
+[node name="FilaServidor" type="HBoxContainer" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+
+[node name="Host" type="LineEdit" parent="Centro/Panel/Margen/VBox/FilaServidor"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "127.0.0.1"
+placeholder_text = "host"
+
+[node name="Puerto" type="LineEdit" parent="Centro/Panel/Margen/VBox/FilaServidor"]
+layout_mode = 2
+custom_minimum_size = Vector2(80, 0)
+text = "7777"
+placeholder_text = "puerto"
+
+[node name="LblUsuario" type="Label" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+text = "Usuario"
+
+[node name="Usuario" type="LineEdit" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+placeholder_text = "nombre de usuario"
+
+[node name="LblPassword" type="Label" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+text = "Contraseña"
+
+[node name="Password" type="LineEdit" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+secret = true
+placeholder_text = "contraseña"
+
+[node name="Sep2" type="HSeparator" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+
+[node name="FilaBotones" type="HBoxContainer" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="BtnRegistrar" type="Button" parent="Centro/Panel/Margen/VBox/FilaBotones"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Registrar"
+
+[node name="BtnEntrar" type="Button" parent="Centro/Panel/Margen/VBox/FilaBotones"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Entrar"
+
+[node name="Estado" type="Label" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.9, 0.8, 0.3, 1)
+theme_override_font_sizes/font_size = 13
+
+[connection signal="pressed" from="Centro/Panel/Margen/VBox/FilaBotones/BtnEntrar" to="." method="_on_entrar"]
+[connection signal="pressed" from="Centro/Panel/Margen/VBox/FilaBotones/BtnRegistrar" to="." method="_on_registrar"]

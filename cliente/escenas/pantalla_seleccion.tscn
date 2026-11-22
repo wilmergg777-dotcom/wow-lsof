@@ -1,0 +1,111 @@
+[gd_scene load_steps=3 format=3 uid="uid://b2sel5678"]
+
+[ext_resource type="Script" path="res://guiones/seleccion.gd" id="1_sel"]
+[ext_resource type="Theme" path="res://recursos/tema.tres" id="2_tema"]
+
+[node name="Seleccion" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_tema")
+script = ExtResource("1_sel")
+
+[node name="Fondo" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08, 0.09, 0.14, 1)
+
+[node name="Centro" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Centro"]
+layout_mode = 2
+custom_minimum_size = Vector2(540, 0)
+
+[node name="Margen" type="MarginContainer" parent="Centro/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="Centro/Panel/Margen"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Titulo" type="Label" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+text = "SELECCIONA TU PERSONAJE"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.91, 0.27, 0.38, 1)
+
+[node name="ListaPersonajes" type="ItemList" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 140)
+item_count = 0
+allow_rmb_select = true
+
+[node name="FilaAcciones" type="HBoxContainer" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="BtnJugar" type="Button" parent="Centro/Panel/Margen/VBox/FilaAcciones"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Jugar"
+
+[node name="BtnLogout" type="Button" parent="Centro/Panel/Margen/VBox/FilaAcciones"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Volver al login"
+
+[node name="Sep" type="HSeparator" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+
+[node name="LblCrear" type="Label" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+text = "Crear nuevo personaje"
+theme_override_font_sizes/font_size = 14
+
+[node name="FilaCrear" type="HBoxContainer" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+
+[node name="Nombre" type="LineEdit" parent="Centro/Panel/Margen/VBox/FilaCrear"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "nombre (3-16 caracteres)"
+max_length = 16
+
+[node name="Clase" type="OptionButton" parent="Centro/Panel/Margen/VBox/FilaCrear"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+item_count = 2
+popup/item_0/text = "Guerrero"
+popup/item_1/text = "Mago"
+
+[node name="BtnCrear" type="Button" parent="Centro/Panel/Margen/VBox/FilaCrear"]
+layout_mode = 2
+text = "Crear"
+
+[node name="Estado" type="Label" parent="Centro/Panel/Margen/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.9, 0.8, 0.3, 1)
+
+[connection signal="pressed" from="Centro/Panel/Margen/VBox/FilaAcciones/BtnJugar" to="." method="_on_jugar"]
+[connection signal="pressed" from="Centro/Panel/Margen/VBox/FilaAcciones/BtnLogout" to="." method="_on_logout"]
+[connection signal="pressed" from="Centro/Panel/Margen/VBox/FilaCrear/BtnCrear" to="." method="_on_crear"]

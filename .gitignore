@@ -1,0 +1,20 @@
+# Godot
+.godot/
+*.import
+export/
+
+# Go
+servidor/aethelgard-server
+servidor/aethelgard-server.exe
+servidor/aethelgard-server-*
+servidor/datos/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*.swo

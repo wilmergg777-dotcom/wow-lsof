@@ -1,0 +1,90 @@
+[gd_scene load_steps=8 format=3 uid="uid://b4mundo3456"]
+
+[ext_resource type="Script" path="res://guiones/mundo.gd" id="1_mundo"]
+[ext_resource type="Script" path="res://guiones/jugador.gd" id="2_jugador"]
+[ext_resource type="Script" path="res://guiones/entidad_remota.gd" id="3_remota"]
+[ext_resource type="PackedScene" path="res://escenas/hud.tscn" id="4_hud"]
+[ext_resource type="Sky" path="res://recursos/cielo.tres" id="5_cielo"]
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = ExtResource("5_cielo")
+ambient_light_source = 1
+ambient_light_color = Color(0.4, 0.45, 0.55, 1)
+ambient_light_energy = 0.6
+tonemap_mode = 2
+glow_enabled = true
+glow_intensity = 0.4
+glow_strength = 0.8
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_1"]
+size = Vector2(200, 200)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(200, 1, 200)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_1"]
+radius = 0.4
+height = 1.6
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
+radius = 0.4
+height = 1.6
+
+[node name="Mundo" type="Node3D"]
+script = ExtResource("1_mundo")
+
+[node name="Ambiente" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="LuzSolar" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, 0.25, -0.433, 0, 0.866, 0.5, 0.5, -0.433, 0.75, 0, 30, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="Suelo" type="StaticBody3D" parent="."]
+
+[node name="MeshSuelo" type="MeshInstance3D" parent="Suelo"]
+mesh = SubResource("PlaneMesh_1")
+
+[node name="ColisionSuelo" type="CollisionShape3D" parent="Suelo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+shape = SubResource("BoxShape3D_1")
+
+[node name="Jugador" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+script = ExtResource("2_jugador")
+
+[node name="Cuerpo" type="MeshInstance3D" parent="Jugador"]
+mesh = SubResource("CapsuleMesh_1")
+
+[node name="Colision" type="CollisionShape3D" parent="Jugador"]
+shape = SubResource("CapsuleShape3D_1")
+
+[node name="Nombre3D" type="Label3D" parent="Jugador"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+text = "—"
+billboard = 1
+no_depth_test = true
+modulate = Color(0.91, 0.27, 0.38, 1)
+
+[node name="RigCamara" type="Node3D" parent="Jugador"]
+
+[node name="SpringArm" type="SpringArm3D" parent="Jugador/RigCamara"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+spring_length = 4.0
+collision_mask = 1
+
+[node name="Camara" type="Camera3D" parent="Jugador/RigCamara/SpringArm"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.0)
+fov = 65.0
+
+[node name="Entidades" type="Node3D" parent="."]
+script = ExtResource("3_remota")
+
+[node name="HUD" parent="." instance=ExtResource("4_hud")]
+
+[node name="LuzRelleno" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.5, -0.5, 0.7, 0.5, 0.7, 0.5, -0.7, 0.5, 0.5, 0, 20, 0)
+light_energy = 0.3
+light_color = Color(0.6, 0.7, 1.0, 1)
