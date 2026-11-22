@@ -40,7 +40,9 @@ servidor/
     ├── mundo/            El corazón del Sim.
     │   ├── mundo.go      Mundo struct + Entidad interface + tick loop + zonas.
     │   ├── defs.go       Facciones, razas, clases, masmoras, arenas + spawns iniciales.
-    │   ├── jugador.go    Jugador (entidad + combate + snapshot + guardar).
+    │   ├── items.go      Catálogo de ítems (materiales + productos crafteados).
+    │   ├── profesiones.go Profesiones, rangos, recetas (Joyería 1-450).
+    │   ├── jugador.go    Jugador (entidad + combate + inventario + profesiones + guardar).
     │   ├── enemigo.go    Enemigo (IA patrulla/aggro/ataque/respawn).
     │   ├── combate.go    Resolución de habilidades + broadcast por zona.
     │   ├── instancia.go  Instancias aisladas (masmorras PvE + arenas PvP).
@@ -205,6 +207,31 @@ Cada clase tiene un rol derivado que el buscador usa para formar grupos PvE.
 | Mago      | dps       | maná     | Rango, daño AoE de escarcha   |
 | Brujo     | dps       | maná     | Rango, sombra                 |
 | Sacerdote | soporte   | maná     | Curación de aliados, buffs    |
+
+### Profesiones, inventario y crafteo
+
+El sistema de profesiones permite craftear ítems consumiendo materiales y
+subir la habilidad. Está diseñado para crecer "poco a poco": añadir una
+profesión nueva es solo añadir otra `DefProfesion` al registro.
+
+- **Inventario**: map `itemID → cantidad` (pilas) en el `Jugador`, persistido
+  como `InventarioStacks`.
+- **Profesiones**: cada PJ puede tener hasta `MaxProfesionesPrimarias = 2`
+  profesiones primarias (regla de WoW). Cada profesión tiene **rangos**
+  (Aprendiz → Gran Maestro) que suben el techo de habilidad, y **recetas**
+  que consumen materiales y producen ítems.
+- **Skill**: cada receta tiene `SkillReq` (mínimo para craftear) y
+  `SkillHasta` (a partir de ahí la receta ya no sube). Craftear sube +1
+  mientras `skill < SkillHasta` y `skill < SkillMax` (techo del rango).
+- **Joyería** (primera profesión, WoW 3.3.5): 6 rangos (Aprendiz 0-75,
+  Oficial 50-150, Experto 125-225, Artesano 200-300, Maestro 275-375,
+  Gran Maestro 350-450) y 36 recetas repartidas entre Classic (1-300),
+  TBC (300-375) y WotLK (350-450), con los materiales y nombres de la guía.
+
+El cliente abre el panel de profesiones con la tecla **P**; muestra las
+profesiones conocidas (barra de habilidad + botón para aprender el
+siguiente rango), permite aprender profesiones nuevas y lista las recetas
+crafteables con sus materiales (tener/necesario) y un botón Craftear.
 
 ### Instancias
 

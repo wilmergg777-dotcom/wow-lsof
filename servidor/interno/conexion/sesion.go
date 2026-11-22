@@ -121,6 +121,9 @@ func (s *Sesion) handleLogin(msg MensajeCliente) error {
 			Facciones:  faccionesRes(s.mundo),
 			Razas:      razasRes(s.mundo),
 			Clases:     clasesRes(s.mundo),
+			Profesiones: profesionesRes(s.mundo),
+			Recetas:     recetasRes(s.mundo),
+			Items:       itemsRes(s.mundo),
 		})
 
 	case "registro":
@@ -284,6 +287,8 @@ func (s *Sesion) seleccionarPersonaje(msg MensajeCliente) error {
 		PersonajePropio: &own,
 		Masmoras:        masmorasRes(s.mundo),
 		Arenas:          arenasRes(s.mundo),
+		EstadoProfesiones: estadoProfesionesRes(s.mundo, j),
+		Inventario:      inventarioRes(j),
 	})
 }
 
@@ -311,6 +316,12 @@ func (s *Sesion) handleEnJuego(msg MensajeCliente) error {
 	case "cola_pvp_salir":
 		s.mundo.Buscador().SalirColaPvP(j)
 		return nil
+	case "aprender_profesion":
+		return s.aprenderProfesion(j, msg)
+	case "aprender_rango":
+		return s.aprenderRango(j, msg)
+	case "craftear":
+		return s.craftear(j, msg)
 	}
 	j.EncolarIntent(msg)
 	return nil
@@ -334,6 +345,61 @@ func (s *Sesion) colaPvPEntrar(j *mundo.Jugador, msg MensajeCliente) error {
 		})
 	}
 	return nil
+}
+
+// aprenderProfesion enseña una profesión primaria al jugador (rango aprendiz).
+func (s *Sesion) aprenderProfesion(j *mundo.Jugador, msg MensajeCliente) error {
+	res := j.AprenderProfesion(s.mundo, msg.ProfesionID)
+	return EscribirMensaje(s.conn, MensajeServidor{
+		Tipo:              "aprendido_resp",
+		Aprendido: &AprendidoRes{
+			OK:          res.OK,
+			Error:       res.Error,
+			ProfesionID: res.ProfesionID,
+			RangoID:     res.RangoID,
+			Skill:       res.Skill,
+			SkillMax:    res.SkillMax,
+		},
+		EstadoProfesiones: estadoProfesionesRes(s.mundo, j),
+	})
+}
+
+// aprenderRango enseña un rango superior de una profesión conocida.
+func (s *Sesion) aprenderRango(j *mundo.Jugador, msg MensajeCliente) error {
+	res := j.AprenderRango(s.mundo, msg.ProfesionID, msg.RangoID)
+	return EscribirMensaje(s.conn, MensajeServidor{
+		Tipo: "aprendido_resp",
+		Aprendido: &AprendidoRes{
+			OK:          res.OK,
+			Error:       res.Error,
+			ProfesionID: res.ProfesionID,
+			RangoID:     res.RangoID,
+			Skill:       res.Skill,
+			SkillMax:    res.SkillMax,
+		},
+		EstadoProfesiones: estadoProfesionesRes(s.mundo, j),
+	})
+}
+
+// craftear ejecuta una receta de profesión: consume materiales, produce
+// el ítem y sube la habilidad si procede.
+func (s *Sesion) craftear(j *mundo.Jugador, msg MensajeCliente) error {
+	res := j.Craftear(s.mundo, msg.RecetaID)
+	return EscribirMensaje(s.conn, MensajeServidor{
+		Tipo: "craftear_resp",
+		Crafteo: &CrafteoRes{
+			OK:                res.OK,
+			Error:             res.Error,
+			RecetaID:          res.RecetaID,
+			ResultadoID:       res.ResultadoItemID,
+			ResultadoCantidad: res.ResultadoCantidad,
+			Skill:             res.Skill,
+			SkillMax:          res.SkillMax,
+			SubioSkill:        res.SubioSkill,
+		},
+		Inventario:        inventarioRes(j),
+		EstadoProfesiones: estadoProfesionesRes(s.mundo, j),
+	})
 }
 
 // logoutAlSeleccion saca al jugador del mundo pero mantiene la conexión.
@@ -504,6 +570,83 @@ func clasesRes(m *mundo.Mundo) []ClaseRes {
 	out := make([]ClaseRes, 0, len(clases))
 	for _, c := range clases {
 		out = append(out, ClaseRes{ID: c.ID, Nombre: c.Nombre, Rol: c.Rol})
+	}
+	return out
+}
+
+// profesionesRes convierte el catálogo de profesiones (con rangos) al protocolo.
+func profesionesRes(m *mundo.Mundo) []ProfesionRes {
+	profs := m.Profesiones()
+	out := make([]ProfesionRes, 0, len(profs))
+	for _, p := range profs {
+		rangos := make([]RangoRes, 0, len(p.Rangos))
+		for _, rg := range p.Rangos {
+			rangos = append(rangos, RangoRes{ID: rg.ID, Nombre: rg.Nombre, SkillReq: rg.SkillReq, SkillMax: rg.SkillMax})
+		}
+		out = append(out, ProfesionRes{
+			ID: p.ID, Nombre: p.Nombre, Primaria: p.Primaria, MaxSkill: p.MaxSkill, Rangos: rangos,
+		})
+	}
+	return out
+}
+
+// recetasRes convierte el catálogo de recetas de todas las profesiones al protocolo.
+func recetasRes(m *mundo.Mundo) []RecetaRes {
+	profs := m.Profesiones()
+	out := make([]RecetaRes, 0)
+	for _, p := range profs {
+		for _, rc := range p.Recetas {
+			mats := make([]MaterialRes, 0, len(rc.Materiales))
+			for _, mt := range rc.Materiales {
+				mats = append(mats, MaterialRes{ItemID: mt.ItemID, Cantidad: mt.Cantidad})
+			}
+			out = append(out, RecetaRes{
+				ID: rc.ID, Nombre: rc.Nombre, ProfesionID: rc.ProfesionID,
+				ResultadoID: rc.ResultadoID, ResultadoCantidad: rc.ResultadoCantidad,
+				Materiales: mats, SkillReq: rc.SkillReq, SkillHasta: rc.SkillHasta,
+			})
+		}
+	}
+	return out
+}
+
+// itemsRes convierte el catálogo de ítems al protocolo.
+func itemsRes(m *mundo.Mundo) []ItemRes {
+	items := m.Items()
+	out := make([]ItemRes, 0, len(items))
+	for _, it := range items {
+		out = append(out, ItemRes{ID: it.ID, Nombre: it.Nombre, Tipo: it.Tipo, Calidad: it.Calidad, Stack: it.Stack})
+	}
+	return out
+}
+
+// estadoProfesionesRes convierte el estado de profesiones del PJ al protocolo.
+func estadoProfesionesRes(m *mundo.Mundo, j *mundo.Jugador) []EstadoProfesionRes {
+	profs := m.Profesiones()
+	estados := j.Profesiones()
+	out := make([]EstadoProfesionRes, 0, len(estados))
+	for _, ep := range estados {
+		def, ok := profs[ep.ProfesionID]
+		max := 0
+		if ok {
+			max = ep.SkillMax(def)
+		}
+		out = append(out, EstadoProfesionRes{
+			ProfesionID:      ep.ProfesionID,
+			Skill:            ep.Skill,
+			SkillMax:         max,
+			RangosAprendidos: append([]string(nil), ep.RangosAprendidos...),
+		})
+	}
+	return out
+}
+
+// inventarioRes convierte el inventario del PJ al protocolo.
+func inventarioRes(j *mundo.Jugador) []ItemStackRes {
+	inv := j.Inventario()
+	out := make([]ItemStackRes, 0, len(inv))
+	for id, cant := range inv {
+		out = append(out, ItemStackRes{ItemID: id, Cantidad: cant})
 	}
 	return out
 }

@@ -74,6 +74,10 @@ type Jugador struct {
 	buffs             map[string]int64 // buff_id → ms fin buff
 	muertoDesdeMs     int64            // 0 si vivo
 
+	// Inventario y profesiones
+	inventario map[string]int            // itemID → cantidad (pila)
+	profesiones map[string]*EstadoProfesion // profID → estado
+
 	// Spawn
 	spawnPos proto.Vec3
 
@@ -189,6 +193,8 @@ func NuevoJugadorDesdePersistencia(
 		energiaActual:     energiaMax,
 		energiaMax:        energiaMax,
 		spawnPos:          proto.Vec3{X: 0, Y: 0, Z: 0},
+		inventario:        make(map[string]int),
+		profesiones:       make(map[string]*EstadoProfesion),
 		cooldowns:         make(map[string]int64),
 		buffs:             make(map[string]int64),
 		colaIntents:       make(chan proto.MensajeCliente, TamañoColaIntents),
@@ -200,6 +206,21 @@ func NuevoJugadorDesdePersistencia(
 	// Si la posición guardada es (0,0,0), lo dejamos en el spawn default.
 	if p.PosMundo == (proto.Vec3{}) {
 		j.pos = j.spawnPos
+	}
+	// Cargar inventario (pila: itemID → cantidad) desde la persistencia.
+	for _, st := range p.InventarioStacks {
+		if st.Cantidad > 0 {
+			j.inventario[st.ItemID] = st.Cantidad
+		}
+	}
+	// Cargar profesiones desde la persistencia.
+	for _, pe := range p.Profesiones {
+		ep := &EstadoProfesion{
+			ProfesionID:      pe.ProfesionID,
+			Skill:            pe.Skill,
+			RangosAprendidos: append([]string(nil), pe.RangosAprendidos...),
+		}
+		j.profesiones[ep.ProfesionID] = ep
 	}
 	return j
 }
@@ -249,6 +270,8 @@ func NuevoJugadorCreado(
 		energiaActual:     energiaMax,
 		energiaMax:        energiaMax,
 		spawnPos:          proto.Vec3{X: 0, Y: 0, Z: 0},
+		inventario:        make(map[string]int),
+		profesiones:       make(map[string]*EstadoProfesion),
 		cooldowns:         make(map[string]int64),
 		buffs:             make(map[string]int64),
 		colaIntents:       make(chan proto.MensajeCliente, TamañoColaIntents),
@@ -708,6 +731,8 @@ func (j *Jugador) guardar(p *persistencia.Gestor) error {
 		RotMundo:    j.rot,
 		Habilidad:   idsHabilidades(j.claseDef),
 		Inventario:  []string{},
+		InventarioStacks: j.stacksParaPersist(),
+		Profesiones: j.profesionesParaPersist(),
 		Oro:         0,
 		CreadoUnixMs: 0, // se preserva al cargar; al crear nuevo se pone al guardar la primera vez
 	}
@@ -731,4 +756,255 @@ func idsHabilidades(d DefClase) []string {
 		out = append(out, h.ID)
 	}
 	return out
+}
+
+// ─── Inventario y profesiones ───────────────────────────────────────────
+//
+// El inventario es un map itemID → cantidad (pila). Las profesiones se
+// guardan como EstadoProfesion. Tanto Craftear como AprenderProfesion
+// asumen que el lock del mundo (m.mu) está tomado por el llamador.
+
+// ResultadoCrafteo es el resultado de un crafteo, para construir la
+// respuesta al cliente.
+type ResultadoCrafteo struct {
+	OK                bool
+	Error             string
+	RecetaID          string
+	ResultadoItemID   string
+	ResultadoCantidad int
+	Skill             int
+	SkillMax          int
+	SubioSkill        bool
+}
+
+// ResultadoProfesion es el resultado de aprender una profesión o rango.
+type ResultadoProfesion struct {
+	OK         bool
+	Error      string
+	ProfesionID string
+	Skill      int
+	SkillMax   int
+	RangoID    string
+}
+
+// Inventario devuelve una copia del inventario (itemID → cantidad).
+func (j *Jugador) Inventario() map[string]int {
+	out := make(map[string]int, len(j.inventario))
+	for k, v := range j.inventario {
+		out[k] = v
+	}
+	return out
+}
+
+// Profesiones devuelve una copia de los estados de profesión.
+func (j *Jugador) Profesiones() []*EstadoProfesion {
+	out := make([]*EstadoProfesion, 0, len(j.profesiones))
+	for _, ep := range j.profesiones {
+		cp := *ep
+		out = append(out, &cp)
+	}
+	return out
+}
+
+// CantidadItem devuelve cuántas unidades de un ítem tiene el jugador.
+func (j *Jugador) CantidadItem(itemID string) int {
+	return j.inventario[itemID]
+}
+
+// AgregarItem añade unidades de un ítem al inventario.
+func (j *Jugador) AgregarItem(itemID string, cantidad int) {
+	if cantidad <= 0 {
+		return
+	}
+	j.inventario[itemID] += cantidad
+}
+
+// stacksParaPersist convierte el inventario a la lista de pilas persistible.
+func (j *Jugador) stacksParaPersist() []persistencia.ItemStack {
+	out := make([]persistencia.ItemStack, 0, len(j.inventario))
+	for id, cant := range j.inventario {
+		if cant > 0 {
+			out = append(out, persistencia.ItemStack{ItemID: id, Cantidad: cant})
+		}
+	}
+	return out
+}
+
+// profesionesParaPersist convierte los estados de profesión a la lista
+// persistible.
+func (j *Jugador) profesionesParaPersist() []persistencia.ProfesionPersist {
+	out := make([]persistencia.ProfesionPersist, 0, len(j.profesiones))
+	for _, ep := range j.profesiones {
+		out = append(out, persistencia.ProfesionPersist{
+			ProfesionID:      ep.ProfesionID,
+			Skill:            ep.Skill,
+			RangosAprendidos: append([]string(nil), ep.RangosAprendidos...),
+		})
+	}
+	return out
+}
+
+// AprenderProfesion enseña una profesión primaria al jugador (rango
+// aprendiz incluido). Respeta el límite de MaxProfesionesPrimarias.
+// Adquiere el lock del mundo internamente (se llama desde sesion.go).
+func (j *Jugador) AprenderProfesion(m *Mundo, profID string) ResultadoProfesion {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	def, ok := m.profesiones[profID]
+	if !ok {
+		return ResultadoProfesion{Error: "profesión inválida"}
+	}
+	if _, ya := j.profesiones[profID]; ya {
+		return ResultadoProfesion{Error: "ya conoces esta profesión"}
+	}
+	// Límite de profesiones primarias.
+	if def.Primaria {
+		primarias := 0
+		for pid, ep := range j.profesiones {
+			if pd, ok := m.profesiones[pid]; ok && pd.Primaria {
+				primarias++
+				_ = ep
+			}
+		}
+		if primarias >= MaxProfesionesPrimarias {
+			return ResultadoProfesion{Error: "ya tienes el máximo de profesiones primarias"}
+		}
+	}
+	// Encontrar el rango aprendiz (SkillReq == 0).
+	rangoAprendiz := ""
+	for _, rg := range def.Rangos {
+		if rg.SkillReq == 0 {
+			rangoAprendiz = rg.ID
+			break
+		}
+	}
+	if rangoAprendiz == "" {
+		return ResultadoProfesion{Error: "la profesión no tiene rango aprendiz"}
+	}
+	ep := &EstadoProfesion{
+		ProfesionID:      profID,
+		Skill:            0,
+		RangosAprendidos: []string{rangoAprendiz},
+	}
+	j.profesiones[profID] = ep
+	return ResultadoProfesion{
+		OK:          true,
+		ProfesionID: profID,
+		Skill:       0,
+		SkillMax:    ep.SkillMax(def),
+		RangoID:     rangoAprendiz,
+	}
+}
+
+// AprenderRango enseña un rango superior de una profesión conocida.
+// Requiere que la habilidad actual alcance el SkillReq del rango.
+// Adquiere el lock del mundo internamente (se llama desde sesion.go).
+func (j *Jugador) AprenderRango(m *Mundo, profID, rangoID string) ResultadoProfesion {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	def, ok := m.profesiones[profID]
+	if !ok {
+		return ResultadoProfesion{Error: "profesión inválida"}
+	}
+	ep, ya := j.profesiones[profID]
+	if !ya {
+		return ResultadoProfesion{Error: "no conoces esa profesión"}
+	}
+	var rango DefRango
+	encontrado := false
+	for _, rg := range def.Rangos {
+		if rg.ID == rangoID {
+			rango = rg
+			encontrado = true
+			break
+		}
+	}
+	if !encontrado {
+		return ResultadoProfesion{Error: "rango inválido"}
+	}
+	if ep.RangoAprendido(rangoID) {
+		return ResultadoProfesion{Error: "ya conoces ese rango"}
+	}
+	if ep.Skill < rango.SkillReq {
+		return ResultadoProfesion{Error: "habilidad insuficiente para ese rango"}
+	}
+	ep.RangosAprendidos = append(ep.RangosAprendidos, rangoID)
+	return ResultadoProfesion{
+		OK:          true,
+		ProfesionID: profID,
+		Skill:       ep.Skill,
+		SkillMax:    ep.SkillMax(def),
+		RangoID:     rangoID,
+	}
+}
+
+// Craftear ejecuta una receta: valida skill, comprueba materiales, los
+// consume, produce el ítem resultado y (si procede) sube la habilidad.
+// Adquiere el lock del mundo internamente (se llama desde sesion.go).
+func (j *Jugador) Craftear(m *Mundo, recetaID string) ResultadoCrafteo {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// Buscar la receta en todas las profesiones.
+	var receta DefReceta
+	var profDef DefProfesion
+	var ep *EstadoProfesion
+	encontrado := false
+	for pid, pd := range m.profesiones {
+		for _, rc := range pd.Recetas {
+			if rc.ID == recetaID {
+				receta = rc
+				profDef = pd
+				ep = j.profesiones[pid]
+				encontrado = true
+				break
+			}
+		}
+		if encontrado {
+			break
+		}
+	}
+	if !encontrado {
+		return ResultadoCrafteo{RecetaID: recetaID, Error: "receta inválida"}
+	}
+	if ep == nil {
+		return ResultadoCrafteo{RecetaID: recetaID, Error: "no conoces la profesión de esta receta"}
+	}
+	skillMax := ep.SkillMax(profDef)
+	if ep.Skill < receta.SkillReq {
+		return ResultadoCrafteo{RecetaID: recetaID, Error: "habilidad insuficiente para esta receta"}
+	}
+	// Comprobar materiales.
+	for _, mat := range receta.Materiales {
+		if j.CantidadItem(mat.ItemID) < mat.Cantidad {
+			nombre := mat.ItemID
+			if d, ok := m.items[mat.ItemID]; ok {
+				nombre = d.Nombre
+			}
+			return ResultadoCrafteo{RecetaID: recetaID, Error: "faltan materiales: " + nombre}
+		}
+	}
+	// Consumir materiales.
+	for _, mat := range receta.Materiales {
+		j.inventario[mat.ItemID] -= mat.Cantidad
+		if j.inventario[mat.ItemID] <= 0 {
+			delete(j.inventario, mat.ItemID)
+		}
+	}
+	// Producir resultado.
+	j.AgregarItem(receta.ResultadoID, receta.ResultadoCantidad)
+	// Subir habilidad si current < SkillHasta y current < skillMax.
+	subio := false
+	if ep.Skill < receta.SkillHasta && ep.Skill < skillMax {
+		ep.Skill++
+		subio = true
+	}
+	return ResultadoCrafteo{
+		OK:                true,
+		RecetaID:          recetaID,
+		ResultadoItemID:   receta.ResultadoID,
+		ResultadoCantidad: receta.ResultadoCantidad,
+		Skill:             ep.Skill,
+		SkillMax:          skillMax,
+		SubioSkill:        subio,
+	}
 }

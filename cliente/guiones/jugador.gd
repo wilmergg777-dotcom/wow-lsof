@@ -31,22 +31,37 @@ func _ready() -> void:
 func set_nombre(nombre: String) -> void:
 	_label_nombre.text = nombre
 
+# _panel_abierto devuelve true si hay un panel de UI (profesiones) abierto,
+# en cuyo caso se pausa el movimiento y el combate y se libera el ratón.
+func _panel_abierto() -> bool:
+	var p = get_parent().get_node_or_null("Profesiones")
+	if p != null and p.visible:
+		return true
+	return false
+
 func _input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		_yaw_camara -= event.relative.x * 0.005
-		_pitch_camara = clamp(_pitch_camara - event.relative.y * 0.005, -1.2, -0.05)
-		_aplicar_rotacion_camara()
+	if _panel_abierto():
+		# Panel abierto: ratón visible, sin captura de cámara ni combate.
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		return
 	if event.is_action_pressed("cerrar"):
 		# Liberar mouse para que el usuario pueda cerrar la ventana.
 		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		else:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		return
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		_yaw_camara -= event.relative.x * 0.005
+		_pitch_camara = clamp(_pitch_camara - event.relative.y * 0.005, -1.2, -0.05)
+		_aplicar_rotacion_camara()
 
 func _aplicar_rotacion_camara() -> void:
 	_rig_camara.rotation = Vector3(_pitch_camara, _yaw_camara, 0)
 
 func _physics_process(_delta: float) -> void:
+	if _panel_abierto():
+		return
 	# Vector de entrada WASD relativo a la cámara.
 	var input_dir = Vector2.ZERO
 	if Input.is_action_pressed("mover_adelante"):

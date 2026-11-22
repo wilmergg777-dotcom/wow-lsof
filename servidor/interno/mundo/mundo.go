@@ -84,6 +84,8 @@ type Mundo struct {
 	razas       map[string]DefRaza
 	masmoras    map[string]DefMasmora
 	arenas      map[string]DefArena
+	items       map[string]DefItem
+	profesiones map[string]DefProfesion
 	tick        uint64
 	tickInterval time.Duration
 	parar       chan struct{}
@@ -149,6 +151,8 @@ func NuevoMundo(cfg ConfigMundo) *Mundo {
 		razas:         razasPredefinidas(),
 		masmoras:      masmorasPredefinidas(),
 		arenas:        arenasPredefinidas(),
+		items:         itemsPredefinidos(),
+		profesiones:   profesionesPredefinidas(),
 		tickInterval:  time.Duration(1000/hz) * time.Millisecond,
 		parar:         make(chan struct{}),
 		hecho:         make(chan struct{}),
@@ -197,6 +201,44 @@ func (m *Mundo) Raza(id string) (DefRaza, bool) {
 	defer m.mu.RUnlock()
 	r, ok := m.razas[id]
 	return r, ok
+}
+
+// Item devuelve la definición de un ítem por ID.
+func (m *Mundo) Item(id string) (DefItem, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	it, ok := m.items[id]
+	return it, ok
+}
+
+// Items devuelve una copia del catálogo de ítems.
+func (m *Mundo) Items() map[string]DefItem {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := make(map[string]DefItem, len(m.items))
+	for k, v := range m.items {
+		out[k] = v
+	}
+	return out
+}
+
+// Profesiones devuelve las profesiones jugables (con sus rangos y recetas).
+func (m *Mundo) Profesiones() map[string]DefProfesion {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := make(map[string]DefProfesion, len(m.profesiones))
+	for k, v := range m.profesiones {
+		out[k] = v
+	}
+	return out
+}
+
+// Profesione devuelve una profesión por ID.
+func (m *Mundo) Profesione(id string) (DefProfesion, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	p, ok := m.profesiones[id]
+	return p, ok
 }
 
 // Masmoras devuelve las definiciones de masmoras disponibles.

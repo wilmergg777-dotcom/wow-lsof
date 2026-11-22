@@ -47,6 +47,9 @@ type MensajeCliente struct {
 	Activo    bool            `json:"activo,omitempty"`     // Para toggles como auto-ataque
 	MasmoraID string          `json:"masmora_id,omitempty"` // cola_pve_entrar
 	ArenaID   string          `json:"arena_id,omitempty"`   // cola_pvp_entrar
+	ProfesionID string        `json:"profesion_id,omitempty"` // aprender_profesion / craftear
+	RecetaID  string          `json:"receta_id,omitempty"`  // craftear
+	RangoID   string          `json:"rango_id,omitempty"`   // aprender_rango
 }
 
 // ─── Mensajes servidor → cliente ────────────────────────────────────────
@@ -72,6 +75,15 @@ type MensajeServidor struct {
 	Clases          []ClaseRes        `json:"clases,omitempty"`
 	Masmoras        []MasmoraRes      `json:"masmoras,omitempty"`
 	Arenas          []ArenaRes        `json:"arenas,omitempty"`
+	// Profesiones / recetas / items / inventario (metadata + estado)
+	Profesiones     []ProfesionRes    `json:"profesiones,omitempty"`     // catálogo completo (login)
+	Recetas         []RecetaRes       `json:"recetas,omitempty"`         // catálogo de recetas (login)
+	Items           []ItemRes         `json:"items,omitempty"`           // catálogo de ítems (login)
+	EstadoProfesiones []EstadoProfesionRes `json:"estado_profesiones,omitempty"` // estado del PJ (sel_pj / cambios)
+	Inventario      []ItemStackRes    `json:"inventario,omitempty"`      // inventario del PJ (sel_pj / cambios)
+	// Resultados de crafteo / aprender profesión
+	Crafteo         *CrafteoRes       `json:"crafteo,omitempty"`
+	Aprendido       *AprendidoRes     `json:"aprendido,omitempty"`
 	// Buscador de masmorras / PvP
 	InstanciaID     string            `json:"instancia_id,omitempty"`
 	InstanciaTipo   string            `json:"instancia_tipo,omitempty"` // "masmora" | "arena_pvp"
@@ -107,6 +119,86 @@ type ClaseRes struct {
 	ID       string `json:"id"`
 	Nombre   string `json:"nombre"`
 	Rol      string `json:"rol"`
+}
+
+// ItemRes es la representación de un ítem para el cliente.
+type ItemRes struct {
+	ID      string `json:"id"`
+	Nombre  string `json:"nombre"`
+	Tipo    string `json:"tipo"`
+	Calidad string `json:"calidad"`
+	Stack   int    `json:"stack"`
+}
+
+// ItemStackRes es una pila del inventario del jugador.
+type ItemStackRes struct {
+	ItemID   string `json:"item_id"`
+	Cantidad int    `json:"cantidad"`
+}
+
+// RangoRes es la representación de un rango de profesión.
+type RangoRes struct {
+	ID       string `json:"id"`
+	Nombre   string `json:"nombre"`
+	SkillReq int    `json:"skill_req"`
+	SkillMax int    `json:"skill_max"`
+}
+
+// MaterialRes es un material requerido por una receta.
+type MaterialRes struct {
+	ItemID   string `json:"item_id"`
+	Cantidad int    `json:"cantidad"`
+}
+
+// RecetaRes es la representación de una receta para el cliente.
+type RecetaRes struct {
+	ID                string        `json:"id"`
+	Nombre            string        `json:"nombre"`
+	ProfesionID       string        `json:"profesion_id"`
+	ResultadoID       string        `json:"resultado_id"`
+	ResultadoCantidad int           `json:"resultado_cantidad"`
+	Materiales        []MaterialRes `json:"materiales"`
+	SkillReq          int           `json:"skill_req"`
+	SkillHasta        int           `json:"skill_hasta"`
+}
+
+// ProfesionRes es la representación de una profesión (catálogo) para el cliente.
+type ProfesionRes struct {
+	ID       string     `json:"id"`
+	Nombre   string     `json:"nombre"`
+	Primaria bool       `json:"primaria"`
+	MaxSkill int        `json:"max_skill"`
+	Rangos   []RangoRes `json:"rangos"`
+}
+
+// EstadoProfesionRes es el estado de una profesión que aprendió un PJ.
+type EstadoProfesionRes struct {
+	ProfesionID      string   `json:"profesion_id"`
+	Skill            int      `json:"skill"`
+	SkillMax         int      `json:"skill_max"`
+	RangosAprendidos []string `json:"rangos_aprendidos"`
+}
+
+// CrafteoRes es el resultado de un crafteo.
+type CrafteoRes struct {
+	OK                bool   `json:"ok"`
+	Error             string `json:"error,omitempty"`
+	RecetaID          string `json:"receta_id"`
+	ResultadoID       string `json:"resultado_id,omitempty"`
+	ResultadoCantidad int    `json:"resultado_cantidad,omitempty"`
+	Skill             int    `json:"skill,omitempty"`
+	SkillMax          int    `json:"skill_max,omitempty"`
+	SubioSkill        bool   `json:"subio_skill,omitempty"`
+}
+
+// AprendidoRes es el resultado de aprender una profesión o rango.
+type AprendidoRes struct {
+	OK          bool   `json:"ok"`
+	Error       string `json:"error,omitempty"`
+	ProfesionID string `json:"profesion_id"`
+	RangoID     string `json:"rango_id,omitempty"`
+	Skill       int    `json:"skill"`
+	SkillMax    int    `json:"skill_max"`
 }
 
 // MasmoraRes es el resumen de una masmora para el panel del buscador.

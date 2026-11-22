@@ -124,6 +124,28 @@ Encola al jugador para una arena PvP (cross-faction).
 ```
 Saca al jugador de la cola PvP.
 
+### `aprender_profesion`
+```json
+{"tipo": "aprender_profesion", "profesion_id": "joyeria"}
+```
+Aprende una profesión primaria (rango aprendiz incluido). Respeta el
+límite de 2 profesiones primarias. Respuesta: `aprendido_resp`.
+
+### `aprender_rango`
+```json
+{"tipo": "aprender_rango", "profesion_id": "joyeria", "rango_id": "oficial"}
+```
+Aprende un rango superior de una profesión conocida (requiere habilidad
+>= `skill_req` del rango). Respuesta: `aprendido_resp`.
+
+### `craftear`
+```json
+{"tipo": "craftear", "receta_id": "hilo_cobre_delicado"}
+```
+Craftea una receta: valida habilidad y materiales, consume los
+materiales, produce el ítem resultado y sube +1 la habilidad si
+`skill < SkillHasta` y `skill < SkillMax`. Respuesta: `craftear_resp`.
+
 ## Mensajes servidor → cliente
 
 ### `login_resp`

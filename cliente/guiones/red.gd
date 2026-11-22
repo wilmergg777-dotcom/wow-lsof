@@ -32,6 +32,14 @@ var razas_disponibles: Array = []
 var clases_disponibles: Array = []
 var masmoras_disponibles: Array = []
 var arenas_disponibles: Array = []
+# Cachés de profesiones/recetas/items (catálogos, vienen en login_resp).
+var profesiones_disponibles: Array = []
+var recetas_disponibles: Array = []
+var items_disponibles: Array = []
+# Estado del PJ: profesiones aprendidas + inventario (vienen en sel_resp y
+# se actualizan con craftear_resp/aprendido_resp).
+var estado_profesiones: Array = []
+var inventario: Array = []
 
 func _ready() -> void:
 	mensaje_recibido.connect(_on_mensaje_recibido)
@@ -46,6 +54,10 @@ func _on_mensaje_recibido(msg: Dictionary) -> void:
 					masmoras_disponibles = msg.get("masmoras", [])
 				if msg.has("arenas"):
 					arenas_disponibles = msg.get("arenas", [])
+				if msg.has("estado_profesiones"):
+					estado_profesiones = msg.get("estado_profesiones", [])
+				if msg.has("inventario"):
+					inventario = msg.get("inventario", [])
 		"login_resp":
 			if msg.has("facciones"):
 				facciones_disponibles = msg.get("facciones", [])
@@ -53,10 +65,26 @@ func _on_mensaje_recibido(msg: Dictionary) -> void:
 				razas_disponibles = msg.get("razas", [])
 			if msg.has("clases"):
 				clases_disponibles = msg.get("clases", [])
+			if msg.has("profesiones"):
+				profesiones_disponibles = msg.get("profesiones", [])
+			if msg.has("recetas"):
+				recetas_disponibles = msg.get("recetas", [])
+			if msg.has("items"):
+				items_disponibles = msg.get("items", [])
+		"craftear_resp":
+			if msg.has("inventario"):
+				inventario = msg.get("inventario", [])
+			if msg.has("estado_profesiones"):
+				estado_profesiones = msg.get("estado_profesiones", [])
+		"aprendido_resp":
+			if msg.has("estado_profesiones"):
+				estado_profesiones = msg.get("estado_profesiones", [])
 		"logout":
 			ultimo_personaje_propio = {}
 			masmoras_disponibles = []
 			arenas_disponibles = []
+			estado_profesiones = []
+			inventario = []
 func conectar(host: String, puerto: int) -> bool:
 	if _estado == "conectado" or _estado == "conectando":
 		return false
@@ -178,6 +206,16 @@ func enviar_crear_pj(nombre: String, clase: String, faccion: String, raza: Strin
 
 func enviar_sel_pj(nombre: String) -> void:
 	enviar({"tipo": "sel_pj", "nombre": nombre})
+
+# ─── Profesiones ─────────────────────────────────────────────────────────
+func enviar_aprender_profesion(profesion_id: String) -> void:
+	enviar({"tipo": "aprender_profesion", "profesion_id": profesion_id})
+
+func enviar_aprender_rango(profesion_id: String, rango_id: String) -> void:
+	enviar({"tipo": "aprender_rango", "profesion_id": profesion_id, "rango_id": rango_id})
+
+func enviar_craftear(receta_id: String) -> void:
+	enviar({"tipo": "craftear", "receta_id": receta_id})
 
 func enviar_movimiento(pos: Vector3, rot: Quaternion) -> void:
 	enviar({

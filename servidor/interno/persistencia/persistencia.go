@@ -31,10 +31,25 @@ type Personaje struct {
 	PosMundo     geometria.Vec3 `json:"pos_mundo"`   // última posición guardada
 	RotMundo     geometria.Vec4 `json:"rot_mundo"`
 	Habilidad    []string `json:"habilidades"` // IDs de habilidades conocidas
-	Inventario   []string `json:"inventario"`  // IDs de ítems (placeholder)
+	Inventario   []string `json:"inventario"`  // IDs de ítems (legacy, sin pila)
+	InventarioStacks []ItemStack `json:"inventario_stacks,omitempty"` // inventario con pilas
+	Profesiones  []ProfesionPersist `json:"profesiones,omitempty"`
 	Oro          int     `json:"oro"`
 	CreadoUnixMs int64    `json:"creado_unix_ms"`
 	UltimoGuardadoUnixMs int64 `json:"ultimo_guardado_unix_ms"`
+}
+
+// ItemStack es una pila de un ítem en el inventario.
+type ItemStack struct {
+	ItemID   string `json:"item_id"`
+	Cantidad int    `json:"cantidad"`
+}
+
+// ProfesionPersist es el estado persistible de una profesión de un PJ.
+type ProfesionPersist struct {
+	ProfesionID      string   `json:"profesion_id"`
+	Skill            int      `json:"skill"`
+	RangosAprendidos []string `json:"rangos_aprendidos"`
 }
 
 // Gestor persiste personajes en disco de forma thread-safe.
