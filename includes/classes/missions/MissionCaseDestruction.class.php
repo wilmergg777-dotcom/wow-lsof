@@ -61,6 +61,37 @@ class MissionCaseDestruction extends MissionFunctions implements Mission
         $this->_fleet	= $Fleet;
     }
 
+    /**
+     * ✅ v3.8 — Igual que en MissionCaseAttack: un fallo del sistema de
+     * torneos no debe romper el combate (aquí además ya se borró la luna
+     * y el informe aún no se guardó).
+     */
+    private function safeTournement($playerId, $tourneyEvent, $addUnits)
+    {
+        try {
+            if (!function_exists('tournement')) {
+                return false;
+            }
+            return tournement($playerId, $tourneyEvent, $addUnits);
+        } catch (Throwable $e) {
+            $logDir = (defined('ROOT_PATH') ? ROOT_PATH : '') . 'cache/';
+            if (!is_dir($logDir)) {
+                @mkdir($logDir, 0755, true);
+            }
+            @file_put_contents(
+                $logDir . 'tournement_error.log',
+                '[' . date('Y-m-d H:i:s') . '] [MissionCaseDestruction] Torneo=' . $tourneyEvent
+                . ' Player=' . $playerId
+                . ' AddUnits=' . $addUnits
+                . ' ERROR: ' . $e->getMessage()
+                . ' en ' . $e->getFile() . ':' . $e->getLine()
+                . PHP_EOL,
+                FILE_APPEND
+            );
+            return false;
+        }
+    }
+
     function TargetEvent()
     {
         global $resource, $reslist;
@@ -117,6 +148,37 @@ HTML;
             ':userId'	=> $targetPlanet['id_owner']
         ));
         $targetUser['factor']	= getFactors($targetUser, 'basic', $this->_fleet['fleet_start_time']);
+
+        // ============================================
+        // ✅ v3.8 — Red de seguridad (misma que MissionCaseAttack v1.4):
+        // si el dueño de la luna es de la misma alianza que el atacante,
+        // la flota vuelve sin pelear. El lanzamiento ya lo bloquea; esto
+        // cubre casos raros (ACS, flotas ya en vuelo tras salir de la ally).
+        // ============================================
+        if (
+            !empty($targetUser)
+            && !empty($targetUser['id'])
+            && (int) $targetUser['id'] < 900000000
+            && !empty($targetUser['ally_id'])
+            && (int) $targetUser['ally_id'] > 0
+            && (int) $targetUser['id'] !== (int) $this->_fleet['fleet_owner']
+        ) {
+            $sql = "SELECT ally_id FROM %%USERS%% WHERE id = :userId LIMIT 1;";
+            $attackerAllyId = $db->selectSingle($sql, array(
+                ':userId' => (int) $this->_fleet['fleet_owner']
+            ), 'ally_id');
+
+            if (
+                !empty($attackerAllyId)
+                && (int) $attackerAllyId > 0
+                && (int) $attackerAllyId === (int) $targetUser['ally_id']
+            ) {
+                $this->setState(FLEET_RETURN);
+                $this->SaveFleet();
+                return;
+            }
+        }
+        // ============================================
 
         // ============================================
         // ASTROIO v1.2 (SISTEMA DE CLIMA) - Obtener clima del objetivo
@@ -290,6 +352,17 @@ HTML;
 
         $userDefend[$fleetDefend[0]['player']['id']]	= $fleetDefend[0]['player']['username'];
 
+        // ✅ v3.8 — Snapshot de unidades ANTES del combate (para el clamp de
+        // factor_bajas: sin él, un clima con factor_bajas < 1.00 podría
+        // "resucitar" más naves de las que existían).
+        $initialUnits = array('attack' => array(), 'defend' => array());
+        foreach ($fleetAttack as $fleetID => $fleetDetail) {
+            $initialUnits['attack'][$fleetID] = $fleetDetail['unit'];
+        }
+        foreach ($fleetDefend as $fleetID => $fleetDetail) {
+            $initialUnits['defend'][$fleetID] = $fleetDetail['unit'];
+        }
+
         require_once 'includes/classes/missions/functions/calculateAttack.php';
 
         $fleetIntoDebris	= Config::get($this->_fleet['fleet_universe'])->Fleet_Cdr;
@@ -307,6 +380,10 @@ HTML;
                 foreach ($fleetDetail['unit'] as $elementID => &$amount) {
                     if ($amount > 0) {
                         $amount = (int)floor($amount / $factorBajas);
+                        // ✅ v3.8 — clamp: nunca más naves que las originales
+                        if (isset($initialUnits['attack'][$fleetID][$elementID])) {
+                            $amount = min($amount, (int)$initialUnits['attack'][$fleetID][$elementID]);
+                        }
                     }
                 }
             }
@@ -318,6 +395,10 @@ HTML;
                 foreach ($fleetDetail['unit'] as $elementID => &$amount) {
                     if ($amount > 0) {
                         $amount = (int)floor($amount / $factorBajas);
+                        // ✅ v3.8 — clamp: nunca más unidades que las originales
+                        if (isset($initialUnits['defend'][$fleetID][$elementID])) {
+                            $amount = min($amount, (int)$initialUnits['defend'][$fleetID][$elementID]);
+                        }
                     }
                 }
             }
@@ -565,7 +646,7 @@ HTML;
                     // ============================================
                     if (isset($targetUser['onlinetime']) && $targetUser['onlinetime'] > TIMESTAMP - 24 * 3600 * 7) {
                         foreach (array_keys($userAttack) as $attackerId) {
-                            tournement($attackerId, 9, 1);
+                            $this->safeTournement($attackerId, 9, 1);
                         }
                     }
                     // ============================================

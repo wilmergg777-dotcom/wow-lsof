@@ -334,10 +334,16 @@ HTML;
                 // Le ponemos un castigo de 24 horas (86400 segundos)
                 $retaliationUntil = TIMESTAMP + 86400;
                 
-                $sql = "UPDATE %%USERS%% SET retaliation_time = :retaliationTime WHERE id = :userId;";
+                // ✅ v3.8 — FIX REPRESALIA: también se escribe retaliation_target
+                // (id del defensor fuerte al que atacó el débil). Sin ese campo,
+                // la excepción de represalia en FleetFunctions
+                // (retaliation_target == mi id) nunca se activaba y el fuerte
+                // NO podía contraatacar. La ventana sigue siendo 24 h.
+                $sql = "UPDATE %%USERS%% SET retaliation_time = :retaliationTime, retaliation_target = :retaliationTarget WHERE id = :userId;";
                 $db->update($sql, array(
-                    ':retaliationTime' => $retaliationUntil,
-                    ':userId'          => $fleetAttack[$fleetID]['player']['id']
+                    ':retaliationTime'   => $retaliationUntil,
+                    ':retaliationTarget' => (int) $targetUser['id'],
+                    ':userId'            => $fleetAttack[$fleetID]['player']['id']
                 ));
             }
             // ============================================================
@@ -403,6 +409,18 @@ HTML;
             
         $userDefend[$fleetDefend[0]['player']['id']]	= $fleetDefend[0]['player']['username'];
         
+        // ✅ v3.8 — Snapshot de unidades ANTES del combate. Si algún clima
+        // tiene factor_bajas < 1.00 (bonus), la división de supervivientes
+        // podría devolver MÁS naves de las que existían ("crear" naves de la
+        // nada). El clamp posterior usa este snapshot para impedirlo.
+        $initialUnits = array('attack' => array(), 'defend' => array());
+        foreach ($fleetAttack as $fleetID => $fleetDetail) {
+            $initialUnits['attack'][$fleetID] = $fleetDetail['unit'];
+        }
+        foreach ($fleetDefend as $fleetID => $fleetDetail) {
+            $initialUnits['defend'][$fleetID] = $fleetDetail['unit'];
+        }
+
         require_once 'includes/classes/missions/functions/calculateAttack.php';
 
         $fleetIntoDebris	= $config->Fleet_Cdr;
@@ -420,6 +438,10 @@ HTML;
                 foreach ($fleetDetail['unit'] as $elementID => &$amount) {
                     if ($amount > 0) {
                         $amount = (int)floor($amount / $factorBajas);
+                        // ✅ v3.8 — clamp: nunca más naves que las originales
+                        if (isset($initialUnits['attack'][$fleetID][$elementID])) {
+                            $amount = min($amount, (int)$initialUnits['attack'][$fleetID][$elementID]);
+                        }
                     }
                 }
             }
@@ -431,6 +453,10 @@ HTML;
                 foreach ($fleetDetail['unit'] as $elementID => &$amount) {
                     if ($amount > 0) {
                         $amount = (int)floor($amount / $factorBajas);
+                        // ✅ v3.8 — clamp: nunca más unidades que las originales
+                        if (isset($initialUnits['defend'][$fleetID][$elementID])) {
+                            $amount = min($amount, (int)$initialUnits['defend'][$fleetID][$elementID]);
+                        }
                     }
                 }
             }
