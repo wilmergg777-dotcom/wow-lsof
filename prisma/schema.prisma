@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Oferta publicada por el dueño de la web (administrador).
+// Junto con los productos de las mini tiendas forma el catálogo.
+// La web empieza vacía: no hay ofertas hasta que alguien publique.
+model Offer {
+  id          String   @id @default(cuid())
+  title       String // nombre del producto o servicio
+  description String   @default("")
+  category    String   @default("Electrónica")
+  price       Float // precio en dinero real ($)
+  priceCoins  Int      @default(0) // precio en monedas internas (0 = se calcula con la tasa)
+  oldPrice    Float? // precio anterior opcional (para mostrar descuento)
+  photo       String? // foto subida o foto elegida de la galería de la tienda
+  stock       Int      @default(20)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+// Ajustes globales del sitio (los controla el administrador)
+model SiteSettings {
+  id                String   @id @default("main")
+  miniStoresEnabled Boolean  @default(true)
+  coinRate          Int      @default(100) // cuántas monedas vale $1 real
+  updatedAt         DateTime @updatedAt
+}
+
+// Mini tienda creada por un usuario vendedor
+model MiniStore {
+  id          String       @id @default(cuid())
+  name        String
+  ownerName   String
+  description String
+  category    String
+  emoji       String       @default("🏪")
+  logo        String? // foto/logotipo de la tienda (data URL)
+  color       String       @default("#5B21B6") // color de marca para el diseño
+  createdAt   DateTime     @default(now())
+  products    MiniProduct[]
+  jobOffers   JobOffer[]
+}
+
+// Producto que vende una mini tienda
+model MiniProduct {
+  id          String    @id @default(cuid())
+  storeId     String
+  store       MiniStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
+  description String    @default("")
+  price       Float // precio en dinero real ($)
+  priceCoins  Int       @default(0) // precio en monedas internas
+  emoji       String    @default("📦")
+  photo       String? // foto del producto (data URL)
+  stock       Int       @default(20)
+  createdAt   DateTime  @default(now())
+}
+
+// Oferta de trabajo de domicilio publicada por una mini tienda
+model JobOffer {
+  id          String        @id @default(cuid())
+  storeId     String
+  store       MiniStore     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  title       String
+  zone        String
+  payment     Float
+  description String
+  open        Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  applications Application[]
+}
+
+// Postulación de un repartidor a una oferta
+model Application {
+  id            String   @id @default(cuid())
+  jobId         String
+  job           JobOffer @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  applicantName String
+  phone         String
+  email         String
+  vehicle       String
+  message       String   @default("")
+  status        String   @default("pending") // pending | accepted | rejected
+  createdAt     DateTime @default(now())
+}
+
+// Pedido de compra con punto de entrega en el mini mapa
+model Order {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  buyerName     String
+  address       String
+  notes         String?
+  mapX          Float
+  mapY          Float
+  items         String // JSON: [{name, price, qty, store}]
+  total         Float
+  totalCoins    Int? // total en monedas si el pago fue con billetera
+  paymentMethod String   @default("cash") // cash | coins
+  etaMinutes    Int
+  status        String   @default("placed") // placed | in_delivery | delivered
+  workerName    String?
+  createdAt     DateTime @default(now())
+}
+
+// Notificaciones del mini correo interno
+model Notification {
+  id        String   @id @default(cuid())
+  toName    String
+  title     String
+  body      String
+  kind      String   @default("sistema") // pedido | trabajo | tienda | recarga | sistema
+  orderId   String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// Billetera de monedas internas de cada usuario
+model Wallet {
+  id        String   @id @default(cuid())
+  ownerName String   @unique
+  coins     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+// Solicitud de recarga de saldo (transferencia real -> monedas)
+model TopUpRequest {
+  id          String    @id @default(cuid())
+  userName    String
+  methodName  String // método de cobro usado
+  amountCash  Float // dinero real enviado
+  coins       Int // monedas que se acreditarán
+  transferId  String // ID de la transferencia que pone el usuario
+  status      String    @default("pending") // pending | approved | rejected
+  adminNote   String?
+  createdAt   DateTime  @default(now())
+  reviewedAt  DateTime?
+}
+
+// Cuenta/tarjeta donde el administrador recibe las transferencias reales
+model PaymentMethod {
+  id           String  @id @default(cuid())
+  label        String // ej: "Tarjeta monetaria BPA"
+  details      String // número de tarjeta o cuenta
+  holder       String // titular de la cuenta
+  instructions String  @default("")
+  active       Boolean @default(true)
+}
