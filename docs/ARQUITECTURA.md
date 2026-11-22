@@ -223,14 +223,24 @@ profesión nueva es solo añadir otra `DefProfesion` al registro.
 - **Skill**: cada receta tiene `SkillReq` (mínimo para craftear) y
   `SkillHasta` (a partir de ahí la receta ya no sube). Craftear sube +1
   mientras `skill < SkillHasta` y `skill < SkillMax` (techo del rango).
-- **Joyería** (primera profesión, WoW 3.3.5): 6 rangos (Aprendiz 0-75,
-  Oficial 50-150, Experto 125-225, Artesano 200-300, Maestro 275-375,
-  Gran Maestro 350-450) y 36 recetas repartidas entre Classic (1-300),
-  TBC (300-375) y WotLK (350-450), con los materiales y nombres de la guía.
+- **Joyería** (WoW 3.3.5): 6 rangos (Aprendiz 0-75, Oficial 50-150,
+  Experto 125-225, Artesano 200-300, Maestro 275-375, Gran Maestro 350-450)
+  y 36 recetas repartidas entre Classic (1-300), TBC (300-375) y WotLK
+  (350-450), con los materiales y nombres de la guía.
+- **Peletería** (WoW 3.3.5): 6 rangos y 30 recetas (Classic 1-300, TBC
+  300-350, WotLK 350-450) con los materiales de la guía (cueros, pellejos,
+  escamas, cuero boreal...). Además tiene **3 especializaciones**
+  (dragontina, elemental, tribal) que se aprenden a partir de 225
+  consumiendo los materiales de la misión de la guía; solo se puede elegir
+  una por profesión. Las recetas pueden requerir una especialización concreta.
+- **Especializaciones**: `DefEspecializacion` (id, nombre, skill_req,
+  descripción, materiales para aprenderla). `AprenderEspecializacion()`
+  valida skill >= req, que no haya ya una elegida, y consume los materiales.
 
 El cliente abre el panel de profesiones con la tecla **P**; muestra las
 profesiones conocidas (barra de habilidad + botón para aprender el
-siguiente rango), permite aprender profesiones nuevas y lista las recetas
+siguiente rango y, si aplica, las especializaciones disponibles con sus
+materiales), permite aprender profesiones nuevas y lista las recetas
 crafteables con sus materiales (tener/necesario) y un botón Craftear.
 
 ### Instancias

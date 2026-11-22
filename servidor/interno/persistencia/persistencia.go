@@ -50,6 +50,7 @@ type ProfesionPersist struct {
 	ProfesionID      string   `json:"profesion_id"`
 	Skill            int      `json:"skill"`
 	RangosAprendidos []string `json:"rangos_aprendidos"`
+	Especializacion  string   `json:"especializacion,omitempty"`
 }
 
 // Gestor persiste personajes en disco de forma thread-safe.

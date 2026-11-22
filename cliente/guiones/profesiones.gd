@@ -150,14 +150,20 @@ func _fila_profesion_conocida(e: Dictionary, cat_prof: Array) -> void:
 	var smax = e.get("skill_max", 0)
 	var nombre = pid
 	var rangos: Array = []
+	var especializaciones: Array = []
 	for p in cat_prof:
 		if p.get("id", "") == pid:
 			nombre = p.get("nombre", pid)
 			rangos = p.get("rangos", [])
+			especializaciones = p.get("especializaciones", [])
 			break
 	var fila = HBoxContainer.new()
 	var lbl = Label.new()
-	lbl.text = "%s — %d / %d" % [nombre, skill, smax]
+	var esp_actual = e.get("especializacion", "")
+	if esp_actual != "":
+		lbl.text = "%s — %d / %d  [%s]" % [nombre, skill, smax, _nombre_especializacion(esp_actual, especializaciones)]
+	else:
+		lbl.text = "%s — %d / %d" % [nombre, skill, smax]
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	fila.add_child(lbl)
 	# Barra de progreso simple.
@@ -181,6 +187,54 @@ func _fila_profesion_conocida(e: Dictionary, cat_prof: Array) -> void:
 			fila.add_child(btn)
 			break
 	_vbox.add_child(fila)
+	# Especializaciones: si la profesión las tiene y el PJ no tiene ninguna,
+	# mostrar las opciones a partir de skill_req (225). Si ya tiene una,
+	# no se ofrecen más (solo se permite una).
+	if especializaciones.is_empty():
+		return
+	var inv = _inv_map()
+	for esp in especializaciones:
+		var eid = esp.get("id", "")
+		var req_esp = esp.get("skill_req", 225)
+		if skill < req_esp:
+			continue
+		var efila = HBoxContainer.new()
+		var elbl = Label.new()
+		var mats_txt = ""
+		var tiene = true
+		for m in esp.get("materiales", []):
+			var mid = m.get("item_id", "")
+			var need = m.get("cantidad", 0)
+			var have = inv.get(mid, 0)
+			if have < need:
+				tiene = false
+			mats_txt += "%s (%d/%d)  " % [_nombre_item(mid), have, need]
+		if esp_actual != "":
+			if esp_actual == eid:
+				elbl.text = "  ✓ " + esp.get("nombre", eid) + " (aprendida)"
+				elbl.add_theme_color_override("font_color", Color(0.4, 1, 0.4))
+			else:
+				continue  # ya elegida otra; no mostrar
+		else:
+			elbl.text = "  " + esp.get("nombre", eid) + " — " + esp.get("descripcion", "") + "  [" + mats_txt + "]"
+			elbl.add_theme_color_override("font_color",
+				Color(0.4, 1, 0.4) if tiene else Color(0.7, 0.7, 0.7))
+		elbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		efila.add_child(elbl)
+		if esp_actual == "":
+			var ebtn = Button.new()
+			ebtn.text = "Elegir"
+			ebtn.disabled = not tiene
+			ebtn.pressed.connect(func(): Red.enviar_aprender_especializacion(pid, eid))
+			efila.add_child(ebtn)
+		_vbox.add_child(efila)
+
+# _nombre_especializacion busca el nombre legible de una especialización.
+func _nombre_especializacion(eid: String, especializaciones: Array) -> String:
+	for esp in especializaciones:
+		if esp.get("id", "") == eid:
+			return esp.get("nombre", eid)
+	return eid
 
 # _poblar_recetas llena la lista de recetas de las profesiones conocidas.
 func _poblar_recetas() -> void:

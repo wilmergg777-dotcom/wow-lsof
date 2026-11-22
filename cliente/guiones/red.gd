@@ -214,6 +214,9 @@ func enviar_aprender_profesion(profesion_id: String) -> void:
 func enviar_aprender_rango(profesion_id: String, rango_id: String) -> void:
 	enviar({"tipo": "aprender_rango", "profesion_id": profesion_id, "rango_id": rango_id})
 
+func enviar_aprender_especializacion(profesion_id: String, especializacion_id: String) -> void:
+	enviar({"tipo": "aprender_especializacion", "profesion_id": profesion_id, "especializacion_id": especializacion_id})
+
 func enviar_craftear(receta_id: String) -> void:
 	enviar({"tipo": "craftear", "receta_id": receta_id})
 

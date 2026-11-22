@@ -219,6 +219,7 @@ func NuevoJugadorDesdePersistencia(
 			ProfesionID:      pe.ProfesionID,
 			Skill:            pe.Skill,
 			RangosAprendidos: append([]string(nil), pe.RangosAprendidos...),
+			Especializacion:  pe.Especializacion,
 		}
 		j.profesiones[ep.ProfesionID] = ep
 	}
@@ -779,12 +780,13 @@ type ResultadoCrafteo struct {
 
 // ResultadoProfesion es el resultado de aprender una profesión o rango.
 type ResultadoProfesion struct {
-	OK         bool
-	Error      string
-	ProfesionID string
-	Skill      int
-	SkillMax   int
-	RangoID    string
+	OK             bool
+	Error          string
+	ProfesionID    string
+	Skill          int
+	SkillMax       int
+	RangoID        string
+	Especializacion string
 }
 
 // Inventario devuelve una copia del inventario (itemID → cantidad).
@@ -839,6 +841,7 @@ func (j *Jugador) profesionesParaPersist() []persistencia.ProfesionPersist {
 			ProfesionID:      ep.ProfesionID,
 			Skill:            ep.Skill,
 			RangosAprendidos: append([]string(nil), ep.RangosAprendidos...),
+			Especializacion:  ep.Especializacion,
 		})
 	}
 	return out
@@ -938,6 +941,67 @@ func (j *Jugador) AprenderRango(m *Mundo, profID, rangoID string) ResultadoProfe
 	}
 }
 
+// AprenderEspecializacion elige una rama de especialización de una
+// profesión (p.ej. Peletería dragontina/elemental/tribal). Requiere
+// habilidad >= SkillReq, no tener ya una especialización, y consume los
+// materiales de la misión (abstracción de la guía). Solo se puede elegir
+// una especialización por profesión.
+// Adquiere el lock del mundo internamente (se llama desde sesion.go).
+func (j *Jugador) AprenderEspecializacion(m *Mundo, profID, espID string) ResultadoProfesion {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	def, ok := m.profesiones[profID]
+	if !ok {
+		return ResultadoProfesion{Error: "profesión inválida"}
+	}
+	ep, ya := j.profesiones[profID]
+	if !ya {
+		return ResultadoProfesion{Error: "no conoces esa profesión"}
+	}
+	var esp DefEspecializacion
+	encontrado := false
+	for _, e := range def.Especializaciones {
+		if e.ID == espID {
+			esp = e
+			encontrado = true
+			break
+		}
+	}
+	if !encontrado {
+		return ResultadoProfesion{Error: "especialización inválida"}
+	}
+	if ep.Especializacion != "" {
+		return ResultadoProfesion{Error: "ya tienes una especialización en esta profesión"}
+	}
+	if ep.Skill < esp.SkillReq {
+		return ResultadoProfesion{Error: "habilidad insuficiente para esa especialización"}
+	}
+	// Comprobar y consumir materiales de la misión.
+	for _, mt := range esp.Materiales {
+		if j.CantidadItem(mt.ItemID) < mt.Cantidad {
+			nombre := mt.ItemID
+			if d, ok := m.items[mt.ItemID]; ok {
+				nombre = d.Nombre
+			}
+			return ResultadoProfesion{Error: "faltan materiales: " + nombre}
+		}
+	}
+	for _, mt := range esp.Materiales {
+		j.inventario[mt.ItemID] -= mt.Cantidad
+		if j.inventario[mt.ItemID] <= 0 {
+			delete(j.inventario, mt.ItemID)
+		}
+	}
+	ep.Especializacion = espID
+	return ResultadoProfesion{
+		OK:             true,
+		ProfesionID:    profID,
+		Skill:          ep.Skill,
+		SkillMax:       ep.SkillMax(def),
+		Especializacion: espID,
+	}
+}
+
 // Craftear ejecuta una receta: valida skill, comprueba materiales, los
 // consume, produce el ítem resultado y (si procede) sube la habilidad.
 // Adquiere el lock del mundo internamente (se llama desde sesion.go).
@@ -972,6 +1036,9 @@ func (j *Jugador) Craftear(m *Mundo, recetaID string) ResultadoCrafteo {
 	skillMax := ep.SkillMax(profDef)
 	if ep.Skill < receta.SkillReq {
 		return ResultadoCrafteo{RecetaID: recetaID, Error: "habilidad insuficiente para esta receta"}
+	}
+	if receta.Especializacion != "" && ep.Especializacion != receta.Especializacion {
+		return ResultadoCrafteo{RecetaID: recetaID, Error: "requiere la especialización " + receta.Especializacion}
 	}
 	// Comprobar materiales.
 	for _, mat := range receta.Materiales {

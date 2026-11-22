@@ -50,6 +50,7 @@ type MensajeCliente struct {
 	ProfesionID string        `json:"profesion_id,omitempty"` // aprender_profesion / craftear
 	RecetaID  string          `json:"receta_id,omitempty"`  // craftear
 	RangoID   string          `json:"rango_id,omitempty"`   // aprender_rango
+	EspecializacionID string  `json:"especializacion_id,omitempty"` // aprender_especializacion
 }
 
 // ─── Mensajes servidor → cliente ────────────────────────────────────────
@@ -160,15 +161,26 @@ type RecetaRes struct {
 	Materiales        []MaterialRes `json:"materiales"`
 	SkillReq          int           `json:"skill_req"`
 	SkillHasta        int           `json:"skill_hasta"`
+	Especializacion   string        `json:"especializacion,omitempty"`
+}
+
+// EspecializacionRes es la representación de una rama de especialización.
+type EspecializacionRes struct {
+	ID          string        `json:"id"`
+	Nombre      string        `json:"nombre"`
+	SkillReq    int           `json:"skill_req"`
+	Descripcion string        `json:"descripcion"`
+	Materiales  []MaterialRes `json:"materiales"`
 }
 
 // ProfesionRes es la representación de una profesión (catálogo) para el cliente.
 type ProfesionRes struct {
-	ID       string     `json:"id"`
-	Nombre   string     `json:"nombre"`
-	Primaria bool       `json:"primaria"`
-	MaxSkill int        `json:"max_skill"`
-	Rangos   []RangoRes `json:"rangos"`
+	ID             string               `json:"id"`
+	Nombre         string               `json:"nombre"`
+	Primaria       bool                 `json:"primaria"`
+	MaxSkill       int                  `json:"max_skill"`
+	Rangos         []RangoRes           `json:"rangos"`
+	Especializaciones []EspecializacionRes `json:"especializaciones,omitempty"`
 }
 
 // EstadoProfesionRes es el estado de una profesión que aprendió un PJ.
@@ -177,6 +189,7 @@ type EstadoProfesionRes struct {
 	Skill            int      `json:"skill"`
 	SkillMax         int      `json:"skill_max"`
 	RangosAprendidos []string `json:"rangos_aprendidos"`
+	Especializacion  string   `json:"especializacion,omitempty"`
 }
 
 // CrafteoRes es el resultado de un crafteo.
@@ -191,14 +204,15 @@ type CrafteoRes struct {
 	SubioSkill        bool   `json:"subio_skill,omitempty"`
 }
 
-// AprendidoRes es el resultado de aprender una profesión o rango.
+// AprendidoRes es el resultado de aprender una profesión, rango o especialización.
 type AprendidoRes struct {
-	OK          bool   `json:"ok"`
-	Error       string `json:"error,omitempty"`
-	ProfesionID string `json:"profesion_id"`
-	RangoID     string `json:"rango_id,omitempty"`
-	Skill       int    `json:"skill"`
-	SkillMax    int    `json:"skill_max"`
+	OK             bool   `json:"ok"`
+	Error          string `json:"error,omitempty"`
+	ProfesionID    string `json:"profesion_id"`
+	RangoID        string `json:"rango_id,omitempty"`
+	Especializacion string `json:"especializacion,omitempty"`
+	Skill          int    `json:"skill"`
+	SkillMax       int    `json:"skill_max"`
 }
 
 // MasmoraRes es el resumen de una masmora para el panel del buscador.

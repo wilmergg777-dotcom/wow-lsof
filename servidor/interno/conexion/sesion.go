@@ -320,6 +320,8 @@ func (s *Sesion) handleEnJuego(msg MensajeCliente) error {
 		return s.aprenderProfesion(j, msg)
 	case "aprender_rango":
 		return s.aprenderRango(j, msg)
+	case "aprender_especializacion":
+		return s.aprenderEspecializacion(j, msg)
 	case "craftear":
 		return s.craftear(j, msg)
 	}
@@ -378,6 +380,26 @@ func (s *Sesion) aprenderRango(j *mundo.Jugador, msg MensajeCliente) error {
 			SkillMax:    res.SkillMax,
 		},
 		EstadoProfesiones: estadoProfesionesRes(s.mundo, j),
+	})
+}
+
+// aprenderEspecializacion elige una rama de especialización de una profesión
+// (p.ej. Peletería dragontina/elemental/tribal). Consume los materiales de
+// la misión y solo permite una por profesión.
+func (s *Sesion) aprenderEspecializacion(j *mundo.Jugador, msg MensajeCliente) error {
+	res := j.AprenderEspecializacion(s.mundo, msg.ProfesionID, msg.EspecializacionID)
+	return EscribirMensaje(s.conn, MensajeServidor{
+		Tipo: "aprendido_resp",
+		Aprendido: &AprendidoRes{
+			OK:              res.OK,
+			Error:           res.Error,
+			ProfesionID:     res.ProfesionID,
+			Especializacion: res.Especializacion,
+			Skill:           res.Skill,
+			SkillMax:        res.SkillMax,
+		},
+		EstadoProfesiones: estadoProfesionesRes(s.mundo, j),
+		Inventario:        inventarioRes(j),
 	})
 }
 
@@ -583,8 +605,20 @@ func profesionesRes(m *mundo.Mundo) []ProfesionRes {
 		for _, rg := range p.Rangos {
 			rangos = append(rangos, RangoRes{ID: rg.ID, Nombre: rg.Nombre, SkillReq: rg.SkillReq, SkillMax: rg.SkillMax})
 		}
+		esps := make([]EspecializacionRes, 0, len(p.Especializaciones))
+		for _, e := range p.Especializaciones {
+			mats := make([]MaterialRes, 0, len(e.Materiales))
+			for _, mt := range e.Materiales {
+				mats = append(mats, MaterialRes{ItemID: mt.ItemID, Cantidad: mt.Cantidad})
+			}
+			esps = append(esps, EspecializacionRes{
+				ID: e.ID, Nombre: e.Nombre, SkillReq: e.SkillReq,
+				Descripcion: e.Descripcion, Materiales: mats,
+			})
+		}
 		out = append(out, ProfesionRes{
-			ID: p.ID, Nombre: p.Nombre, Primaria: p.Primaria, MaxSkill: p.MaxSkill, Rangos: rangos,
+			ID: p.ID, Nombre: p.Nombre, Primaria: p.Primaria, MaxSkill: p.MaxSkill,
+			Rangos: rangos, Especializaciones: esps,
 		})
 	}
 	return out
@@ -604,6 +638,7 @@ func recetasRes(m *mundo.Mundo) []RecetaRes {
 				ID: rc.ID, Nombre: rc.Nombre, ProfesionID: rc.ProfesionID,
 				ResultadoID: rc.ResultadoID, ResultadoCantidad: rc.ResultadoCantidad,
 				Materiales: mats, SkillReq: rc.SkillReq, SkillHasta: rc.SkillHasta,
+				Especializacion: rc.Especializacion,
 			})
 		}
 	}
@@ -636,6 +671,7 @@ func estadoProfesionesRes(m *mundo.Mundo, j *mundo.Jugador) []EstadoProfesionRes
 			Skill:            ep.Skill,
 			SkillMax:         max,
 			RangosAprendidos: append([]string(nil), ep.RangosAprendidos...),
+			Especializacion:  ep.Especializacion,
 		})
 	}
 	return out

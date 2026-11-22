@@ -21,6 +21,11 @@ const (
 	TipoCollar      = "collar"
 	TipoPrisma      = "prisma"
 	TipoSello       = "sello"
+	// Tipos de Peletería
+	TipoArmadura = "armadura" // piezas de cuero/malla
+	TipoCapa     = "capa"
+	TipoBolsa    = "bolsa"
+	TipoRefuerzo = "refuerzo" // parches/mejoras de armadura
 )
 
 // Calidades.
@@ -177,6 +182,92 @@ func itemsPredefinidos() map[string]DefItem {
 		{"sello_onirico", "Sello onírico", TipoSello, CalidadEpico},
 	}
 	for _, c := range crafted {
+		m[c.id] = def(c.id, c.nombre, c.tipo, c.calidad)
+	}
+
+	// ─── Materiales de Peletería (Classic) ───
+	for id, n := range map[string]string{
+		"cuero_ligero":          "Cuero ligero",
+		"cuero_fino":            "Cuero fino",
+		"cuero_pesado":          "Cuero pesado",
+		"pellejo_pesado_curado": "Pellejo pesado curado",
+		"cuero_grueso":          "Cuero grueso",
+		"pellejo_grueso_curado": "Pellejo grueso curado",
+		"cuero_basto":           "Cuero basto",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+	// ─── Materiales de Peletería (TBC) ───
+	// Cuero de pellejo nudoso y grueso son también productos crafteados
+	// (recetas intermedias), pero se registran como material.
+	for id, n := range map[string]string{
+		"restos_cuero_pellejo_nodoso":    "Restos de cuero de pellejo nudoso",
+		"cuero_pellejo_nodoso":           "Cuero de pellejo nudoso",
+		"escamas_viles":                  "Escamas viles",
+		"cuero_pellejo_nodoso_grueso":    "Cuero de pellejo nudoso grueso",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+	// ─── Materiales de Peletería (WotLK) ───
+	// Cuero boreal pesado es también producto crafteado (receta intermedia).
+	for id, n := range map[string]string{
+		"cuero_boreal":        "Cuero boreal",
+		"agua_cristalizada":   "Agua cristalizada",
+		"agua_eterna":         "Agua eterna",
+		"orbe_congelado":      "Orbe congelado",
+		"quitina_nerubiana":   "Quitina nerubiana",
+		"pelaje_artico":       "Pelaje ártico",
+		"cuero_boreal_pesado": "Cuero boreal pesado",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+	// ─── Materiales de especialización de Peletería ───
+	for id, n := range map[string]string{
+		"escamas_dragon_desgastadas": "Escamas de dragón desgastadas",
+		"corazon_fuego":              "Corazón de fuego",
+		"globo_agua":                 "Globo de agua",
+		"nucleo_tierra":              "Núcleo de tierra",
+		"aliento_viento":             "Aliento de viento",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadRaro)
+	}
+
+	// ─── Productos crafteados de Peletería (1-450) ───
+	craftedPeleteria := []struct {
+		id, nombre, tipo, calidad string
+	}{
+		// Classic 1-300
+		{"complemento_armadura_ligera", "Complemento para armadura ligera", TipoRefuerzo, CalidadComun},
+		{"capa_cuero_cosida_mano", "Capa de cuero cosida a mano", TipoCapa, CalidadComun},
+		{"guantes_cuero_relieve", "Guantes de cuero en relieve", TipoArmadura, CalidadComun},
+		{"cinturon_cuero_refinado", "Cinturón de cuero refinado", TipoArmadura, CalidadComun},
+		{"botas_cuero_oscuro", "Botas de cuero oscuro", TipoArmadura, CalidadComun},
+		{"pantalones_cuero_oscuro", "Pantalones de cuero oscuro", TipoArmadura, CalidadComun},
+		{"guantes_cuero_montanero", "Guantes de cuero de montañero", TipoArmadura, CalidadComun},
+		{"complemento_pesado_armadura", "Complemento pesado para armadura", TipoRefuerzo, CalidadComun},
+		{"hombreras_barbaricas", "Hombreras barbáricas", TipoArmadura, CalidadRaro},
+		{"brazales_oscurecidos", "Brazales oscurecidos", TipoArmadura, CalidadComun},
+		{"cinta_nochefugaz", "Cinta Nochefugaz", TipoArmadura, CalidadRaro},
+		{"faltriquera_municion_cuero_grueso", "Faltriquera de munición de cuero grueso", TipoBolsa, CalidadComun},
+		{"pantalones_nochefugaz", "Pantalones Nochefugaz", TipoArmadura, CalidadRaro},
+		{"botas_nochefugaz", "Botas Nochefugaz", TipoArmadura, CalidadRaro},
+		{"guanteletes_cuero_maligno", "Guanteletes de cuero maligno", TipoArmadura, CalidadRaro},
+		{"brazales_cuero_maligno", "Brazales de cuero maligno", TipoArmadura, CalidadRaro},
+		{"cinta_cuero_maligno", "Cinta de cuero maligno", TipoArmadura, CalidadRaro},
+		// TBC 300-350
+		{"refuerzo_armadura_pellejo_nodoso", "Refuerzo para armadura de pellejo nudoso", TipoRefuerzo, CalidadComun},
+		{"jubon_draenico_grueso", "Jubón draénico grueso", TipoArmadura, CalidadRaro},
+		{"coraza_escamas_viles", "Coraza de escamas viles", TipoArmadura, CalidadRaro},
+		// WotLK 350-450
+		{"refuerzo_armadura_boreal", "Refuerzo para armadura boreal", TipoRefuerzo, CalidadComun},
+		{"botas_articas", "Botas árticas", TipoArmadura, CalidadRaro},
+		{"leotardos_escamas_escarcha_oscuros", "Leotardos de escamas de escarcha oscuros", TipoArmadura, CalidadRaro},
+		{"brazales_encapotados", "Brazales encapotados", TipoArmadura, CalidadRaro},
+		{"manijas_encapotadas", "Manijas encapotadas", TipoArmadura, CalidadRaro},
+		{"armadura_pierna_pellejo_escarcha", "Armadura para pierna de pellejo de escarcha", TipoRefuerzo, CalidadRaro},
+		{"coraza_cuero_boreal_pesado", "Coraza de cuero boreal pesado", TipoArmadura, CalidadEpico},
+	}
+	for _, c := range craftedPeleteria {
 		m[c.id] = def(c.id, c.nombre, c.tipo, c.calidad)
 	}
 	return m

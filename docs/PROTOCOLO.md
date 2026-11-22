@@ -138,6 +138,16 @@ límite de 2 profesiones primarias. Respuesta: `aprendido_resp`.
 Aprende un rango superior de una profesión conocida (requiere habilidad
 >= `skill_req` del rango). Respuesta: `aprendido_resp`.
 
+### `aprender_especializacion`
+```json
+{"tipo": "aprender_especializacion", "profesion_id": "peleteria", "especializacion_id": "tribal"}
+```
+Elige una rama de especialización de una profesión (p.ej. Peletería
+dragontina/elemental/tribal). Requiere habilidad >= `skill_req` (225), que
+no haya ya una especialización elegida, y consume los materiales de la
+misión. Solo se permite una por profesión. Respuesta: `aprendido_resp`
+(con `especializacion` y el inventario actualizado).
+
 ### `craftear`
 ```json
 {"tipo": "craftear", "receta_id": "hilo_cobre_delicado"}
