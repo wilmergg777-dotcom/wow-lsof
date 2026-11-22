@@ -1,8 +1,10 @@
 // ============================================================
-// API de mini tiendas de Violetero
+// API de ajustes del sitio de Violetero
 // ============================================================
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAdmin } from '@/lib/session'
+import { logSecurityEvent } from '@/lib/security'
 
 async function getSettings() {
   let settings = await db.siteSettings.findUnique({ where: { id: 'main' } })
@@ -18,8 +20,17 @@ export async function GET() {
 
 // PATCH /api/settings — el administrador activa/desactiva mini tiendas
 // y configura la tasa de cambio (monedas por 1 CUP real)
+// PARCHES DE SEGURIDAD: SOLO el administrador (antes cualquiera
+// podía cambiar la tasa de cambio y falsear todos los precios).
 export async function PATCH(req: Request) {
-  const body = await req.json()
+  const sess = await requireAdmin(req)
+  if (!sess) {
+    return NextResponse.json(
+      { error: 'Solo el administrador puede cambiar los ajustes del sitio' },
+      { status: 403 }
+    )
+  }
+  const body = await req.json().catch(() => ({}))
   if (
     typeof body.miniStoresEnabled !== 'boolean' &&
     typeof body.coinRate !== 'number' &&
@@ -46,6 +57,12 @@ export async function PATCH(req: Request) {
         ? { courierFee: Math.round(body.courierFee) }
         : {}),
     },
+  })
+  await logSecurityEvent({
+    userId: sess.user.id,
+    userName: sess.user.name,
+    type: 'settings_changed',
+    detail: 'Ajustes del sitio actualizados (tasa de cambio, mini tiendas o tarifa)',
   })
   return NextResponse.json(updated)
 }

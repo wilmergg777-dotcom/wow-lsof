@@ -85,6 +85,31 @@ export function maskPhone(phone: string): string {
   return `${'*'.repeat(Math.max(0, clean.length - 3))}${clean.slice(-3)}`
 }
 
+// ---------- Parches anti-abuso de carga de datos ----------
+// Fotos: solo data:image o /gallery/ y con un tamaño máximo,
+// para que nadie envíe una foto gigante y tumbe el servidor.
+export const MAX_PHOTO_CHARS = 7_000_000 // ~5 MB en base64
+export function validPhoto(p: unknown): string | null {
+  if (typeof p !== 'string') return null
+  if (!p.startsWith('data:image') && !p.startsWith('/gallery/')) return null
+  if (p.length > MAX_PHOTO_CHARS) return null
+  return p
+}
+
+// Límite de tamaño del cuerpo de la petición (anti DoS).
+// Devuelve true si la petición excede el máximo indicado (MB).
+export function bodyTooLarge(req: Request, maxMb = 8): boolean {
+  const len = Number(req.headers.get('content-length') || 0)
+  return len > maxMb * 1024 * 1024
+}
+
+// Recorta un texto a una longitud máxima (anti campos gigantes)
+export function clip(v: unknown, max: number): string {
+  return String(v ?? '')
+    .trim()
+    .slice(0, max)
+}
+
 // ---------- Describir el dispositivo desde el User-Agent ----------
 export function describeDevice(ua: string): string {
   const s = ua || ''

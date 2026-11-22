@@ -25,6 +25,7 @@ type ForgotResponse = {
   note: string
   demo: boolean
   demoCode?: string
+  needsAdminHelp?: boolean
   fallbackHint: string
 }
 
@@ -79,8 +80,8 @@ export function AuthView() {
       toast.error('El nombre debe tener al menos 3 caracteres')
       return
     }
-    if (pw.length < 4) {
-      toast.error('La contraseña debe tener al menos 4 caracteres')
+    if (pw.length < 6) {
+      toast.error('La contraseña debe tener al menos 6 caracteres')
       return
     }
     if (pw !== pw2) {
@@ -149,8 +150,8 @@ export function AuthView() {
   }
 
   const saveNewPassword = async () => {
-    if (fpPw.length < 4) {
-      toast.error('La contraseña nueva debe tener al menos 4 caracteres')
+    if (fpPw.length < 6) {
+      toast.error('La contraseña nueva debe tener al menos 6 caracteres')
       return
     }
     if (fpPw !== fpPw2) {
@@ -256,6 +257,19 @@ export function AuthView() {
                   </p>
                 </div>
               )}
+              {!fpInfo?.demo && !fpInfo?.channelLabel && fpInfo?.needsAdminHelp && (
+                <div className="border border-[#B45309]/40 bg-[#FEF3C7] rounded-lg p-3 mb-3 text-[13px]">
+                  <p className="flex items-center gap-1.5 font-bold text-[#B45309]">
+                    <ShieldCheck className="w-4 h-4" /> El envío de códigos no está configurado
+                  </p>
+                  <p className="mt-1 text-[#565959]">
+                    Por seguridad, en la web pública el código nunca se muestra en pantalla. El
+                    administrador debe conectar el bot de Telegram (Panel → Seguridad) para que
+                    los códigos puedan llegar. Si necesitas entrar hoy, contacta con el
+                    administrador de la tienda.
+                  </p>
+                </div>
+              )}
               <label className="block text-[13px] font-bold text-[#0F1111] mb-1">
                 Código de 6 dígitos
               </label>
@@ -308,7 +322,7 @@ export function AuthView() {
                 value={fpPw}
                 onChange={(e) => setFpPw(e.target.value)}
                 type="password"
-                placeholder="Mínimo 4 caracteres"
+                placeholder="Mínimo 6 caracteres"
                 aria-label="Contraseña nueva"
                 className="w-full border border-[#888c8c] rounded px-3 py-2 text-[14px] outline-none focus:border-[#e77600] mb-3"
               />
@@ -391,7 +405,7 @@ export function AuthView() {
           value={pw}
           onChange={(e) => setPw(e.target.value)}
           type="password"
-          placeholder={tab === 'register' ? 'Mínimo 4 caracteres' : 'Tu contraseña'}
+          placeholder={tab === 'register' ? 'Mínimo 6 caracteres' : 'Tu contraseña'}
           aria-label="Contraseña"
           onKeyDown={(e) => {
             if (e.key === 'Enter' && tab === 'login') login()

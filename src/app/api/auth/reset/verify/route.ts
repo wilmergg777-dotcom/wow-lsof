@@ -23,7 +23,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 async function findUser(identifier: string) {
   return (
     (await db.user.findUnique({ where: { name: identifier } })) ||
-    (EMAIL_RE.test(identifier) ? await db.user.findUnique({ where: { email: identifier } }) : null) ||
+    (EMAIL_RE.test(identifier)
+      ? await db.user.findFirst({ where: { email: identifier } })
+      : null) ||
     (await db.user.findFirst({ where: { phone: identifier } }))
   )
 }

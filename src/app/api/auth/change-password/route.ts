@@ -32,9 +32,9 @@ export async function POST(req: Request) {
     await logSecurityEvent({ userId: sess.user.id, userName: sess.user.name, type: 'password_change_failed', detail: 'Contraseña actual incorrecta al intentar cambiarla', ip })
     return NextResponse.json({ error: 'La contraseña actual no es correcta' }, { status: 400 })
   }
-  if (newPassword.length < 4) {
+  if (newPassword.length < 6) {
     return NextResponse.json(
-      { error: 'La contraseña nueva debe tener al menos 4 caracteres' },
+      { error: 'La contraseña nueva debe tener al menos 6 caracteres' },
       { status: 400 }
     )
   }

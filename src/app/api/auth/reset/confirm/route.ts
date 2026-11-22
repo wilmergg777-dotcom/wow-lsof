@@ -16,9 +16,9 @@ export async function POST(req: Request) {
   const resetToken = String(body.resetToken || '')
   const password = String(body.password || '')
 
-  if (password.length < 4) {
+  if (password.length < 6) {
     return NextResponse.json(
-      { error: 'La contraseña nueva debe tener al menos 4 caracteres' },
+      { error: 'La contraseña nueva debe tener al menos 6 caracteres' },
       { status: 400 }
     )
   }

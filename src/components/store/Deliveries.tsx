@@ -25,10 +25,17 @@ export function DeliveriesView() {
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(() => {
+    // Parches de seguridad: las entregas propias y las postulaciones
+    // solo se consultan con sesión iniciada. El tablero turbo es público.
+    const logged = Boolean(user.name) && user.name !== 'Invitado'
     Promise.all([
       api<Order[]>('/api/orders?status=placed&mode=turbo'),
-      api<Order[]>(`/api/orders?worker=${encodeURIComponent(user.name)}`),
-      api<Application[]>('/api/applications'),
+      logged
+        ? api<Order[]>(`/api/orders?worker=${encodeURIComponent(user.name)}`)
+        : Promise.resolve([] as Order[]),
+      logged
+        ? api<Application[]>('/api/applications')
+        : Promise.resolve([] as Application[]),
       api<JobOffer[]>('/api/joboffers'),
     ])
       .then(([t, m, apps, jobs]) => {
@@ -43,7 +50,9 @@ export function DeliveriesView() {
           .map((j) => j.storeId)
         setMyStores([...new Set(storeIds)])
       })
-      .catch((e) => toast.error(e.message))
+      .catch((e) => {
+        if (logged) toast.error(e.message)
+      })
       .finally(() => setLoading(false))
   }, [user.name])
 

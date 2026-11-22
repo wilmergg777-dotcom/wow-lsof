@@ -17,6 +17,7 @@ const VEHICLES = ['Moto', 'Bicicleta', 'Auto', 'A pie']
 
 export function JobsView() {
   const user = useStore((s) => s.user)
+  const openView = useStore((s) => s.openView)
   const [offers, setOffers] = useState<JobOffer[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<JobOffer | null>(null)
@@ -37,6 +38,12 @@ export function JobsView() {
 
   const apply = async () => {
     if (!selected) return
+    // Parches de seguridad: la postulación queda a nombre de la cuenta
+    if (!user.name || user.name === 'Invitado') {
+      toast.error('Inicia sesión para postular a una oferta')
+      openView('login')
+      return
+    }
     if (!fName.trim() || !fPhone.trim() || !fEmail.trim()) {
       toast.error('Completa tu nombre, teléfono y correo en el formulario')
       return

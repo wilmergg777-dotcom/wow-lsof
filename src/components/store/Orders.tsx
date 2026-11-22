@@ -12,15 +12,23 @@ import { MiniMap } from './MiniMap'
 
 export function OrdersView() {
   const user = useStore((s) => s.user)
+  const openView = useStore((s) => s.openView)
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Parches de seguridad: "Mis pedidos" es privado y necesita sesión.
+  const isGuest = !user.name || user.name === 'Invitado'
+
   useEffect(() => {
+    if (isGuest) {
+      setLoading(false)
+      return
+    }
     api<Order[]>(`/api/orders?buyer=${encodeURIComponent(user.name)}`)
       .then(setOrders)
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false))
-  }, [user.name])
+  }, [user.name, isGuest])
 
   if (loading) return <p className="text-center py-16 text-[#565959]">Cargando pedidos…</p>
 
@@ -28,7 +36,22 @@ export function OrdersView() {
     <div className="p-4 max-w-[1000px] mx-auto">
       <h1 className="text-[28px] font-bold text-[#0F1111] mb-4">Mis pedidos</h1>
 
-      {orders.length === 0 ? (
+      {isGuest ? (
+        <div className="bg-white rounded-lg border border-[#e3e6e6] p-12 text-center">
+          <PackageCheck className="w-16 h-16 text-[#ddd] mx-auto" strokeWidth={1.2} />
+          <p className="text-[16px] font-bold text-[#0F1111] mt-4">Inicia sesión para ver tus pedidos</p>
+          <p className="text-[14px] text-[#565959] mt-1">
+            Tus pedidos son privados: crea tu cuenta o entra con la tuya para ver el estado y el
+            tiempo de entrega de tus compras.
+          </p>
+          <button
+            onClick={() => openView('login')}
+            className="mt-5 bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[14px] font-bold rounded-full px-8 py-2 cursor-pointer"
+          >
+            Iniciar sesión o registrarme
+          </button>
+        </div>
+      ) : orders.length === 0 ? (
         <div className="bg-white rounded-lg border border-[#e3e6e6] p-12 text-center">
           <PackageCheck className="w-16 h-16 text-[#ddd] mx-auto" strokeWidth={1.2} />
           <p className="text-[16px] font-bold text-[#0F1111] mt-4">Todavía no hiciste pedidos</p>

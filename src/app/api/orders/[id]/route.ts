@@ -1,17 +1,32 @@
 // ============================================================
 // API de un pedido: el repartidor lo toma o lo entrega
+// PARCHES DE SEGURIDAD:
+// - Tomar un pedido exige sesión: el repartidor es SIEMPRE la
+//   cuenta de la sesión (no el nombre que mande el navegador).
+// - Marcar entregado: solo el repartidor asignado o el admin.
+// - Liquidar: solo el dueño real de la tienda (por su sesión)
+//   o el administrador.
 // ============================================================
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getSessionUser, isSelfOrAdmin } from '@/lib/session'
+import { logSecurityEvent } from '@/lib/security'
 import { formatPrice } from '@/lib/products'
 
-// PATCH /api/orders/[id] — { action: 'take' | 'deliver', workerName }
+// PATCH /api/orders/[id] — { action: 'take' | 'deliver' | 'settle' }
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const sess = await getSessionUser(req)
+  if (!sess) {
+    return NextResponse.json(
+      { error: 'Inicia sesión para trabajar como repartidor' },
+      { status: 401 }
+    )
+  }
   const { id } = await params
-  const body = await req.json()
+  const body = await req.json().catch(() => ({}))
   const order = await db.order.findUnique({ where: { id } })
   if (!order) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
 
@@ -19,16 +34,27 @@ export async function PATCH(
     if (order.status !== 'placed') {
       return NextResponse.json({ error: 'El pedido ya no está disponible' }, { status: 400 })
     }
-    const updated = await db.order.update({
-      where: { id },
-      data: { status: 'in_delivery', workerName: String(body.workerName || 'Repartidor') },
+    // Carrera por el pedido: solo gana la primera sesión que lo toma
+    const taken = await db.order.updateMany({
+      where: { id, status: 'placed' },
+      data: { status: 'in_delivery', workerName: sess.user.name },
+    })
+    if (taken.count === 0) {
+      return NextResponse.json({ error: 'El pedido ya no está disponible' }, { status: 400 })
+    }
+    const updated = await db.order.findUnique({ where: { id } })
+    await logSecurityEvent({
+      userId: sess.user.id,
+      userName: sess.user.name,
+      type: 'order_taken',
+      detail: `Tomó el pedido ${order.code} para entrega`,
     })
     // Notificar al comprador: su pedido salió para entrega
     await db.notification.create({
       data: {
         toName: order.buyerName,
         title: `Pedido ${order.code} en camino`,
-        body: `${body.workerName} salió a entregar tu pedido. Entrega estimada en ${order.etaMinutes} minutos en: ${order.address}`,
+        body: `${sess.user.name} salió a entregar tu pedido. Entrega estimada en ${order.etaMinutes} minutos en: ${order.address}`,
         kind: 'pedido',
         orderId: order.id,
       },
@@ -37,9 +63,22 @@ export async function PATCH(
   }
 
   if (body.action === 'deliver') {
+    // Solo el repartidor asignado (o el administrador) puede marcar entregado
+    if (!isSelfOrAdmin(sess, order.workerName || '')) {
+      return NextResponse.json(
+        { error: 'Solo el repartidor asignado puede marcar este pedido como entregado' },
+        { status: 403 }
+      )
+    }
     const updated = await db.order.update({
       where: { id },
       data: { status: 'delivered' },
+    })
+    await logSecurityEvent({
+      userId: sess.user.id,
+      userName: sess.user.name,
+      type: 'order_delivered',
+      detail: `Pedido ${order.code} entregado`,
     })
     // Notificar al comprador: pedido entregado
     await db.notification.create({
@@ -88,13 +127,10 @@ export async function PATCH(
   // LIQUIDACIÓN: el mensajero ya entregó el dinero cobrado al
   // dueño de la mini tienda (o al dueño de la web)
   if (body.action === 'settle') {
-    const name = String(body.ownerName || '').trim()
-    if (!name) return NextResponse.json({ error: 'Falta el nombre del dueño' }, { status: 400 })
-    const user = await db.user.findUnique({ where: { name } })
     const storeIds = order.storeIds.split(',').filter(Boolean)
-    let allowed = user?.role === 'administrador'
+    let allowed = sess.user.role === 'administrador'
     if (!allowed && storeIds.length) {
-      const myStores = await db.miniStore.findMany({ where: { ownerName: name } })
+      const myStores = await db.miniStore.findMany({ where: { ownerName: sess.user.name } })
       allowed = myStores.some((s) => storeIds.includes(s.id))
     }
     // Pedidos solo de la web (sin tiendas): solo el administrador
@@ -110,6 +146,12 @@ export async function PATCH(
     const updated = await db.order.update({
       where: { id },
       data: { settled: true, settledAt: new Date() },
+    })
+    await logSecurityEvent({
+      userId: sess.user.id,
+      userName: sess.user.name,
+      type: 'order_settled',
+      detail: `Liquidó el pedido ${order.code}`,
     })
     const pending = Math.max(0, order.total - order.courierFee)
     if (order.workerName) {

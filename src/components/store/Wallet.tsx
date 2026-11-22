@@ -32,7 +32,7 @@ import { formatCoins, formatPrice } from '@/lib/products'
 
 export function WalletView() {
   const user = useStore((s) => s.user)
-  const setUser = useStore((s) => s.setUser)
+  const openView = useStore((s) => s.openView)
 
   const [wallet, setWallet] = useState<Wallet | null>(null)
   const [methods, setMethods] = useState<PaymentMethod[]>([])
@@ -45,15 +45,16 @@ export function WalletView() {
   const [methodId, setMethodId] = useState('')
   const [amount, setAmount] = useState('')
   const [transferId, setTransferId] = useState('')
-  // Nombre provisional si es Invitado
-  const [nameDraft, setNameDraft] = useState('')
 
   const isGuest = !user.name || user.name === 'Invitado'
 
   const loadAll = useCallback(() => {
-    const nameParam = isGuest ? '' : `?name=${encodeURIComponent(user.name)}`
+    const nameParam = `?name=${encodeURIComponent(user.name)}`
     Promise.all([
-      api<Wallet>(`/api/wallet${nameParam ? nameParam : '?name='}`),
+      // Parches de seguridad: el saldo solo se consulta con sesión.
+      isGuest
+        ? Promise.resolve({ ownerName: 'Invitado', coins: 0, guest: true } as Wallet)
+        : api<Wallet>(`/api/wallet${nameParam}`),
       api<PaymentMethod[]>('/api/payment-methods'),
       api<Settings>('/api/settings'),
       ...(isGuest ? [] : [api<TopUpRequest[]>(`/api/topups${nameParam}`)]),
@@ -149,32 +150,18 @@ export function WalletView() {
       {isGuest && (
         <div className="bg-[#FEF3C7] border border-[#B45309]/30 rounded-lg p-5">
           <p className="text-[14px] font-bold text-[#B45309]">
-            Pónle nombre a tu usuario para abrir tu billetera
+            Inicia sesión para usar tu billetera
           </p>
-          <div className="flex gap-2 mt-3 max-w-md">
-            <input
-              value={nameDraft}
-              onChange={(e) => setNameDraft(e.target.value)}
-              placeholder="Ej: Luis"
-              className="flex-1 border border-[#888c8c] rounded px-3 py-2 text-[14px] outline-none focus:border-[#e77600]"
-            />
-            <button
-              onClick={() => {
-                const n = nameDraft.trim()
-                if (!n) {
-                  toast.error('Escribe tu nombre')
-                  return
-                }
-                setUser({ name: n, role: user.role })
-                toast.success(`Hola, ${n}. Ya puedes usar tu billetera`)
-                setLoading(true)
-                setTimeout(loadAll, 50)
-              }}
-              className="bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[14px] font-bold rounded-full px-6 cursor-pointer"
-            >
-              Guardar
-            </button>
-          </div>
+          <p className="text-[13px] text-[#B45309] mt-1">
+            La billetera es personal y privada: crea tu cuenta o entra con la tuya para
+            recargar saldo con una transferencia y pagar tus compras con monedas.
+          </p>
+          <button
+            onClick={() => openView('login')}
+            className="mt-3 bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[14px] font-bold rounded-full px-8 py-2 cursor-pointer"
+          >
+            Iniciar sesión o registrarme
+          </button>
         </div>
       )}
 

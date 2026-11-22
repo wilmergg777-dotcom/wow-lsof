@@ -212,6 +212,7 @@ export type DeliveryTarget = {
   emailVerified?: boolean
   phone?: string | null
   telegramChatId?: string | null
+  telegramUsername?: string | null
 }
 
 export type DeliveryResult = {

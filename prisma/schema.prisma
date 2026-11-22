@@ -44,9 +44,9 @@ model User {
   name                 String    @unique
   password             String // hash con sal (scrypt), nunca se guarda el texto plano
   role                 String    @default("comprador") // comprador | repartidor | administrador
-  email                String? // correo electrónico del usuario (para códigos y avisos)
+  email                String? @unique // correo electrónico del usuario (para códigos y avisos)
   emailVerifiedAt      DateTime? // cuándo se verificó el correo con un código
-  phone                String? // número de teléfono (para códigos por SMS)
+  phone                String? @unique // número de teléfono (para códigos por SMS)
   phoneVerifiedAt      DateTime? // cuándo se verificó el teléfono con un código
   telegramChatId       String? // chat de Telegram enlazado (plan B si el SMS no llega)
   telegramUsername     String?

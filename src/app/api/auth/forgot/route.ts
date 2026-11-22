@@ -24,6 +24,16 @@ import { deliverCode, hasRealChannel, CHANNEL_LABELS, type Channel } from '@/lib
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+// ¿La petición viene de la propia máquina (el dueño probando en
+// local)? En modo demostración el código se muestra SOLO ahí.
+// En un dominio público jamás se devuelve el código: si no hay
+// canal real configurado, el usuario debe contactar al admin.
+function isLocalRequest(req: Request): boolean {
+  if (process.env.DEMO_RESET_CODES === '1') return true
+  const host = (req.headers.get('host') || '').split(':')[0].toLowerCase()
+  return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '0.0.0.0'
+}
+
 export async function POST(req: Request) {
   const ip = getClientIp(req)
   const body = await req.json().catch(() => ({}))
@@ -45,9 +55,11 @@ export async function POST(req: Request) {
     )
   }
 
-  // Busca la cuenta por nombre, correo o teléfono (sin exponer si existe)
+  // Busca la cuenta por nombre, correo o teléfono (sin exponer si existe).
+  // findFirst evita errores de runtime si la base de datos vieja
+  // todavía no tiene las columnas marcadas como únicas.
   const user = EMAIL_RE.test(identifier)
-    ? await db.user.findUnique({ where: { email: identifier } })
+    ? await db.user.findFirst({ where: { email: identifier } })
     : (await db.user.findUnique({ where: { name: identifier } })) ||
       (await db.user.findFirst({ where: { phone: identifier } }))
 
@@ -99,15 +111,24 @@ export async function POST(req: Request) {
   })
 
   // Sin canales reales configurados el código se muestra en pantalla
-  // (MODO DEMOSTRACIÓN) para que el flujo se pueda probar hasta
-  // que el administrador configure el bot de Telegram / SMS / correo.
-  const demo = !(await hasRealChannel())
+  // (MODO DEMOSTRACIÓN) PERO SOLO en pruebas locales del dueño.
+  // En un sitio público nunca se devuelve el código en la
+  // respuesta: un atacante podría pedir el código de una cuenta
+  // ajena y apropiarse de ella.
+  const demoChannel = !(await hasRealChannel())
+  const local = isLocalRequest(req)
+  const demo = demoChannel && local
   return NextResponse.json({
     ...okResponse,
     channel: delivery.channel,
     channelLabel: delivery.channel ? CHANNEL_LABELS[delivery.channel] : null,
     target: delivery.target,
-    note: delivery.note,
+    note: demo
+      ? delivery.note
+      : demoChannel
+        ? 'El administrador todavía no configuró el envío real de códigos. Contacta con el administrador de la tienda para recuperar tu contraseña.'
+        : delivery.note,
+    needsAdminHelp: demoChannel && !local,
     demo,
     demoCode: demo ? code : undefined,
     fallbackHint:

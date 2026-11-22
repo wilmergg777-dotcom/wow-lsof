@@ -37,5 +37,17 @@ export async function ensureUsersSeed() {
         role: 'administrador',
       },
     })
+    // Aviso de seguridad: la cuenta inicial usa la contraseña de
+    // fábrica hasta que el dueño la cambie desde los ajustes.
+    await db.securityEvent
+      .create({
+        data: {
+          userName: 'Administrador',
+          type: 'admin_default_password',
+          detail:
+            'Se creó la cuenta del administrador con la contraseña inicial "admin123". CÁMBIALA YA en Ajustes → Cambiar contraseña.',
+        },
+      })
+      .catch(() => {})
   }
 }

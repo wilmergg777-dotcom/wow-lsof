@@ -23,15 +23,29 @@ export async function POST(req: Request) {
       { status: 400 }
     )
   }
+  // Parche anti suplantación: nadie puede registrarse con nombres
+  // que parezcan del administrador ni con caracteres peligrosos.
+  if (/admin/i.test(name)) {
+    return NextResponse.json(
+      { error: 'No puedes usar un nombre con "admin": es un nombre reservado' },
+      { status: 400 }
+    )
+  }
+  if (/[<>"'`;${}\\]/.test(name)) {
+    return NextResponse.json(
+      { error: 'El nombre tiene caracteres no permitidos' },
+      { status: 400 }
+    )
+  }
   if (name.toLowerCase() === 'invitado') {
     return NextResponse.json(
       { error: 'No puedes usar el nombre "Invitado": crea tu propio nombre' },
       { status: 400 }
     )
   }
-  if (password.length < 4) {
+  if (password.length < 6) {
     return NextResponse.json(
-      { error: 'La contraseña debe tener al menos 4 caracteres' },
+      { error: 'La contraseña debe tener al menos 6 caracteres' },
       { status: 400 }
     )
   }
@@ -55,20 +69,29 @@ export async function POST(req: Request) {
     )
   }
 
-  const user = await db.user.create({
-    data: { name, password: hashPassword(password), role },
-    select: { name: true, role: true, id: true },
-  })
-  await logSecurityEvent({ userId: user.id, userName: user.name, type: 'account_created', detail: `Nueva cuenta (${role})`, ip })
+  try {
+    const user = await db.user.create({
+      data: { name, password: hashPassword(password), role },
+      select: { name: true, role: true, id: true },
+    })
+    await logSecurityEvent({ userId: user.id, userName: user.name, type: 'account_created', detail: `Nueva cuenta (${role})`, ip })
 
-  // La cuenta recién creada entra con sesión iniciada
-  const { token } = await createSession(user.id, user.name, req.headers.get('user-agent') || '', ip)
-  const res = NextResponse.json({ name: user.name, role: user.role }, { status: 201 })
-  res.cookies.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: SESSION_MAX_AGE,
-  })
-  return res
+    // La cuenta recién creada entra con sesión iniciada
+    const { token } = await createSession(user.id, user.name, req.headers.get('user-agent') || '', ip)
+    const res = NextResponse.json({ name: user.name, role: user.role }, { status: 201 })
+    res.cookies.set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: SESSION_MAX_AGE,
+    })
+    return res
+  } catch {
+    // Dos registros a la vez con el mismo nombre: la base de datos
+    // rechaza el duplicado y se responde con el mensaje normal.
+    return NextResponse.json(
+      { error: `El nombre "${name}" ya está registrado. Inicia sesión.` },
+      { status: 400 }
+    )
+  }
 }

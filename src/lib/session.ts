@@ -83,3 +83,30 @@ export async function revokeSessionById(userId: string, sessionId: string) {
   })
   return r.count
 }
+
+// ============================================================
+// PARCHES DE SEGURIDAD: control de acceso del servidor
+// Antes las rutas confiaban en el nombre que enviaba el
+// navegador (se podía suplantar). Ahora la identidad SIEMPRE
+// sale de la cookie de sesión httpOnly.
+// ============================================================
+
+// Exige una sesión válida. Devuelve la sesión o null (-> 401).
+export async function requireUser(req: Request) {
+  return getSessionUser(req)
+}
+
+// Exige sesión de administrador. Devuelve la sesión o null (-> 401/403).
+export async function requireAdmin(req: Request) {
+  const sess = await getSessionUser(req)
+  if (!sess) return null
+  if (sess.user.role !== 'administrador') return null
+  return sess
+}
+
+// ¿El nombre que pide la petición coincide con la cuenta de la
+// sesión (o es el administrador)? Evita que un usuario actúe en
+// nombre de otro.
+export function isSelfOrAdmin(sess: { user: { name: string; role: string } }, name: string) {
+  return sess.user.name === name || sess.user.role === 'administrador'
+}
