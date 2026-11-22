@@ -23,7 +23,7 @@ const {
 const { verifyToken, requireAdmin, requireSuperAdmin } = require('../middlewares/auth');
 
 // ?? FIX: solo aplica auth a rutas que empiecen con /admin,
-// as¨ª no bloquea /futures-games, /tables/casual, etc. de otros routers.
+// asÂ¨Âª no bloquea /futures-games, /tables/casual, etc. de otros routers.
 router.use('/admin', verifyToken, requireAdmin);
 
 router.get('/admin/pending', async (req, res) => {
@@ -142,7 +142,7 @@ router.get('/admin/audit-log', async (req, res) => {
     }
 });
 
-// ?? MODIFICADO: L¨®gica del Bono de Inversi¨®n integrada
+// ?? MODIFICADO: LÂ¨Â®gica del Bono de InversiÂ¨Â®n integrada
 router.post('/admin/deposits/approve', validateRequestId, async (req, res) => {
     const { request_id } = req.body;
     const adminId = req.user.id;
@@ -160,7 +160,7 @@ router.post('/admin/deposits/approve', validateRequestId, async (req, res) => {
         const amount = Number(reqData[0].amount_cup);
         const userId = reqData[0].user_id;
 
-        // ?? L¨®GICA DEL BONO DE INVERSI¨®N
+        // ?? LÂ¨Â®GICA DEL BONO DE INVERSIÂ¨Â®N
         let bonoAplicado = 0;
         let totalAcreditado = amount;
 
@@ -187,13 +187,13 @@ router.post('/admin/deposits/approve', validateRequestId, async (req, res) => {
 
             let nuevoBonusUsado = bonusUsado + bonoAplicado;
 
-            // Guardar en la base de datos cu¨¢nto se ha usado
+            // Guardar en la base de datos cuÂ¨Â¢nto se ha usado
             await connection.query(`
                 INSERT INTO wallet_settings (setting_key, setting_value) VALUES ('bonus_usado', ?)
                 ON DUPLICATE KEY UPDATE setting_value = ?
             `, [nuevoBonusUsado, nuevoBonusUsado]);
 
-            // Si la bolsa se agot¨®, apagar el bono
+            // Si la bolsa se agotÂ¨Â®, apagar el bono
             if (nuevoBonusUsado >= bonusLimite) {
                 await connection.query(`
                     INSERT INTO wallet_settings (setting_key, setting_value) VALUES ('bonus_porcentaje', 0)
@@ -202,7 +202,7 @@ router.post('/admin/deposits/approve', validateRequestId, async (req, res) => {
             }
         }
 
-        // Sumar al jugador el dep¨®sito + su bono
+        // Sumar al jugador el depÂ¨Â®sito + su bono
         await connection.query("UPDATE wallets SET balance_ntx = balance_ntx + ? WHERE user_id = ?", [totalAcreditado, userId]);
         
         // Las reservas y el balance del admin se actualizan con el monto real depositado (amount)
@@ -217,14 +217,14 @@ router.post('/admin/deposits/approve', validateRequestId, async (req, res) => {
 
         await connection.commit();
 
-        // Notificaci¨®n interna al jugador
+        // NotificaciÂ¨Â®n interna al jugador
         const msjNotificacion = bonoAplicado > 0 
-            ? `Tu dep¨®sito de ${amount} CUP ha sido aprobado. Se acreditaron ${totalAcreditado} NTX a tu billetera (Incluye un Bono de Inversi¨®n de ${bonoAplicado} NTX).`
-            : `Tu dep¨®sito de ${amount} CUP ha sido aprobado. Se acreditaron ${amount} NTX a tu billetera.`;
+            ? `Tu depÂ¨Â®sito de ${amount} CUP ha sido aprobado. Se acreditaron ${totalAcreditado} NTX a tu billetera (Incluye un Bono de InversiÂ¨Â®n de ${bonoAplicado} NTX).`
+            : `Tu depÂ¨Â®sito de ${amount} CUP ha sido aprobado. Se acreditaron ${amount} NTX a tu billetera.`;
 
         await crearNotificacion(
             userId,
-            'Dep¨®sito aprobado',
+            'DepÂ¨Â®sito aprobado',
             msjNotificacion,
             'deposit_approved',
             { amount, bonoAplicado, request_id }
@@ -281,7 +281,7 @@ router.post('/admin/withdrawals/approve', validateRequestId, async (req, res) =>
         await crearNotificacion(
             userId,
             'Retiro completado',
-            `Tu retiro de ${amount} NTX ha sido procesado y aprobado. El dinero ser¨¢ transferido a tu cuenta bancaria.`,
+            `Tu retiro de ${amount} NTX ha sido procesado y aprobado. El dinero serÂ¨Â¢ transferido a tu cuenta bancaria.`,
             'withdraw_approved',
             { amount, request_id }
         );
@@ -355,7 +355,7 @@ router.post('/admin/withdrawals/reject', validateRequestId, async (req, res) => 
     }
 });
 
-// ?? MODIFICADO: Ahora devuelve tambi¨¦n los datos del bono
+// ?? MODIFICADO: Ahora devuelve tambiÂ¨Â¦n los datos del bono
 router.get('/admin/settings', async (req, res) => {
     try {
         const [rows] = await pool.query("SELECT setting_key, setting_value FROM wallet_settings");
@@ -374,7 +374,7 @@ router.get('/admin/settings', async (req, res) => {
     }
 });
 
-// ?? MODIFICADO: Ahora tambi¨¦n guarda los n¨²meros del bono
+// ?? MODIFICADO: Ahora tambiÂ¨Â¦n guarda los nÂ¨Â²meros del bono
 router.post('/admin/settings/toggle', requireSuperAdmin, validateAdminSettingsToggle, async (req, res) => {
     const { setting, value } = req.body;
     
@@ -383,7 +383,7 @@ router.post('/admin/settings/toggle', requireSuperAdmin, validateAdminSettingsTo
     }
     
     try {
-        // Si es un switch (on/off), guardamos 1 o 0. Si es n¨²mero, lo guardamos tal cual.
+        // Si es un switch (on/off), guardamos 1 o 0. Si es nÂ¨Â²mero, lo guardamos tal cual.
         let valToSave = value;
         if (setting === 'retiros_activos' || setting === 'inversiones_activas') {
             valToSave = value ? 1 : 0;
@@ -447,7 +447,7 @@ router.post('/admin/bank/fund', requireSuperAdmin, validateFundAdmin, async (req
     const superAdminId = req.user.id;
 
     if (!admin_id || !amount || Number(amount) <= 0) {
-        return res.status(400).json({ error: 'Admin y monto v¨¢lido son obligatorios' });
+        return res.status(400).json({ error: 'Admin y monto vÂ¨Â¢lido son obligatorios' });
     }
 
     const fundAmount = Number(amount);
@@ -473,7 +473,7 @@ router.post('/admin/bank/fund', requireSuperAdmin, validateFundAdmin, async (req
         await crearNotificacion(
             admin_id,
             'Fondo agregado',
-            `El superadmin te agreg¨® ${fundAmount} NTX de fondo a tu cuenta.`,
+            `El superadmin te agregÂ¨Â® ${fundAmount} NTX de fondo a tu cuenta.`,
             'info',
             { amount: fundAmount, by: superAdminId }
         );
@@ -494,25 +494,47 @@ router.post('/admin/bank/fund', requireSuperAdmin, validateFundAdmin, async (req
 
 // ==========================================
 // NUEVA RUTA: LIQUIDAR FONDO DEL PROYECTO (RAKE)
+// ðŸ”¥ MEJORADO: ahora la liquidaciÃ³n SE ACREDITA al superadmin
+//    (admin_balances.fondo) y queda registrada en fund_movements.
+//    Antes solo ponÃ­a el banco a 0 y el dinero â€œdesaparecÃ­aâ€.
 // ==========================================
 router.post('/admin/bank/liquidate-rake', requireSuperAdmin, async (req, res) => {
+    const superAdminId = req.user.id;
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
-        
-        // Obtenemos cu¨¢nto es lo que se va a liquidar (opcional, para devolverlo en la respuesta)
-        const [reserves] = await connection.query("SELECT balance_ntx FROM bank_reserves WHERE id = 1 FOR UPDATE");
-        const amountToLiquidate = reserves[0]?.balance_ntx || 0;
 
-        if (amountToLiquidate > 0) {
-            // Ponemos el balance del rake en 0
-            await connection.query("UPDATE bank_reserves SET balance_ntx = 0 WHERE id = 1");
+        // CuÃ¡nto hay en el Fondo del Proyecto
+        const [reserves] = await connection.query("SELECT balance_ntx FROM bank_reserves WHERE id = 1 FOR UPDATE");
+        const amountToLiquidate = Number(reserves[0]?.balance_ntx || 0);
+
+        if (amountToLiquidate <= 0) {
+            await connection.rollback();
+            return res.status(400).json({ error: 'El fondo del proyecto estÃ¡ en 0, nada que liquidar.' });
         }
 
+        // 1. Poner el balance del rake en 0
+        await connection.query("UPDATE bank_reserves SET balance_ntx = 0 WHERE id = 1");
+
+        // 2. Acreditar el fondo al superadmin (admin_balances.fondo)
+        await connection.query(
+            `INSERT INTO admin_balances (admin_id, total_recibido, total_retirado, fondo)
+             VALUES (?, 0, 0, ?)
+             ON DUPLICATE KEY UPDATE fondo = fondo + VALUES(fondo)`,
+            [superAdminId, amountToLiquidate]
+        );
+
+        // 3. Registrar el movimiento para auditorÃ­a
+        await connection.query(
+            `INSERT INTO fund_movements (fund, type, amount, description, admin_id)
+             VALUES ('project', 'out', ?, 'LiquidaciÃ³n del Fondo del Proyecto (rake) al superadmin', ?)`,
+            [amountToLiquidate, superAdminId]
+        );
+
         await connection.commit();
-        res.json({ 
-            message: 'Fondo del Proyecto liquidado a 0 correctamente.', 
-            amount_liquidated: amountToLiquidate 
+        res.json({
+            message: `Fondo del Proyecto liquidado: ${amountToLiquidate} NTX acreditados a tu cuenta de admin.`,
+            amount_liquidated: amountToLiquidate
         });
     } catch (error) {
         await connection.rollback();
@@ -520,6 +542,66 @@ router.post('/admin/bank/liquidate-rake', requireSuperAdmin, async (req, res) =>
         res.status(500).json({ error: 'Error al liquidar el fondo del proyecto' });
     } finally {
         connection.release();
+    }
+});
+
+// ==========================================
+// ðŸ”¥ NUEVA RUTA: VERIFICACIÃ“N DEL FLUJO DE FONDOS
+// Muestra de un vistazo: Fondo del Proyecto, pendiente de referidos,
+// totales del ledger y Ãºltimos movimientos de rake.
+// ==========================================
+router.get('/admin/funds', async (req, res) => {
+    try {
+        const [reserves] = await pool.query("SELECT balance_ntx FROM bank_reserves WHERE id = 1");
+        const project_fund = Number(reserves[0]?.balance_ntx || 0);
+
+        const [refPending] = await pool.query(
+            "SELECT COUNT(*) as rows_pending, COALESCE(SUM(amount),0) as total_pending FROM referral_earnings WHERE status = 'pending'"
+        );
+        const [refClaimed] = await pool.query(
+            "SELECT COUNT(*) as rows_claimed, COALESCE(SUM(amount),0) as total_claimed FROM referral_earnings WHERE status = 'claimed'"
+        );
+
+        const [totals] = await pool.query(
+            `SELECT COALESCE(SUM(rake_amount),0) as total_rake,
+                    COALESCE(SUM(referral_share),0) as total_to_referrals,
+                    COALESCE(SUM(project_share),0) as total_to_project,
+                    COUNT(*) as movements
+             FROM rake_ledger`
+        );
+        const [bySource] = await pool.query(
+            `SELECT source, COALESCE(SUM(rake_amount),0) as total_rake,
+                    COALESCE(SUM(referral_share),0) as total_referral,
+                    COALESCE(SUM(project_share),0) as total_project,
+                    COUNT(*) as movements
+             FROM rake_ledger GROUP BY source`
+        );
+        const [lastLedger] = await pool.query(
+            `SELECT rl.*, u.username as winner_username
+             FROM rake_ledger rl LEFT JOIN users u ON rl.winner_user_id = u.id
+             ORDER BY rl.created_at DESC LIMIT 20`
+        );
+        const [movements] = await pool.query(
+            `SELECT fm.*, u.username as admin_username
+             FROM fund_movements fm LEFT JOIN users u ON fm.admin_id = u.id
+             ORDER BY fm.created_at DESC LIMIT 20`
+        );
+
+        res.json({
+            project_fund,
+            referrals: {
+                pending_total: Number(refPending[0]?.total_pending || 0),
+                pending_rows: Number(refPending[0]?.rows_pending || 0),
+                claimed_total: Number(refClaimed[0]?.total_claimed || 0),
+            },
+            rake_totals: totals[0] || {},
+            rake_by_source: bySource || [],
+            last_ledger: lastLedger || [],
+            fund_movements: movements || [],
+        });
+    } catch (error) {
+        console.error('Error en /admin/funds:', error);
+        res.status(500).json({ error: 'Error al obtener el estado de los fondos' });
     }
 });
 
@@ -608,7 +690,7 @@ router.post('/admin/smtp-test', requireSuperAdmin, validateSmtpTest, async (req,
             to: test_email,
             subject: 'Prueba de Servidor de Correos - RoyalBET',
             text: 'Este es un mensaje de prueba. Si recibes este correo, tu configuracion SMTP es correcta.',
-            html: '<h3>?Hola!</h3><p>Este es un correo de prueba enviado desde <b>RoyalBET</b>.</p><p>Si est¨¢s viendo esto, tu configuraci¨®n SMTP est¨¢ funcionando perfectamente.</p>'
+            html: '<h3>?Hola!</h3><p>Este es un correo de prueba enviado desde <b>RoyalBET</b>.</p><p>Si estÂ¨Â¢s viendo esto, tu configuraciÂ¨Â®n SMTP estÂ¨Â¢ funcionando perfectamente.</p>'
         });
 
         res.json({ message: 'Correo de prueba enviado exitosamente. Revisa tu bandeja de entrada.' });
@@ -625,10 +707,10 @@ router.post('/admin/announcements', requireSuperAdmin, validateAnnouncement, asy
     const { title, message, sendToWeb, sendToEmail } = req.body;
 
     if (!title || !message) {
-        return res.status(400).json({ error: 'El t¨ªtulo y el mensaje son obligatorios' });
+        return res.status(400).json({ error: 'El tÂ¨Âªtulo y el mensaje son obligatorios' });
     }
     if (!sendToWeb && !sendToEmail) {
-        return res.status(400).json({ error: 'Debes seleccionar al menos un m¨¦todo de env¨ªo' });
+        return res.status(400).json({ error: 'Debes seleccionar al menos un mÂ¨Â¦todo de envÂ¨Âªo' });
     }
 
     try {
@@ -638,7 +720,7 @@ router.post('/admin/announcements', requireSuperAdmin, validateAnnouncement, asy
             return res.status(400).json({ error: 'No hay usuarios registrados en el sistema' });
         }
 
-        // 2. Enviar al Buz¨®n Web (usando tu funci¨®n crearNotificacion)
+        // 2. Enviar al BuzÂ¨Â®n Web (usando tu funciÂ¨Â®n crearNotificacion)
         if (sendToWeb) {
             for (const user of users) {
                 await crearNotificacion(
@@ -651,13 +733,13 @@ router.post('/admin/announcements', requireSuperAdmin, validateAnnouncement, asy
             }
         }
 
-        // 3. Enviar por Correo Electr¨®nico
+        // 3. Enviar por Correo ElectrÂ¨Â®nico
         if (sendToEmail) {
             const [smtpRows] = await pool.query('SELECT * FROM smtp_config WHERE id = 1');
             const smtpConfig = smtpRows[0];
 
             if (!smtpConfig || !smtpConfig.smtp_host) {
-                return res.status(400).json({ error: 'Configuraci¨®n SMTP no encontrada. No se pudieron enviar los correos.' });
+                return res.status(400).json({ error: 'ConfiguraciÂ¨Â®n SMTP no encontrada. No se pudieron enviar los correos.' });
             }
 
             const transporter = nodemailer.createTransport({
@@ -668,7 +750,7 @@ router.post('/admin/announcements', requireSuperAdmin, validateAnnouncement, asy
                 tls: { rejectUnauthorized: false }
             });
 
-            // Enviamos los correos en segundo plano para no bloquear la petici¨®n HTTP
+            // Enviamos los correos en segundo plano para no bloquear la peticiÂ¨Â®n HTTP
             (async () => {
                 for (const user of users) {
                     if (user.email) {
@@ -683,7 +765,7 @@ router.post('/admin/announcements', requireSuperAdmin, validateAnnouncement, asy
                                         <h2 style="color: #00e676;">${title}</h2>
                                         <p style="font-size: 16px; line-height: 1.5;">${message.replace(/\n/g, '<br>')}</p>
                                         <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-                                        <p style="color: #888; font-size: 12px;">Este es un mensaje autom¨¢tico de RoyalBET. Por favor no respondas a este correo.</p>
+                                        <p style="color: #888; font-size: 12px;">Este es un mensaje automÂ¨Â¢tico de RoyalBET. Por favor no respondas a este correo.</p>
                                     </div>
                                 `
                             });
@@ -704,7 +786,7 @@ router.post('/admin/announcements', requireSuperAdmin, validateAnnouncement, asy
 });
 
 // ==========================================
-// ?? NUEVAS RUTAS PARA GESTI¨®N DE JUGADORES
+// ?? NUEVAS RUTAS PARA GESTIÂ¨Â®N DE JUGADORES
 // ==========================================
 
 router.get('/admin/users', async (req, res) => {

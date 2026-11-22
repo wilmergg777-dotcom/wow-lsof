@@ -2,6 +2,7 @@
 const http = require('http');
 const express = require('express');
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 const PokerTable = require('./pokerGame');
 // 🔥 CONEXIÓN A BASE DE DATOS
 const db = require('./db');
@@ -9,15 +10,45 @@ const db = require('./db');
 const PORT = 3001;
 const PLAYERS_PER_MESA = 9; // 🔥 default global
 
+// 🔥 SEGURIDAD: JWT (igual que el backend principal) y CORS restringido
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('❌ FATAL: JWT_SECRET no está definido (pokerServer).');
+  process.exit(1);
+}
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://royalbet.duckdns.org',
+];
+
 const app = express();
 app.use(express.json());
 const httpServer = http.createServer(app);
-const io = new Server(httpServer, { cors: { origin: '*' } });
+const io = new Server(httpServer, { cors: { origin: ALLOWED_ORIGINS } });
 
-// 🔥 DICCIONARIO DE MESAS ACTIVAS 🔥
+// 🔥 SEGURIDAD: exigir JWT en TODAS las conexiones de socket.
+// Antes cualquiera podía conectarse y suplantar a otro jugador (robo de silla).
+io.use((socket, next) => {
+  const token = socket.handshake?.auth?.token || socket.handshake?.query?.token || null;
+  if (!token) return next(new Error('unauthorized: token requerido'));
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    socket.data.user = { id: payload.id, username: payload.username };
+    return next();
+  } catch (err) {
+    return next(new Error('unauthorized: token inválido'));
+  }
+});
+
 const activeTables = {};
 const socketToTable = {};
 const disconnectTimeouts = {};
+
+// 🔥 RECONEXIÓN: 60s de gracia en mesas cash (antes 15s). Durante la gracia
+// la silla se conserva y la fila de active_player_tables NO se borra, para
+// que /poker/my-tables pueda restaurar la partida al volver al lobby.
+const GRACE_PERIOD_MS = 60000;
 
 const TABLE_CONFIGS = {
   'omaha-05-1':     { smallBlind: 0.25, bigBlind: 0.5,  maxPlayers: PLAYERS_PER_MESA },
@@ -142,22 +173,27 @@ io.on('connection', (socket) => {
     console.log(`[Poker] ${socket.id} se unió a la sala ${tableId}`);
   });
 
-  // 🔥 FUNCIÓN ASYNC PARA CONSULTAR LA BASE DE DATOS
+  // 🔥 SEGURIDAD: identidad SIEMPRE del JWT (antes se confiaba en data.userId
+  // que el cliente enviaba → cualquier usuario podía sentarse como otro).
   socket.on('sitDown', async (data, ack) => {
     const respond = (ok, error) => {
       if (typeof ack === 'function') ack({ ok, error });
       if (!ok && error) socket.emit('errorMsg', error);
     };
 
-    if (!data || !data.userId) return respond(false, 'Datos de usuario inválidos');
+    const authUser = socket.data.user;
+    if (!authUser || !authUser.id) return respond(false, 'Debes iniciar sesión');
+    if (!data) return respond(false, 'Datos de usuario inválidos');
 
+    const userId = authUser.id;            // ✅ del JWT, NO del cliente
+    const username = authUser.username;
     const tableId = data.tableId || 'omaha-05-1';
     if (!isValidTableId(tableId)) return respond(false, 'Mesa inválida');
 
     let buyInAmount = Number(data.buyInAmount);
     if (!Number.isFinite(buyInAmount) || buyInAmount <= 0) {
       buyInAmount = 1000;
-      console.warn(`[Poker] buyInAmount inválido para ${data.username}, usando 1000 por defecto`);
+      console.warn(`[Poker] buyInAmount inválido para ${username}, usando 1000 por defecto`);
     }
 
     const config = getConfigForTable(tableId);
@@ -168,7 +204,7 @@ io.on('connection', (socket) => {
     // y pulsa "Comprar más", el frontend emite sitDown con seatIndex = su propia silla.
     // Esta rama detecta que ya existe y añade fichas con addChips().
     const existingPlayer = existingTable?.seats.find(
-      p => p !== null && p.userId === data.userId
+      p => p !== null && p.userId === userId
     );
     if (existingPlayer) {
       socketToTable[socket.id] = tableId;
@@ -179,11 +215,11 @@ io.on('connection', (socket) => {
           clearTimeout(disconnectTimeouts[existingPlayer.socketId]);
           delete disconnectTimeouts[existingPlayer.socketId];
         }
-        const rr = existingTable.reconnectPlayer(socket.id, data.userId);
+        const rr = existingTable.reconnectPlayer(socket.id, userId);
         if (!rr.ok) return respond(false, rr.error);
       }
 
-      const r = existingTable.addChips(data.userId, buyInAmount);
+      const r = existingTable.addChips(userId, buyInAmount);
       if (!r.ok) return respond(false, r.error);
 
       // 🔥 Actualizar/crear el registro de mesa activa sin duplicados
@@ -192,18 +228,18 @@ io.on('connection', (socket) => {
           `INSERT INTO active_player_tables (user_id, table_id, socket_id, server_type)
            VALUES (?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE socket_id = VALUES(socket_id), server_type = VALUES(server_type)`,
-          [data.userId, tableId, socket.id, 'real']
+          [userId, tableId, socket.id, 'real']
         );
       } catch (err) {
         console.error('[DB Error] Error actualizando mesa activa en rebuy/reconexión:', err);
       }
 
-      console.log(`[Poker] ${data.username} rebuy en ${tableId} (+${buyInAmount})`);
+      console.log(`[Poker] ${username} rebuy en ${tableId} (+${buyInAmount})`);
       return respond(true);
     }
 
     // 🔥 VALIDACIÓN CROSS-TABLE EN MEMORIA (Evita 2 mesas en el mismo servidor 3001)
-    const otherTableId = findTableOfUser(data.userId);
+    const otherTableId = findTableOfUser(userId);
     if (otherTableId) {
       return respond(false, `Ya estás sentado en la mesa ${otherTableId}. Salí primero.`);
     }
@@ -239,7 +275,7 @@ io.on('connection', (socket) => {
     try {
       const [rows] = await db.query(
         'SELECT COUNT(*) AS total FROM active_player_tables WHERE user_id = ?',
-        [data.userId]
+        [userId]
       );
 
       if (rows[0].total >= 2) {
@@ -257,8 +293,8 @@ io.on('connection', (socket) => {
     // 🔥 AGREGADO: data.avatar_url || null
     const r = table.seat(
       socket.id,
-      data.userId,
-      data.username,
+      userId,
+      username,
       buyInAmount,
       data.seatIndex,
       data.avatar_url || null
@@ -271,7 +307,7 @@ io.on('connection', (socket) => {
         `INSERT INTO active_player_tables (user_id, table_id, socket_id, server_type)
          VALUES (?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE socket_id = VALUES(socket_id), server_type = VALUES(server_type)`,
-        [data.userId, tableId, socket.id, 'real']
+        [userId, tableId, socket.id, 'real']
       );
     } catch (err) {
       console.error('[DB Error] Error guardando mesa activa:', err);
@@ -430,10 +466,14 @@ io.on('connection', (socket) => {
   });
 
   socket.on('reconnect_player', async (data) => {
-    const { userId, tableId } = data || {};
-    if (!userId || !tableId) return;
+    // 🔥 SEGURIDAD: el userId viene SIEMPRE del JWT (evita robo de silla).
+    const authUser = socket.data.user;
+    if (!authUser || !authUser.id) return socket.emit('errorMsg', 'Debes iniciar sesión');
+    const tableId = data?.tableId;
+    if (!tableId) return;
     if (!isValidTableId(tableId)) return;
 
+    const userId = authUser.id;
     console.log(`[Poker] Reconexión userId=${userId} en ${tableId}`);
     const table = activeTables[tableId];
     if (!table) return;
@@ -469,6 +509,8 @@ io.on('connection', (socket) => {
   // 🔥 FIX: extraer el token ANTES de que se cierre el socket y pasarlo a leave().
   // Sin esto, en dinero real el motor intentaría cash-out con null y el jugador
   // perdería sus fichas al desconectarse.
+  // 🔥 REANUDACIÓN: la fila de active_player_tables NO se borra al desconectar;
+  // se conserva durante la gracia para que /poker/my-tables restaure la mesa.
   socket.on('disconnect', async () => {
     console.log('[Poker] desconectado:', socket.id);
     const tableId = socketToTable[socket.id];
@@ -480,26 +522,30 @@ io.on('connection', (socket) => {
     // Buscamos al jugador ANTES de quitarlo de la mesa
     const player = table.seats.find(p => p !== null && p.socketId === socket.id);
 
-    // 🔥 BORRAR DE LA BASE DE DATOS AL DESCONECTARSE (solo el registro de este socket)
-    if (player) {
-      try {
-        await db.query(
-          'DELETE FROM active_player_tables WHERE user_id = ? AND table_id = ? AND socket_id = ? AND server_type = "real"',
-          [player.userId, tableId, socket.id]
-        );
-      } catch (err) {
-        console.error('[DB Error] Error al eliminar mesa activa en disconnect:', err);
-      }
-    }
-
     // 🔥 Extraer token antes de que se cierre el socket (el handshake sigue disponible)
     const token = getSocketToken(socket);
+
+    if (player) {
+      socket.to(tableId).emit('player_disconnected', {
+        userId: player.userId,
+        username: player.username,
+        graceMs: GRACE_PERIOD_MS,
+      });
+    }
 
     disconnectTimeouts[socket.id] = setTimeout(() => {
       console.log(`[Poker] Grace agotado en ${tableId}. Eliminando:`, socket.id);
       table.leave(socket.id, true, token);
+      // 🔥 La fila se limpia SOLO cuando la gracia expira (mismo flujo que
+      // la sala de práctica del backend principal).
+      if (player) {
+        db.query(
+          'DELETE FROM active_player_tables WHERE user_id = ? AND table_id = ? AND socket_id = ? AND server_type = "real"',
+          [player.userId, tableId, socket.id]
+        ).catch(err => console.error('[DB Error] Error al eliminar mesa activa tras gracia:', err));
+      }
       delete disconnectTimeouts[socket.id];
-    }, 15000);
+    }, GRACE_PERIOD_MS);
   });
 });
 

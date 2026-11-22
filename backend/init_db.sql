@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS game_history (
     INDEX idx_gh_user (user_id, played_at)
 );
 
--- Referidos: ganancias por rake 25/75
+-- Referidos: ganancias por rake 25/75 (porcentaje configurable en wallet_settings)
 CREATE TABLE IF NOT EXISTS referral_earnings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     referrer_id INT NOT NULL,
@@ -155,6 +155,60 @@ CREATE TABLE IF NOT EXISTS referral_claims (
     status VARCHAR(20) DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_rc_user (user_id)
+);
+
+-- 🔥 LEDGER AUDITABLE DEL RAKE: cada reparto de porcentajes queda registrado.
+-- source: 'cash' (rake de mesas) | 'tournament' (comisión de inscripción)
+CREATE TABLE IF NOT EXISTS rake_ledger (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    source VARCHAR(20) NOT NULL DEFAULT 'cash',
+    table_id VARCHAR(80),
+    hand_number INT NULL,
+    winner_user_id INT NULL,
+    rake_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    referral_share DECIMAL(18,2) NOT NULL DEFAULT 0,
+    project_share DECIMAL(18,2) NOT NULL DEFAULT 0,
+    referrer_id INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_rl_source (source, created_at),
+    INDEX idx_rl_winner (winner_user_id),
+    INDEX idx_rl_referrer (referrer_id)
+);
+
+-- 🔥 MOVIMIENTOS DE FONDOS (recogidas del fondo del proyecto, etc.)
+CREATE TABLE IF NOT EXISTS fund_movements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    fund VARCHAR(20) NOT NULL DEFAULT 'project',   -- project | referrals
+    type VARCHAR(10) NOT NULL DEFAULT 'in',        -- in | out
+    amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    description VARCHAR(255),
+    admin_id INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_fm_fund (fund, created_at)
+);
+
+-- 🔥 COMPRAS DE FICHAS (buy-ins): permiten reembolsar SOLO buy-ins reales
+-- y evitan que /poker/cash-out pueda acreditar dinero arbitrario.
+CREATE TABLE IF NOT EXISTS poker_buys (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    table_id VARCHAR(80) NOT NULL,
+    amount DECIMAL(18,2) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'paid',    -- paid | refunded
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_pb_user (user_id, status, created_at)
+);
+
+-- 🔥 INSCRIPCIONES DE TORNEOS (auditoría/persistencia de entradas pagadas)
+CREATE TABLE IF NOT EXISTS tournament_registrations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    game_id VARCHAR(80) NOT NULL,
+    user_id INT NOT NULL,
+    entry_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'paid',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_tr_game_user (game_id, user_id),
+    INDEX idx_tr_user (user_id)
 );
 
 -- Transferencias entre usuarios
@@ -316,4 +370,5 @@ INSERT IGNORE INTO wallet_settings (setting_key, setting_value) VALUES
     ('min_deposit_cup', '200'),
     ('min_withdraw_ntx', '100'),
     ('rake_percent', '5'),
-    ('referral_rake_share', '25');
+    ('referral_rake_share', '25'),
+    ('tournament_commission', '10');

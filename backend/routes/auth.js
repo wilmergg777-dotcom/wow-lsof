@@ -9,17 +9,19 @@ const { JWT_SECRET, FRONTEND_URL } = require('../config');
 const { verifyToken, registerSession, invalidateSession } = require('../middlewares/auth');
 const { getClientIp } = require('../utils/ip');
 const { enviarCorreoVerificacion, enviarCorreoRecuperacion } = require('../utils/email');
+// ðŸ”¥ SEGURIDAD: rate limiting especÃ­fico contra fuerza bruta
+const { authLimiter } = require('../middlewares/rateLimiter');
 // ===========================================================
 // VALIDADOR
 // ===========================================================
 const { validateRegister, validateLogin, validateSetEmail, validateLoginCode } = require('../middlewares/validators');
 
-// ?? NUEVO: Funci¨®n para generar un ID ¨²nico de 6 d¨ªgitos
+// ?? NUEVO: FunciÂ¨Â®n para generar un ID Â¨Â²nico de 6 dÂ¨Âªgitos
 async function generateUniqueId() {
     let uniqueId;
     let isUnique = false;
     while (!isUnique) {
-        // Genera un n¨²mero entre 100000 y 999999
+        // Genera un nÂ¨Â²mero entre 100000 y 999999
         uniqueId = Math.floor(100000 + Math.random() * 900000).toString();
         const [rows] = await pool.query('SELECT id FROM users WHERE unique_id = ?', [uniqueId]);
         if (rows.length === 0) {
@@ -29,20 +31,27 @@ async function generateUniqueId() {
     return uniqueId;
 }
 
-router.post('/register', validateRegister, async (req, res) => {
+router.post('/register', authLimiter, validateRegister, async (req, res) => {
     const { username, email, phone, password, referred_by } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Usuario y contrasena obligatorios' });
     try {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
-        
+
+        // ðŸ”¥ SEGURIDAD: validar que el referido existe y no es el propio usuario
+        let referrerId = null;
+        if (referred_by) {
+            const [referrer] = await pool.query('SELECT id FROM users WHERE id = ?', [referred_by]);
+            referrerId = referrer.length > 0 ? referred_by : null;
+        }
+
         // ?? NUEVO: Generamos el unique_id antes de insertar
         const uniqueId = await generateUniqueId();
 
         // ?? MODIFICADO: Agregamos unique_id a la consulta INSERT
         const [result] = await pool.query(
             'INSERT INTO users (username, email, phone, password_hash, referred_by, unique_id) VALUES (?, ?, ?, ?, ?, ?)',
-            [username, email || null, phone || null, passwordHash, referred_by || null, uniqueId]
+            [username, email || null, phone || null, passwordHash, referrerId, uniqueId]
         );
         // ?? Los usuarios nuevos empiezan con 0 fichas
         await pool.query('INSERT INTO wallets (user_id, balance_ntx) VALUES (?, 0)', [result.insertId]);
@@ -53,7 +62,7 @@ router.post('/register', validateRegister, async (req, res) => {
     }
 });
 
-router.post('/login', validateLogin, async (req, res) => {
+router.post('/login', authLimiter, validateLogin, async (req, res) => {
     const { identifier, password } = req.body;
     try {
         const [users] = await pool.query(
@@ -66,7 +75,7 @@ router.post('/login', validateLogin, async (req, res) => {
         const validPassword = await bcrypt.compare(password, user.password_hash);
         if (!validPassword) return res.status(401).json({ error: 'Contrasena incorrecta' });
 
-        // ?? NUEVA VALIDACI¨®N: Cuenta bloqueada
+        // ?? NUEVA VALIDACIÂ¨Â®N: Cuenta bloqueada
         if (user.is_blocked === 1) {
             return res.status(403).json({ error: 'Tu cuenta ha sido bloqueada por un administrador. Contacta a soporte.' });
         }
@@ -76,7 +85,7 @@ router.post('/login', validateLogin, async (req, res) => {
             return res.json({
                 requires_email: true,
                 temp_token: tempToken,
-                message: 'Para mayor seguridad, debes configurar un correo electr¨®nico antes de ingresar al casino. As¨ª podr¨¢s recuperar tu cuenta si cambias de IP.'
+                message: 'Para mayor seguridad, debes configurar un correo electrÂ¨Â®nico antes de ingresar al casino. AsÂ¨Âª podrÂ¨Â¢s recuperar tu cuenta si cambias de IP.'
             });
         }
 
@@ -114,7 +123,7 @@ router.post('/login', validateLogin, async (req, res) => {
             return res.json({
                 requires_verification: true,
                 email: user.email,
-                message: 'Hemos enviado un c¨®digo de verificaci¨®n a tu correo debido a un inicio de sesi¨®n desde una ubicaci¨®n desconocida.'
+                message: 'Hemos enviado un cÂ¨Â®digo de verificaciÂ¨Â®n a tu correo debido a un inicio de sesiÂ¨Â®n desde una ubicaciÂ¨Â®n desconocida.'
             });
         }
 
@@ -133,7 +142,7 @@ router.post('/login', validateLogin, async (req, res) => {
         }
 
         const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-		await registerSession(user.id, token);
+                await registerSession(user.id, token);
 
         res.json({
             token,
@@ -144,7 +153,7 @@ router.post('/login', validateLogin, async (req, res) => {
                 phone: user.phone,
                 role: user.role,
                 discord_id: user.discord_id, // ?? AGREGADO
-                unique_id: user.unique_id,   // ?? NUEVO: Enviamos el ID ¨²nico al Frontend
+                unique_id: user.unique_id,   // ?? NUEVO: Enviamos el ID Â¨Â²nico al Frontend
                 has_pin: user.pay_pin ? true : false,
                 pin_enabled: user.pay_pin_enabled
             }
@@ -161,10 +170,10 @@ router.post('/auth/set-email', validateSetEmail, async (req, res) => {
 
     try {
         const decoded = jwt.verify(temp_token, JWT_SECRET);
-        if (decoded.action !== 'set_email') return res.status(401).json({ error: 'Token inv¨¢lido' });
+        if (decoded.action !== 'set_email') return res.status(401).json({ error: 'Token invÂ¨Â¢lido' });
 
         const [existing] = await pool.query('SELECT id FROM users WHERE email = ? AND id != ?', [email, decoded.id]);
-        if (existing.length > 0) return res.status(400).json({ error: 'Este correo ya est¨¢ en uso por otro usuario.' });
+        if (existing.length > 0) return res.status(400).json({ error: 'Este correo ya estÂ¨Â¢ en uso por otro usuario.' });
 
         await pool.query('UPDATE users SET email = ? WHERE id = ?', [email, decoded.id]);
 
@@ -190,17 +199,17 @@ router.post('/auth/set-email', validateSetEmail, async (req, res) => {
                 phone: user.phone,
                 role: user.role,
                 discord_id: user.discord_id, // ?? AGREGADO
-                unique_id: user.unique_id,   // ?? NUEVO: Enviamos el ID ¨²nico al Frontend
+                unique_id: user.unique_id,   // ?? NUEVO: Enviamos el ID Â¨Â²nico al Frontend
                 has_pin: user.pay_pin ? true : false,
                 pin_enabled: user.pay_pin_enabled
             }
         });
     } catch (error) {
-        res.status(401).json({ error: 'Sesi¨®n expirada o inv¨¢lida. Vuelve a iniciar sesi¨®n.' });
+        res.status(401).json({ error: 'SesiÂ¨Â®n expirada o invÂ¨Â¢lida. Vuelve a iniciar sesiÂ¨Â®n.' });
     }
 });
 
-router.post('/verify-login-code', validateLoginCode, async (req, res) => {
+router.post('/verify-login-code', authLimiter, validateLoginCode, async (req, res) => {
     const { identifier, code } = req.body;
     if (!identifier || !code) return res.status(400).json({ error: 'Faltan datos' });
 
@@ -213,7 +222,7 @@ router.post('/verify-login-code', validateLoginCode, async (req, res) => {
 
         const user = users[0];
 
-        // ?? NUEVA VALIDACI¨®N: Cuenta bloqueada
+        // ?? NUEVA VALIDACIÂ¨Â®N: Cuenta bloqueada
         if (user.is_blocked === 1) {
             return res.status(403).json({ error: 'Tu cuenta ha sido bloqueada por un administrador. Contacta a soporte.' });
         }
@@ -225,7 +234,7 @@ router.post('/verify-login-code', validateLoginCode, async (req, res) => {
             [user.id, code]
         );
 
-        if (codes.length === 0) return res.status(400).json({ error: 'C¨®digo incorrecto o expirado.' });
+        if (codes.length === 0) return res.status(400).json({ error: 'CÂ¨Â®digo incorrecto o expirado.' });
 
         await pool.query('DELETE FROM user_verification_codes WHERE user_id = ?', [user.id]);
 
@@ -251,14 +260,14 @@ router.post('/verify-login-code', validateLoginCode, async (req, res) => {
                 phone: user.phone,
                 role: user.role,
                 discord_id: user.discord_id, // ?? AGREGADO
-                unique_id: user.unique_id,   // ?? NUEVO: Enviamos el ID ¨²nico al Frontend
+                unique_id: user.unique_id,   // ?? NUEVO: Enviamos el ID Â¨Â²nico al Frontend
                 has_pin: user.pay_pin ? true : false,
                 pin_enabled: user.pay_pin_enabled
             }
         });
     } catch (error) {
-        console.error("Error al verificar c¨®digo:", error);
-        res.status(500).json({ error: 'Error al verificar el c¨®digo' });
+        console.error("Error al verificar cÂ¨Â®digo:", error);
+        res.status(500).json({ error: 'Error al verificar el cÂ¨Â®digo' });
     }
 });
 
@@ -276,8 +285,8 @@ router.post('/logout', verifyToken, async (req, res) => {
     }
 });
 
-// ?? NUEVO (Paso 4.4): Solicitar c¨®digo de recuperaci¨®n
-router.post('/auth/forgot-password', async (req, res) => {
+// ?? NUEVO (Paso 4.4): Solicitar cÂ¨Â®digo de recuperaciÂ¨Â®n
+router.post('/auth/forgot-password', authLimiter, async (req, res) => {
     const { identifier } = req.body;
     if (!identifier) return res.status(400).json({ error: 'Debes ingresar tu usuario o correo' });
 
@@ -288,9 +297,9 @@ router.post('/auth/forgot-password', async (req, res) => {
         );
 
         // Por seguridad, respondemos OK aunque no exista el usuario
-        // (as¨ª nadie puede "adivinar" qu¨¦ correos o usuarios existen)
+        // (asÂ¨Âª nadie puede "adivinar" quÂ¨Â¦ correos o usuarios existen)
         if (users.length === 0 || !users[0].email) {
-            return res.json({ message: 'Si el usuario existe y tiene correo registrado, recibir¨¢s un c¨®digo en breve.' });
+            return res.json({ message: 'Si el usuario existe y tiene correo registrado, recibirÂ¨Â¢s un cÂ¨Â®digo en breve.' });
         }
 
         const user = users[0];
@@ -312,7 +321,7 @@ router.post('/auth/forgot-password', async (req, res) => {
 
         const maskedEmail = user.email.replace(/(.{2}).+(@.+)/, '$1***$2');
         res.json({
-            message: `Hemos enviado un c¨®digo de recuperaci¨®n a ${maskedEmail}.`,
+            message: `Hemos enviado un cÂ¨Â®digo de recuperaciÂ¨Â®n a ${maskedEmail}.`,
             email: maskedEmail
         });
     } catch (error) {
@@ -321,11 +330,11 @@ router.post('/auth/forgot-password', async (req, res) => {
     }
 });
 
-// ?? NUEVO (Paso 4.4): Restablecer contrase?a con el c¨®digo
-router.post('/auth/reset-password', async (req, res) => {
+// ?? NUEVO (Paso 4.4): Restablecer contrase?a con el cÂ¨Â®digo
+router.post('/auth/reset-password', authLimiter, async (req, res) => {
     const { identifier, code, newPassword } = req.body;
     if (!identifier || !code || !newPassword) {
-        return res.status(400).json({ error: 'Faltan datos (usuario, c¨®digo y nueva contrase?a)' });
+        return res.status(400).json({ error: 'Faltan datos (usuario, cÂ¨Â®digo y nueva contrase?a)' });
     }
     if (newPassword.length < 6) {
         return res.status(400).json({ error: 'La contrase?a debe tener al menos 6 caracteres' });
@@ -336,7 +345,7 @@ router.post('/auth/reset-password', async (req, res) => {
             'SELECT id FROM users WHERE username = ? OR email = ?',
             [identifier, identifier]
         );
-        if (users.length === 0) return res.status(400).json({ error: 'C¨®digo incorrecto o expirado' });
+        if (users.length === 0) return res.status(400).json({ error: 'CÂ¨Â®digo incorrecto o expirado' });
 
         const user = users[0];
 
@@ -345,7 +354,7 @@ router.post('/auth/reset-password', async (req, res) => {
             [user.id, code]
         );
         if (codes.length === 0) {
-            return res.status(400).json({ error: 'C¨®digo incorrecto o expirado' });
+            return res.status(400).json({ error: 'CÂ¨Â®digo incorrecto o expirado' });
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -357,7 +366,7 @@ router.post('/auth/reset-password', async (req, res) => {
         // Cerrar sesiones activas (obliga a loguearse de nuevo en cualquier dispositivo)
         await invalidateSession(user.id);
 
-        res.json({ message: 'Contrase?a actualizada correctamente. Ya puedes iniciar sesi¨®n.' });
+        res.json({ message: 'Contrase?a actualizada correctamente. Ya puedes iniciar sesiÂ¨Â®n.' });
     } catch (error) {
         console.error("Error al reset-password:", error);
         res.status(500).json({ error: 'Error interno del servidor' });
@@ -374,7 +383,7 @@ router.get('/auth/discord', async (req, res) => {
 
         const { discord_client_id, discord_redirect_uri } = configs[0];
         
-        // ?? Si viene link_token, lo pasamos como state para saber que es vinculaci¨®n
+        // ?? Si viene link_token, lo pasamos como state para saber que es vinculaciÂ¨Â®n
         const linkToken = req.query.link_token || '';
         const stateParam = linkToken ? `&state=${linkToken}` : '';
         
@@ -386,7 +395,7 @@ router.get('/auth/discord', async (req, res) => {
     }
 });
 
-// ?? MODIFICADO: Detecta el state para saber si es vinculaci¨®n o login normal
+// ?? MODIFICADO: Detecta el state para saber si es vinculaciÂ¨Â®n o login normal
 router.get('/auth/discord/callback', async (req, res) => {
     const { code, state } = req.query;
     if (!code) return res.status(400).send('No se recibio el codigo de Discord');
@@ -419,7 +428,7 @@ router.get('/auth/discord/callback', async (req, res) => {
         });
         const discordUser = await userResponse.json();
 
-        // ?? SI HAY STATE, ES UNA VINCULACI¨®N, NO UN LOGIN
+        // ?? SI HAY STATE, ES UNA VINCULACIÂ¨Â®N, NO UN LOGIN
         if (state && state.length > 10) {
             try {
                 const decoded = jwt.verify(state, JWT_SECRET);
@@ -436,7 +445,7 @@ router.get('/auth/discord/callback', async (req, res) => {
         let user;
         if (users.length > 0) {
             user = users[0];
-            // ?? NUEVA VALIDACI¨®N: Cuenta bloqueada
+            // ?? NUEVA VALIDACIÂ¨Â®N: Cuenta bloqueada
             if (user.is_blocked === 1) {
                 return res.status(403).send('Tu cuenta ha sido bloqueada por un administrador. Contacta a soporte.');
             }
@@ -452,7 +461,7 @@ router.get('/auth/discord/callback', async (req, res) => {
                 'INSERT INTO users (username, email, phone, password_hash, discord_id, unique_id) VALUES (?, ?, ?, ?, ?, ?)',
                 [generatedUsername, null, null, dummyPassword, discordUser.id, uniqueId]
             );
-            // ?? Los usuarios nuevos de Discord tambi¨¦n empiezan con 0 fichas
+            // ?? Los usuarios nuevos de Discord tambiÂ¨Â¦n empiezan con 0 fichas
             await pool.query('INSERT INTO wallets (user_id, balance_ntx) VALUES (?, 0)', [insertResult.insertId]);
 
             user = { id: insertResult.insertId, username: generatedUsername, role: 'user' };

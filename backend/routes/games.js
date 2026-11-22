@@ -4,9 +4,12 @@ const fetch = require('node-fetch');
 
 const pool = require('../db');
 const { verifyToken } = require('../middlewares/auth');
+const { requireInternal } = require('../middlewares/internalAuth');
+const { getFundConfig, applyRake } = require('../services/funds');
 const { getGames, getGameById, LATE_REG_MS } = require('../services/futures');
 const { getSeats, getTable } = require('../services/practice-table');
 const mtt = require('../services/mtt-tournaments');
+const { authLimiter, betLimiter } = require('../middlewares/rateLimiter');
 // ===========================================================
 // VALIDADOR
 // ===========================================================
@@ -236,7 +239,7 @@ router.get('/futures-games/my-seat', verifyToken, (req, res) => {
 });
 
 // 🔥 MULTIMESA / RECONEXIÓN: todas las mesas activas de este jugador
-// (práctica + todas las mesas de torneo). El frontend usa esto para
+// (cash + práctica + todas las mesas de torneo). El frontend usa esto para
 // restaurar la partida automáticamente al abrir la app o volver al lobby.
 router.get('/poker/my-tables', verifyToken, async (req, res) => {
     try {
@@ -274,6 +277,37 @@ router.get('/poker/my-tables', verifyToken, async (req, res) => {
             });
         }
 
+        // 🔥 MESAS CASH: mesas reales registradas en active_player_tables
+        // (server_type='real'). El registro existe mientras el jugador esté
+        // sentado o dentro del periodo de gracia de desconexión, así que
+        // aquí SOLO aparecen mesas donde de verdad tiene silla pendiente.
+        try {
+            const [rows] = await pool.query(
+                "SELECT table_id FROM active_player_tables WHERE user_id = ? AND server_type = 'real'",
+                [req.user.id]
+            );
+            const cashIds = [...new Set(rows.map(r => r.table_id))];
+            if (cashIds.length > 0) {
+                for (const tableId of cashIds) {
+                    if (out.some(t => t.tableId === tableId)) continue;
+                    const config = findConfigByTableId(tableId);
+                    if (!config) continue;
+                    const [sb, bb] = String(config.blinds).split('/').map(Number);
+                    out.push({
+                        tableId,
+                        kind: 'cash',
+                        title: `${config.name} ${config.blinds}`,
+                        smallBlind: Number.isFinite(sb) ? sb : null,
+                        bigBlind: Number.isFinite(bb) ? bb : null,
+                        phase: null,
+                        myTurn: false,
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('[my-tables] No se pudieron leer mesas cash:', e.message);
+        }
+
         res.json(out);
     } catch (err) {
         console.error('[my-tables] Error:', err);
@@ -281,7 +315,7 @@ router.get('/poker/my-tables', verifyToken, async (req, res) => {
     }
 });
 
-router.post('/futures-games/register', verifyToken, validateGameRegister, async (req, res) => {
+router.post('/futures-games/register', verifyToken, authLimiter, validateGameRegister, async (req, res) => {
     const { gameId } = req.body;
     const userId = req.user.id;
 
@@ -314,8 +348,26 @@ router.post('/futures-games/register', verifyToken, validateGameRegister, async 
             [game.entry, userId]
         );
 
+        // 🔥 FONDOS: la COMISIÓN del torneo (10% de la entrada) NO se reparte aquí.
+        // Se reparte en mtt.startTournament() (al arrancar el torneo), porque si el
+        // torneo se cancela con reembolso total, repartir la comisión antes crearía
+        // dinero de la nada. Aquí solo registramos la inscripción para auditoría.
+        // 🔥 PERSISTENCIA: registrar la inscripción en la BD (auditoría + recuperación)
+        try {
+            await connection.query(
+                "INSERT INTO tournament_registrations (game_id, user_id, entry_amount, status) VALUES (?, ?, ?, 'paid')",
+                [String(game.id), userId, game.entry]
+            );
+        } catch (regErr) {
+            console.warn('[register] No se pudo registrar en tournament_registrations:', regErr.message);
+        }
+
         await connection.commit();
-        res.json({ message: 'Registro exitoso', newBalance: wallet[0].balance_ntx - game.entry, game });
+        res.json({
+            message: 'Registro exitoso',
+            newBalance: wallet[0].balance_ntx - game.entry,
+            game,
+        });
     } catch (error) {
         await connection.rollback();
         const i = game.players.indexOf(userId);
@@ -330,7 +382,7 @@ router.post('/futures-games/register', verifyToken, validateGameRegister, async 
 // y RECHAZA explícitamente la Sala de Práctica (no debe cobrar NTX-20).
 // También permite RE-BUYS: un jugador que se quedó sin fichas y está en
 // modo espectador puede volver a comprar fichas sin problema.
-router.post('/poker/buy-in', verifyToken, validateBuyIn, async (req, res) => {
+router.post('/poker/buy-in', verifyToken, betLimiter, validateBuyIn, async (req, res) => {
     const { amount, tableId } = req.body;
     const userId = req.user.id;
 
@@ -371,6 +423,14 @@ router.post('/poker/buy-in', verifyToken, validateBuyIn, async (req, res) => {
             [amount, userId]
         );
 
+        // 🔥 SEGURIDAD: registrar el buy-in en poker_buys. Si el sitDown falla,
+        // el reembolso por /poker/cash-out SOLO se permite contra este registro
+        // (mismo monto, últimos 15 min). Así nadie puede acreditar dinero libremente.
+        await connection.query(
+            "INSERT INTO poker_buys (user_id, table_id, amount, status) VALUES (?, ?, ?, 'paid')",
+            [userId, String(tableId).slice(0, 80), amount]
+        );
+
         await connection.commit();
         res.json({ message: 'Buy-in exitoso', newBalance: wallet[0].balance_ntx - amount });
     } catch (error) {
@@ -381,12 +441,14 @@ router.post('/poker/buy-in', verifyToken, validateBuyIn, async (req, res) => {
     }
 });
 
-// 🔥 FIX CRÍTICO DE SEGURIDAD: añadido verifyToken.
-// Antes cualquiera podía acreditar NTX-20 a cualquier userId sin autenticarse.
-// El userId se obtiene del token, NO del body (evita suplantación).
+// 🔥 SEGURIDAD (REEMBOLSO ONLY):
+// El cash-out PÚBLICO ya NO acredita dinero libremente. Solo sirve para
+// reembolsar un buy-in cuyo sitDown falló (el flujo del frontend en
+// PokerTable.jsx). Se valida contra la tabla poker_buys: mismo monto,
+// últimos 15 minutos, una sola vez.
 router.post('/poker/cash-out', verifyToken, validateCashOut, async (req, res) => {
     const { amount } = req.body;
-    const userId = req.user.id; // ✅ userId seguro desde el JWT
+    const userId = req.user.id;
 
     if (!amount || amount <= 0) {
         return res.status(400).json({ error: 'Datos invalidos para procesar el retiro' });
@@ -395,64 +457,99 @@ router.post('/poker/cash-out', verifyToken, validateCashOut, async (req, res) =>
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
+
+        // Buscar un buy-in reciente SIN reembolsar con el mismo monto
+        const [buys] = await connection.query(
+            `SELECT id FROM poker_buys
+              WHERE user_id = ? AND amount = ? AND status = 'paid'
+                AND created_at > (NOW() - INTERVAL 15 MINUTE)
+              ORDER BY created_at ASC LIMIT 1 FOR UPDATE`,
+            [userId, amount]
+        );
+        if (buys.length === 0) {
+            throw new Error('No hay un buy-in reciente para reembolsar con ese monto');
+        }
+
+        await connection.query("UPDATE poker_buys SET status = 'refunded' WHERE id = ?", [buys[0].id]);
         await connection.query(
             'UPDATE wallets SET balance_ntx = balance_ntx + ? WHERE user_id = ?',
             [amount, userId]
         );
+
         await connection.commit();
-        res.json({ message: 'Cash-out exitoso', amount });
+        res.json({ message: 'Buy-in reembolsado correctamente', amount });
     } catch (error) {
         await connection.rollback();
-        console.error('Error al procesar el cash-out:', error);
-        res.status(500).json({ error: 'Error al procesar el cash-out' });
+        res.status(400).json({ error: error.message });
     } finally {
         connection.release();
     }
 });
 
-router.post('/poker/process-rake', validateProcessRake, async (req, res) => {
-    const { rakeAmount, playerId } = req.body;
-    if (!rakeAmount || !playerId || rakeAmount <= 0) {
+// 🔥 NUEVO — ENDPOINT INTERNO (motor de poker → API):
+// Acredita al jugador las fichas retiradas al levantarse de una mesa cash.
+// Protegido con X-Internal-Token; NO es accesible para usuarios normales.
+router.post('/poker/internal/cash-out', requireInternal, async (req, res) => {
+    const { userId, amount } = req.body;
+    const uid = Number(userId);
+    const amt = Number(amount);
+    if (!Number.isInteger(uid) || uid <= 0 || !Number.isFinite(amt) || amt <= 0) {
+        return res.status(400).json({ error: 'Datos invalidos para el cash-out interno' });
+    }
+    try {
+        await pool.query(
+            'UPDATE wallets SET balance_ntx = balance_ntx + ? WHERE user_id = ?',
+            [amt, uid]
+        );
+        res.json({ message: 'Cash-out interno exitoso', amount: amt });
+    } catch (error) {
+        console.error('Error al procesar el cash-out interno:', error);
+        res.status(500).json({ error: 'Error al procesar el cash-out' });
+    }
+});
+
+// 🔥 SEGURIDAD — el rake ahora llega SOLO por el endpoint interno con
+// X-Internal-Token (antes era público y cualquiera podía fabricar ganancias
+// de referidos). El reparto lo centraliza services/funds.js y queda
+// auditado en rake_ledger.
+const processRakeHandler = async (req, res) => {
+    const { rakeAmount, playerId, tableId, handNumber } = req.body;
+    const rake = Number(rakeAmount);
+    const player = Number(playerId);
+    if (!Number.isFinite(rake) || rake <= 0 || !Number.isInteger(player) || player <= 0) {
         return res.status(400).json({ error: 'Datos invalidos para procesar el rake' });
     }
 
-    const connection = await pool.getConnection();
     try {
-        await connection.beginTransaction();
-
-        const [users] = await connection.query('SELECT referred_by FROM users WHERE id = ?', [playerId]);
-        const referrerId = users[0]?.referred_by;
-
-        const referrerShare = Number((rakeAmount * 0.25).toFixed(2));
-        const projectShare = Number((rakeAmount * 0.75).toFixed(2));
-
-        await connection.query(
-            'UPDATE bank_reserves SET balance_ntx = balance_ntx + ? WHERE id = 1',
-            [projectShare]
-        );
-
-        if (referrerId) {
-            await connection.query(
-                "INSERT INTO referral_earnings (referrer_id, referred_id, amount, status) VALUES (?, ?, ?, 'pending')",
-                [referrerId, playerId, referrerShare]
-            );
-        } else {
-            await connection.query(
-                'UPDATE bank_reserves SET balance_ntx = balance_ntx + ? WHERE id = 1',
-                [referrerShare]
-            );
-        }
-
-        await connection.commit();
-        res.json({ message: 'Rake procesado correctamente', projectShare, referrerShare });
+        const split = await pool.getConnection().then(async (connection) => {
+            try {
+                await connection.beginTransaction();
+                const result = await applyRake(connection, {
+                    source: 'cash',
+                    tableId: tableId ? String(tableId).slice(0, 80) : null,
+                    handNumber: Number.isInteger(Number(handNumber)) ? Number(handNumber) : null,
+                    winnerUserId: player,
+                    rakeAmount: rake,
+                });
+                await connection.commit();
+                return result;
+            } catch (e) {
+                await connection.rollback();
+                throw e;
+            } finally {
+                connection.release();
+            }
+        });
+        res.json({ message: 'Rake procesado correctamente', ...split });
     } catch (error) {
-        await connection.rollback();
         console.error('Error al procesar el rake:', error);
         res.status(500).json({ error: 'Error al procesar el rake' });
-    } finally {
-        connection.release();
     }
-});
+};
+
+router.post('/poker/internal/process-rake', requireInternal, validateProcessRake, processRakeHandler);
+// Compatibilidad con el motor viejo: misma lógica, pero también protegida
+router.post('/poker/process-rake', requireInternal, validateProcessRake, processRakeHandler);
 
 // ============================================================
 // 🔥 ENDPOINT REFACTORIZADO: Casual Rooms (salas + auto-spawn)

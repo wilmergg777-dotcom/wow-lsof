@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 
 const pool = require('../db');
 const { verifyToken } = require('../middlewares/auth');
+const { hashPin } = require('../utils/pin');
 // ===========================================================
 // VALIDADOR
 // ===========================================================
@@ -250,13 +251,16 @@ router.put('/user/password', verifyToken, validatePasswordChange, async (req, re
 });
 
 // ?? ACTUALIZADO: Guarda la fecha en que se cambio el PIN
+// ?? SEGURIDAD: el PIN ahora se guarda HASHEADO con bcrypt (antes en texto
+// plano). La verificación acepta los PIN legacy de la BD vieja.
 router.put('/user/paypin', verifyToken, validatePayPin, async (req, res) => {
     const { pin } = req.body;
     if (!pin || pin.length < 4) return res.status(400).json({ error: 'El PIN debe tener al menos 4 digitos' });
     try {
+        const pinHash = await hashPin(pin);
         await pool.query(
             'UPDATE users SET pay_pin = ?, pin_changed_at = NOW() WHERE id = ?', 
-            [pin, req.user.id]
+            [pinHash, req.user.id]
         );
         res.json({ message: 'PIN configurado correctamente', has_pin: true });
     } catch (error) {

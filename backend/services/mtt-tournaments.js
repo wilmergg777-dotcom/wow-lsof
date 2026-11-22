@@ -10,6 +10,7 @@
 // ============================================================
 const pool = require('../db');
 const PokerTable = require('../pokerGame');
+const { getFundConfig, applyRake } = require('./funds');
 
 const TABLES_MAX_PLAYERS = 9;
 const STARTING_STACK = 3000;      // fichas de torneo
@@ -185,6 +186,39 @@ async function startTournament(game) {
 
   activeMTTs.set(game.id, mtt);
   console.log(`[MTT] Torneo ${game.id} INICIADO: ${seatedIds.length} jugadores en ${numTables} mesa(s).`);
+
+  // 🔥 FONDOS: comisión del torneo (10% de cada entrada) repartida AHORA que el
+  // torneo arrancó de verdad (no hay reembolso posterior). Reparto:
+  //   25% de la comisión → Sistema de Referidos (referral_earnings del padrino)
+  //   75%                → Fondo del Proyecto (bank_reserves)
+  // Auditado en rake_ledger con source='tournament'.
+  try {
+    const cfg = await getFundConfig(true);
+    for (const userId of seatedIds) {
+      const commission = Number(((game.entry * (cfg.tournament_commission || 10)) / 100).toFixed(2));
+      if (commission <= 0) continue;
+      const conn = await pool.getConnection();
+      try {
+        await conn.beginTransaction();
+        await applyRake(conn, {
+          source: 'tournament',
+          tableId: String(game.id),
+          handNumber: null,
+          winnerUserId: userId,
+          rakeAmount: commission,
+        });
+        await conn.commit();
+      } catch (errPlayer) {
+        await conn.rollback();
+        console.error(`[MTT] Error repartiendo comisión de ${userId} en ${game.id}:`, errPlayer.message);
+      } finally {
+        conn.release();
+      }
+    }
+    console.log(`[MTT] Comisión de ${game.id} repartida al fondo y referidos.`);
+  } catch (errFunds) {
+    console.error(`[MTT] Error repartiendo comisiones de ${game.id}:`, errFunds.message);
+  }
 
   // Arrancar la primera mano en cada mesa tras un breve margen de conexión
   setTimeout(() => {

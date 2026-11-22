@@ -89,15 +89,17 @@ module.exports = function setupPokerSockets(io) {
             (user ? ` (${user.username})` : ' (anonimo)')
         );
 
-        // ?? FIX 2: chat scoped a la sala ¡X acepta string u objeto { user, text, type }
+        // ?? FIX 2: chat scoped a la sala ?? acepta string u objeto { user, text, type }
+        // ?? SEGURIDAD: el nombre SIEMPRE viene de la sesión autenticada.
+        // Antes el cliente podía mandar { user: 'otro' } y hacerse pasar por
+        // cualquier jugador (suplantación en el chat).
         socket.on('chatMessage', (msg) => {
-            let username = user?.username || 'Anonimo';
+            const username = user?.username || 'Anonimo';
             let text = '';
 
             if (typeof msg === 'string') {
                 text = msg.trim().slice(0, MAX_CHAT_LENGTH);
             } else if (msg && typeof msg === 'object') {
-                username = msg.user || username;
                 text = String(msg.text || '').trim().slice(0, MAX_CHAT_LENGTH);
             }
 

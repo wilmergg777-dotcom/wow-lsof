@@ -4,6 +4,7 @@ const router = express.Router();
 const pool = require('../db');
 const { verifyToken } = require('../middlewares/auth');
 const { enviarCodigoRetiro, enviarCodigoTransferencia } = require('../utils/email');
+const { verifyPin, hashPin } = require('../utils/pin');
 // ===========================================================
 // VALIDADOR
 // ===========================================================
@@ -49,8 +50,8 @@ router.post('/wallet/deposit', verifyToken, validateDeposit, async (req, res) =>
     }
 });
 
-// ?? PASO 1 del retiro: valida PIN + saldo, genera c¨®digo, env¨ªa correo.
-// NO descuenta saldo ni crea la solicitud todav¨ªa.
+// ?? PASO 1 del retiro: valida PIN + saldo, genera cÂ¨Â®digo, envÂ¨Âªa correo.
+// NO descuenta saldo ni crea la solicitud todavÂ¨Âªa.
 router.post('/wallet/withdraw', verifyToken, validateWithdraw, async (req, res) => {
     const { amount_ntx, card_number, holder_name, bank_name, pin } = req.body;
     const userId = req.user.id;
@@ -66,7 +67,15 @@ router.post('/wallet/withdraw', verifyToken, validateWithdraw, async (req, res) 
         const userEmail = userData[0]?.email;
 
         if (!userPin) return res.status(400).json({ error: 'No tienes un PIN configurado. Ve a Seguridad para configurarlo.' });
-        if (userPin !== pin) return res.status(400).json({ error: 'PIN de seguridad incorrecto. Intentalo de nuevo.' });
+        // ?? SEGURIDAD: verificaciÃ³n con bcrypt + migraciÃ³n automÃ¡tica de PIN legacy
+        const pinCheck = await verifyPin(pin, userPin);
+        if (!pinCheck.ok) return res.status(400).json({ error: 'PIN de seguridad incorrecto. Intentalo de nuevo.' });
+        if (pinCheck.wasLegacy) {
+            // MigraciÃ³n progresiva: el PIN viejo en texto plano se guarda hasheado
+            try {
+                await pool.query('UPDATE users SET pay_pin = ? WHERE id = ?', [await hashPin(pin), userId]);
+            } catch (migErr) { console.warn('[withdraw] MigraciÃ³n de PIN legacy fallÃ³:', migErr.message); }
+        }
         if (!userEmail) return res.status(400).json({ error: 'Necesitas un correo registrado para verificar el retiro. Actualiza tu perfil.' });
 
         const [wallet] = await pool.query("SELECT balance_ntx FROM wallets WHERE user_id = ?", [userId]);
@@ -78,7 +87,7 @@ router.post('/wallet/withdraw', verifyToken, validateWithdraw, async (req, res) 
         const expiresAt = new Date();
         expiresAt.setMinutes(expiresAt.getMinutes() + 15);
 
-        // Borrar c¨®digos viejos y guardar el nuevo con TODO el payload en la DB
+        // Borrar cÂ¨Â®digos viejos y guardar el nuevo con TODO el payload en la DB
         await pool.query('DELETE FROM withdraw_verification_codes WHERE user_id = ?', [userId]);
         await pool.query(
             `INSERT INTO withdraw_verification_codes 
@@ -97,7 +106,7 @@ router.post('/wallet/withdraw', verifyToken, validateWithdraw, async (req, res) 
         res.json({
             requires_verification: true,
             email: maskedEmail,
-            message: `Hemos enviado un c¨®digo de verificaci¨®n a ${maskedEmail}. Ingr¨¦salo para completar el retiro de ${amount} NTX.`
+            message: `Hemos enviado un cÂ¨Â®digo de verificaciÂ¨Â®n a ${maskedEmail}. IngrÂ¨Â¦salo para completar el retiro de ${amount} NTX.`
         });
     } catch (error) {
         console.error("ERROR withdraw step 1:", error);
@@ -105,13 +114,13 @@ router.post('/wallet/withdraw', verifyToken, validateWithdraw, async (req, res) 
     }
 });
 
-// ?? PASO 2 del retiro: valida c¨®digo, descuenta saldo, crea la solicitud.
+// ?? PASO 2 del retiro: valida cÂ¨Â®digo, descuenta saldo, crea la solicitud.
 // Usa los datos guardados en la DB (no los que manda el cliente).
 router.post('/wallet/withdraw/verify', verifyToken, validateWithdrawVerify, async (req, res) => {
     const { code } = req.body;
     const userId = req.user.id;
 
-    if (!code || code.length !== 6) return res.status(400).json({ error: 'C¨®digo inv¨¢lido' });
+    if (!code || code.length !== 6) return res.status(400).json({ error: 'CÂ¨Â®digo invÂ¨Â¢lido' });
 
     const connection = await pool.getConnection();
     try {
@@ -124,13 +133,13 @@ router.post('/wallet/withdraw/verify', verifyToken, validateWithdrawVerify, asyn
 
         if (codes.length === 0) {
             await connection.rollback();
-            return res.status(400).json({ error: 'C¨®digo incorrecto o expirado. Solicita uno nuevo.' });
+            return res.status(400).json({ error: 'CÂ¨Â®digo incorrecto o expirado. Solicita uno nuevo.' });
         }
 
         const record = codes[0];
         const amount = Number(record.amount_ntx);
 
-        // Re-verificar saldo (por si cambi¨® entre el paso 1 y el paso 2)
+        // Re-verificar saldo (por si cambiÂ¨Â® entre el paso 1 y el paso 2)
         const [wallet] = await connection.query("SELECT balance_ntx FROM wallets WHERE user_id = ? FOR UPDATE", [userId]);
         if (!wallet[0] || wallet[0].balance_ntx < amount) {
             await connection.query('DELETE FROM withdraw_verification_codes WHERE user_id = ?', [userId]);
@@ -190,7 +199,7 @@ router.post('/wallet/transfer', verifyToken, validateTransferLegacy, async (req,
 });
 
 // ==========================================
-// ?? NUEVO FLUJO DE TRANSFERENCIA CON VALIDACI¨®N DE 24 HORAS
+// ?? NUEVO FLUJO DE TRANSFERENCIA CON VALIDACIÂ¨Â®N DE 24 HORAS
 // ==========================================
 
 router.post('/wallet/transfer/request', verifyToken, validateTransferRequest, async (req, res) => {
@@ -200,7 +209,7 @@ router.post('/wallet/transfer/request', verifyToken, validateTransferRequest, as
 
     // --- Validaciones de entrada ---
     if (!receiverUniqueId) return res.status(400).json({ error: 'Debes especificar el ID del destinatario.' });
-    if (!Number.isFinite(amountNum) || amountNum <= 0) return res.status(400).json({ error: 'Monto inv¨¢lido.' });
+    if (!Number.isFinite(amountNum) || amountNum <= 0) return res.status(400).json({ error: 'Monto invÂ¨Â¢lido.' });
     if (!pin) return res.status(400).json({ error: 'Debes ingresar tu PIN de pago.' });
 
     try {
@@ -215,10 +224,17 @@ router.post('/wallet/transfer/request', verifyToken, validateTransferRequest, as
         const emailChangedAt = senderData[0]?.email_changed_at;
 
         if (!senderPin) return res.status(400).json({ error: 'No tienes un PIN configurado. Ve a Seguridad para configurarlo.' });
-        if (senderPin !== pin) return res.status(400).json({ error: 'PIN de pago incorrecto. Intentalo de nuevo.' });
+        // ?? SEGURIDAD: verificaciÃ³n con bcrypt + migraciÃ³n automÃ¡tica de PIN legacy
+        const pinCheck = await verifyPin(pin, senderPin);
+        if (!pinCheck.ok) return res.status(400).json({ error: 'PIN de pago incorrecto. Intentalo de nuevo.' });
+        if (pinCheck.wasLegacy) {
+            try {
+                await pool.query('UPDATE users SET pay_pin = ? WHERE id = ?', [await hashPin(pin), senderId]);
+            } catch (migErr) { console.warn('[transfer] MigraciÃ³n de PIN legacy fallÃ³:', migErr.message); }
+        }
         if (!senderEmail) return res.status(400).json({ error: 'Necesitas un correo registrado para verificar la transferencia. Actualiza tu perfil.' });
 
-        // ?? VALIDACI¨®N DE 24 HORAS
+        // ?? VALIDACIÂ¨Â®N DE 24 HORAS
         const now = new Date();
         const restrictMs = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
 
@@ -234,9 +250,9 @@ router.post('/wallet/transfer/request', verifyToken, validateTransferRequest, as
                 return res.status(403).json({ error: 'Transferencias bloqueadas por 24h tras cambio de Correo.' });
             }
         }
-        // FIN DE VALIDACI¨®N 24H
+        // FIN DE VALIDACIÂ¨Â®N 24H
 
-        // --- Buscar al receptor por ID ¨²nico (sin el @) ---
+        // --- Buscar al receptor por ID Â¨Â²nico (sin el @) ---
         const cleanReceiverId = String(receiverUniqueId).replace('@', '').trim();
         const [receivers] = await pool.query(
             'SELECT id, username FROM users WHERE unique_id = ?',
@@ -260,12 +276,12 @@ router.post('/wallet/transfer/request', verifyToken, validateTransferRequest, as
             return res.status(400).json({ error: 'Saldo insuficiente para esta transferencia.' });
         }
 
-        // --- Generar c¨®digo de 6 d¨ªgitos y guardarlo en DB (15 min de vida) ---
+        // --- Generar cÂ¨Â®digo de 6 dÂ¨Âªgitos y guardarlo en DB (15 min de vida) ---
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date();
         expiresAt.setMinutes(expiresAt.getMinutes() + 15);
 
-        // Borrar c¨®digos viejos del mismo usuario y guardar el nuevo
+        // Borrar cÂ¨Â®digos viejos del mismo usuario y guardar el nuevo
         await pool.query('DELETE FROM transfer_verification_codes WHERE user_id = ?', [senderId]);
         await pool.query(
             `INSERT INTO transfer_verification_codes 
@@ -274,7 +290,7 @@ router.post('/wallet/transfer/request', verifyToken, validateTransferRequest, as
             [senderId, code, amountNum, receiver.id, expiresAt]
         );
 
-        // --- Enviar correo (funci¨®n espec¨ªfica para transferencias) ---
+        // --- Enviar correo (funciÂ¨Â®n especÂ¨Âªfica para transferencias) ---
         const enviado = await enviarCodigoTransferencia(senderEmail, code, amountNum, receiver.username);
         if (!enviado) {
             await pool.query('DELETE FROM transfer_verification_codes WHERE user_id = ? AND code = ?', [senderId, code]);
@@ -285,7 +301,7 @@ router.post('/wallet/transfer/request', verifyToken, validateTransferRequest, as
         res.json({
             requires_verification: true,
             email: maskedEmail,
-            message: `Hemos enviado un c¨®digo de verificaci¨®n a ${maskedEmail}. Ingr¨¦salo para confirmar la transferencia de ${amountNum} NTX a ${receiver.username}.`
+            message: `Hemos enviado un cÂ¨Â®digo de verificaciÂ¨Â®n a ${maskedEmail}. IngrÂ¨Â¦salo para confirmar la transferencia de ${amountNum} NTX a ${receiver.username}.`
         });
     } catch (error) {
         console.error("ERROR transfer/request:", error);
@@ -293,28 +309,28 @@ router.post('/wallet/transfer/request', verifyToken, validateTransferRequest, as
     }
 });
 
-// ?? PASO 3 del nuevo flujo: valida c¨®digo, ejecuta la transferencia at¨®micamente.
+// ?? PASO 3 del nuevo flujo: valida cÂ¨Â®digo, ejecuta la transferencia atÂ¨Â®micamente.
 router.post('/wallet/transfer/verify', verifyToken, validateTransferVerify, async (req, res) => {
     const { receiverUniqueId, amount, code } = req.body;
     const senderId = req.user.id;
     const amountNum = Number(amount);
 
-    if (!code || code.length !== 6) return res.status(400).json({ error: 'El c¨®digo debe tener 6 d¨ªgitos.' });
-    if (!Number.isFinite(amountNum) || amountNum <= 0) return res.status(400).json({ error: 'Monto inv¨¢lido.' });
+    if (!code || code.length !== 6) return res.status(400).json({ error: 'El cÂ¨Â®digo debe tener 6 dÂ¨Âªgitos.' });
+    if (!Number.isFinite(amountNum) || amountNum <= 0) return res.status(400).json({ error: 'Monto invÂ¨Â¢lido.' });
     if (!receiverUniqueId) return res.status(400).json({ error: 'Falta el ID del destinatario.' });
 
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
 
-        // --- 1. Validar c¨®digo ---
+        // --- 1. Validar cÂ¨Â®digo ---
         const [codes] = await connection.query(
             "SELECT * FROM transfer_verification_codes WHERE user_id = ? AND code = ? AND expires_at > NOW() FOR UPDATE",
             [senderId, code]
         );
         if (codes.length === 0) {
             await connection.rollback();
-            return res.status(400).json({ error: 'C¨®digo incorrecto o expirado. Solicita uno nuevo.' });
+            return res.status(400).json({ error: 'CÂ¨Â®digo incorrecto o expirado. Solicita uno nuevo.' });
         }
         const record = codes[0];
 
@@ -353,7 +369,7 @@ router.post('/wallet/transfer/verify', verifyToken, validateTransferVerify, asyn
             throw new Error('Saldo insuficiente.');
         }
 
-        // --- 5. Ejecutar la transferencia (at¨®mica) ---
+        // --- 5. Ejecutar la transferencia (atÂ¨Â®mica) ---
         await connection.query(
             "UPDATE wallets SET balance_ntx = balance_ntx - ? WHERE user_id = ?",
             [amountNum, senderId]
@@ -373,12 +389,12 @@ router.post('/wallet/transfer/verify', verifyToken, validateTransferVerify, asyn
             console.warn('[transfer/verify] No se pudo insertar en tabla transfers:', errInsert.message);
         }
 
-        // --- 7. Borrar el c¨®digo usado ---
+        // --- 7. Borrar el cÂ¨Â®digo usado ---
         await connection.query('DELETE FROM transfer_verification_codes WHERE user_id = ?', [senderId]);
 
         await connection.commit();
         res.json({
-            message: 'Transferencia realizada con ¨¦xito.',
+            message: 'Transferencia realizada con Â¨Â¦xito.',
             receiver: receiver.username,
             amount: amountNum
         });
@@ -392,7 +408,7 @@ router.post('/wallet/transfer/verify', verifyToken, validateTransferVerify, asyn
 });
 
 // ==========================================
-// HISTORIAL (dep¨®sitos + retiros + transferencias enviadas/recibidas)
+// HISTORIAL (depÂ¨Â®sitos + retiros + transferencias enviadas/recibidas)
 // ==========================================
 router.get('/wallet/history', verifyToken, async (req, res) => {
     try {

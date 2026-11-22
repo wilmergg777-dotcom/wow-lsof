@@ -4,6 +4,31 @@ const { determineWinners } = require('./pokerEngine');
 // 🔥 FIX: URL configurable del backend (para el VPS)
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
 
+// 🔥 FONDOS: porcentaje de rake configurable desde wallet_settings (caché 60s)
+// y token interno para los endpoints de dinero.
+const { getFundConfig, CONFIG_DEFAULTS } = require('./services/funds');
+const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN || 'royalbet-internal-default';
+let CACHED_RAKE_PERCENT = CONFIG_DEFAULTS.rake_percent / 100;
+function refreshRakePercent() {
+    getFundConfig().then(cfg => {
+        CACHED_RAKE_PERCENT = (cfg.rake_percent || 5) / 100;
+    }).catch(() => { /* sin BD: se mantiene el valor en caché */ });
+}
+refreshRakePercent();
+setInterval(refreshRakePercent, 60 * 1000).unref?.();
+
+// 🔥 SEGURIDAD: helper para llamadas internas motor→API con token interno
+function internalPost(path, payload) {
+    return fetch(`${BACKEND_URL}${path}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Token': INTERNAL_API_TOKEN,
+        },
+        body: JSON.stringify(payload),
+    }).catch(err => console.error(`[Poker] Error en llamada interna ${path}:`, err));
+}
+
 const SUITS = ['♠', '♥', '♦', '♣'];
 const VALUES = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 
@@ -237,20 +262,12 @@ class PokerTable {
 
     // 🔥 FIX #12: No hacer cash-out si es mesa de práctica (las fichas son falsas)
     // 🔥 MTT: tampoco en torneo (el premio lo paga el payout automático al final)
-    // 🔥 FIX AUTH: usar el authToken que viene del socket para autenticar el cash-out.
+    // 🔥 FIX SEGURIDAD: el cash-out del motor ahora usa el endpoint INTERNO con
+    // X-Internal-Token. El endpoint público /poker/cash-out ya NO acredita dinero
+    // libremente (solo reembolsos de buy-in fallidos), así que un usuario no puede
+    // imprimir fichas llamándolo directamente.
     if (player.chips > 0 && !this.isPractice && !this.isTournament) {
-      if (authToken) {
-        fetch(`${BACKEND_URL}/api/poker/cash-out`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          },
-          body: JSON.stringify({ amount: player.chips })
-        }).catch(err => console.error("Error en cash-out:", err));
-      } else {
-        console.warn(`[Poker] No se pudo hacer cash-out para ${player.username}: falta authToken.`);
-      }
+      internalPost('/api/poker/internal/cash-out', { userId: player.userId, amount: player.chips });
     }
 
     this.seats[index] = null;
@@ -575,7 +592,10 @@ class PokerTable {
       const { winners, all } = determineWinners(evalPlayers);
 
       // 🔥 FIX #12: Si es práctica, no se cobra rake
-      const potRake = this.isPractice ? 0 : Math.floor(pot.amount * 0.05);
+      // 🔥 MTT: los torneos tampoco pagan rake por bote (su comisión es la
+      //         comisión de la entrada, ya repartida al registrar).
+      // 🔥 FONDOS: porcentaje leído de wallet_settings (caché), antes 0.05 fijo.
+      const potRake = (this.isPractice || this.isTournament) ? 0 : Math.floor(pot.amount * CACHED_RAKE_PERCENT);
       totalRake += potRake;
       const netPot = pot.amount - potRake;
 
@@ -622,15 +642,17 @@ class PokerTable {
     // 🔥 FIX #9: para el rake, usar el PRIMER GANADOR (antes usaba active[0],
     // que podía no ser ganador → su referrer cobraba el 25% por error).
     // 🔥 FIX #12: Solo enviar rake al backend si NO es mesa de práctica
-    if (active.length > 0 && totalRake > 0 && !this.isPractice) {
+    if (active.length > 0 && totalRake > 0 && !this.isPractice && !this.isTournament) {
       const rakeSourceSocketId = winnerResults.length > 0 ? winnerResults[0].socketId : active[0].socketId;
       const winnerData = this.seats.find(p => p !== null && p.socketId === rakeSourceSocketId);
       if (winnerData) {
-        fetch(`${BACKEND_URL}/api/poker/process-rake`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rakeAmount: totalRake, playerId: winnerData.userId })
-        }).catch(err => console.error("Error enviando rake:", err));
+        // 🔥 SEGURIDAD: endpoint interno con X-Internal-Token (antes público y sin auth)
+        internalPost('/api/poker/internal/process-rake', {
+          rakeAmount: totalRake,
+          playerId: winnerData.userId,
+          tableId: this.tableId,
+          handNumber: this.handNumber,
+        });
       }
     }
 
@@ -653,7 +675,9 @@ class PokerTable {
     if (this.turnTimeout) clearTimeout(this.turnTimeout);
 
     // 🔥 FIX #12: Si es práctica, no se cobra rake
-    const rake = this.isPractice ? 0 : Math.floor(this.pot * 0.05);
+    // 🔥 MTT: torneos sin rake por bote (la comisión va en la entrada)
+    // 🔥 FONDOS: porcentaje configurable desde wallet_settings
+    const rake = (this.isPractice || this.isTournament) ? 0 : Math.floor(this.pot * CACHED_RAKE_PERCENT);
     const potAfterRake = this.pot - rake;
 
     let share = Math.floor(potAfterRake / winnerIds.length);
@@ -669,15 +693,17 @@ class PokerTable {
       if (firstWinner) firstWinner.chips += remainder;
     }
 
-    // 🔥 FIX #12: Solo enviar rake al backend si NO es mesa de práctica
-    if (winnerIds.length > 0 && !this.isPractice) {
+    // 🔥 FIX #12: Solo enviar rake al backend si NO es mesa de práctica ni torneo
+    if (winnerIds.length > 0 && !this.isPractice && !this.isTournament) {
       const winnerData = this.seats.find(p => p !== null && p.socketId === winnerIds[0]);
       if (winnerData && rake > 0) {
-        fetch(`${BACKEND_URL}/api/poker/process-rake`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rakeAmount: rake, playerId: winnerData.userId })
-        }).catch(err => console.error("Error enviando rake:", err));
+        // 🔥 SEGURIDAD: endpoint interno con X-Internal-Token
+        internalPost('/api/poker/internal/process-rake', {
+          rakeAmount: rake,
+          playerId: winnerData.userId,
+          tableId: this.tableId,
+          handNumber: this.handNumber,
+        });
       }
     }
 
