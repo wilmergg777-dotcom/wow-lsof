@@ -351,7 +351,7 @@ CREATE TABLE `%PREFIX%fleets` (
   `fleet_end_system` smallint(5) unsigned NOT NULL DEFAULT '0',
   `fleet_end_planet` tinyint(3) unsigned NOT NULL DEFAULT '0',
   `fleet_end_type` tinyint(3) unsigned NOT NULL DEFAULT '1',
-  `fleet_target_obj` smallint(3) unsigned NOT NULL DEFAULT '0',
+  `fleet_target_obj` int unsigned NOT NULL DEFAULT '0',
   `fleet_resource_metal` double(255,0) unsigned NOT NULL DEFAULT '0',
   `fleet_resource_crystal` double(255,0) unsigned NOT NULL DEFAULT '0',
   `fleet_resource_deuterium` double(255,0) unsigned NOT NULL DEFAULT '0',
@@ -408,7 +408,7 @@ CREATE TABLE `%PREFIX%log_fleets` (
   `fleet_end_system` smallint(5) unsigned NOT NULL DEFAULT '0',
   `fleet_end_planet` tinyint(3) unsigned NOT NULL DEFAULT '0',
   `fleet_end_type` tinyint(3) unsigned NOT NULL DEFAULT '1',
-  `fleet_target_obj` smallint(3) unsigned NOT NULL DEFAULT '0',
+  `fleet_target_obj` int unsigned NOT NULL DEFAULT '0',
   `fleet_resource_metal` double(255,0) unsigned NOT NULL DEFAULT '0',
   `fleet_resource_crystal` double(255,0) unsigned NOT NULL DEFAULT '0',
   `fleet_resource_deuterium` double(255,0) unsigned NOT NULL DEFAULT '0',
@@ -4044,7 +4044,8 @@ CREATE TABLE IF NOT EXISTS `%PREFIX%pvp_tournament_players` (
   PRIMARY KEY (`id`),
   KEY `idx_tournament` (`tournament_id`),
   KEY `idx_user` (`user_id`),
-  KEY `idx_alliance` (`alliance_id`)
+  KEY `idx_alliance` (`alliance_id`),
+  UNIQUE KEY `uniq_tournament_user` (`tournament_id`, `user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 CREATE TABLE IF NOT EXISTS `%PREFIX%pvp_tournament_rounds` (

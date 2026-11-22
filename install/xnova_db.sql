@@ -1231,7 +1231,7 @@ CREATE TABLE `uni1_fleets` (
   `fleet_end_system` smallint(5) UNSIGNED NOT NULL DEFAULT 0,
   `fleet_end_planet` tinyint(3) UNSIGNED NOT NULL DEFAULT 0,
   `fleet_end_type` tinyint(3) UNSIGNED NOT NULL DEFAULT 1,
-  `fleet_target_obj` smallint(3) UNSIGNED NOT NULL DEFAULT 0,
+  `fleet_target_obj` int UNSIGNED NOT NULL DEFAULT 0,
   `fleet_resource_metal` double(255,0) UNSIGNED NOT NULL DEFAULT 0,
   `fleet_resource_crystal` double(255,0) UNSIGNED NOT NULL DEFAULT 0,
   `fleet_resource_deuterium` double(255,0) UNSIGNED NOT NULL DEFAULT 0,
@@ -2452,7 +2452,7 @@ CREATE TABLE `uni1_log_fleets` (
   `fleet_end_system` smallint(5) UNSIGNED NOT NULL DEFAULT 0,
   `fleet_end_planet` tinyint(3) UNSIGNED NOT NULL DEFAULT 0,
   `fleet_end_type` tinyint(3) UNSIGNED NOT NULL DEFAULT 1,
-  `fleet_target_obj` smallint(3) UNSIGNED NOT NULL DEFAULT 0,
+  `fleet_target_obj` int UNSIGNED NOT NULL DEFAULT 0,
   `fleet_resource_metal` double(255,0) UNSIGNED NOT NULL DEFAULT 0,
   `fleet_resource_crystal` double(255,0) UNSIGNED NOT NULL DEFAULT 0,
   `fleet_resource_deuterium` double(255,0) UNSIGNED NOT NULL DEFAULT 0,
@@ -3847,7 +3847,8 @@ CREATE TABLE `uni1_pvp_tournament_players` (
   `eliminated` tinyint(1) NOT NULL DEFAULT 0,
   `eliminated_round` tinyint(3) NOT NULL DEFAULT 0,
   `final_position` tinyint(3) NOT NULL DEFAULT 0,
-  `registered_at` int(11) NOT NULL DEFAULT 0
+  `registered_at` int(11) NOT NULL DEFAULT 0,
+  UNIQUE KEY `uniq_tournament_user` (`tournament_id`, `user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------

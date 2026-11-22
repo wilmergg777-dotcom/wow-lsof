@@ -251,7 +251,7 @@ class PVPTournamentHelper
             '¡Nuevo torneo PvP programado!',
             'Se ha programado un torneo <b>' . $data['type'] . '</b> (' . $data['mode'] . ').<br>'
             . 'Inscripciones abiertas hasta: ' . date('d/m/Y H:i', $regEnds) . '<br>'
-            . '<a href="game.php?page=pvp&tab=tournaments">Ver torneo</a>'
+            . '<a href="game.php?page=pvp&mode=tournaments">Ver torneo</a>'
         );
 
         return array(
@@ -317,17 +317,42 @@ class PVPTournamentHelper
         $moneda  = PVPHelper::getCurrencyLabel($userId);
         $isIntl  = ($riel === 'QVAPAY');
 
+        // ✅ v3.8 — GATE atómico de cupo ANTES de cobrar (UPDATE condicional +
+        // rowCount): el check previo era lectura obsoleta — doble click creaba
+        // DOS filas (la tabla no tiene UNIQUE en (tournament_id,user_id)),
+        // cobraba DOS veces y saltaba el cupo.
+        self::db()->update(
+            "UPDATE %%PVP_TOURNAMENTS%% SET `current_players` = `current_players` + 1
+             WHERE `id` = :tid AND `status` = 'registration' AND `current_players` < `max_players`;",
+            array(':tid' => $tournamentId)
+        );
+        if (self::db()->rowCount() !== 1) {
+            return array('ok' => false, 'msg' => 'El torneo está lleno o las inscripciones están cerradas.');
+        }
+
+        $releaseSlot = function () use ($tournamentId) {
+            try {
+                self::db()->update(
+                    "UPDATE %%PVP_TOURNAMENTS%% SET `current_players` = `current_players` - 1
+                     WHERE `id` = :tid AND `current_players` > 0;",
+                    array(':tid' => $tournamentId)
+                );
+            } catch (Throwable $e) {}
+        };
+
         // Fee BASE NTX-20
         $feeBase  = (int) $t['entry_fee'];
         $realPaid = self::getRealPaidByPlayer($feeBase, $userId);
 
         // Verificar saldo en su riel
         if (!PVPHelper::hasBalance($userId, $feeBase)) {
+            $releaseSlot();
             return array('ok' => false, 'msg' => 'No tienes suficientes ' . $moneda . '. Necesitas ' . number_format($realPaid) . '.');
         }
 
         // Descontar del riel correcto (removeBalance loguea NTX20 solo si CUP)
         if (!PVPHelper::removeBalance($userId, $feeBase, 'pvp_tournament_reg', 'Inscripción torneo #' . $tournamentId)) {
+            $releaseSlot();
             return array('ok' => false, 'msg' => 'No se pudo descontar la entrada.');
         }
 
@@ -346,28 +371,46 @@ class PVPTournamentHelper
                     `registered_at`   = :now;",
                 array(':tid' => $tournamentId, ':uid' => $userId, ':now' => TIMESTAMP)
             );
+        } catch (Exception $e) {
+            // ✅ v3.8 — Reembolso + liberar cupo si el INSERT falla
+            $releaseSlot();
+            PVPHelper::addRealAmount($userId, $realPaid, $riel, 'pvp_tournament_refund', 'Error al inscribir');
+            if (!$isIntl) {
+                self::logNtx20($userId, +$realPaid, 'earn_pvp_tournament', 'Reembolso torneo #' . $tournamentId . ' (error)', $tournamentId);
+            }
+            return array('ok' => false, 'msg' => 'Error al inscribir.');
+        }
 
+        try {
             // Actualizar pool del riel + total legacy
             if ($isIntl) {
                 self::db()->update(
-                    "UPDATE %%PVP_TOURNAMENTS%% 
+                    "UPDATE %%PVP_TOURNAMENTS%%
                      SET `pool_untx20` = `pool_untx20` + :real,
-                         `prize_pool`   = `prize_pool` + :real2,
-                         `current_players` = `current_players` + 1
+                         `prize_pool`   = `prize_pool` + :real2
                      WHERE `id` = :tid;",
                     array(':real' => $realPaid, ':real2' => $realPaid, ':tid' => $tournamentId)
                 );
             } else {
                 self::db()->update(
-                    "UPDATE %%PVP_TOURNAMENTS%% 
+                    "UPDATE %%PVP_TOURNAMENTS%%
                      SET `pool_ntx20` = `pool_ntx20` + :real,
-                         `prize_pool` = `prize_pool` + :real2,
-                         `current_players` = `current_players` + 1
+                         `prize_pool` = `prize_pool` + :real2
                      WHERE `id` = :tid;",
                     array(':real' => $realPaid, ':real2' => $realPaid, ':tid' => $tournamentId)
                 );
             }
         } catch (Exception $e) {
+            // ✅ v3.8 — Si el pool falla tras el INSERT, BORRAR la fila antes
+            // de reembolsar: antes quedaba inscrito con paid=1 (jugaría gratis)
+            // y el pool nunca recibía su pago.
+            try {
+                self::db()->delete(
+                    "DELETE FROM %%PVP_TOURNAMENT_PLAYERS%% WHERE `tournament_id` = :tid AND `user_id` = :uid AND `final_position` = 0;",
+                    array(':tid' => $tournamentId, ':uid' => $userId)
+                );
+            } catch (Throwable $e2) {}
+            $releaseSlot();
             PVPHelper::addRealAmount($userId, $realPaid, $riel, 'pvp_tournament_refund', 'Error al inscribir');
             if (!$isIntl) {
                 self::logNtx20($userId, +$realPaid, 'earn_pvp_tournament', 'Reembolso torneo #' . $tournamentId . ' (error)', $tournamentId);
@@ -465,33 +508,45 @@ class PVPTournamentHelper
             // Pago del banco (riel del líder)
             $bankCol = $isIntl ? 'untx20' : 'ntx20';
             $p       = self::prefix();
-            $bank    = self::db()->selectSingle(
-                "SELECT `" . $bankCol . "` AS `balance`
-                   FROM `" . $p . "alliance_bank`
-                  WHERE `alliance_id` = :aid
-                  LIMIT 1;",
-                array(':aid' => $allianceId)
-            );
-            $bankBalance = empty($bank) ? 0 : (int) $bank['balance'];
 
-            if ($bankBalance < $realPaid) {
-                return array('ok' => false, 'msg' => 'El banco de tu alianza no tiene suficientes ' . $moneda . '. Necesita ' . number_format($realPaid) . '.');
-            }
-
+            // ✅ v3.8 — Descuento del banco con guard de saldo en el WHERE +
+            // rowCount: antes era check-then-act (SELECT sin lock) y dos
+            // líderes concurrentes descontaban DOS veces dejando el banco en
+            // negativo.
             self::db()->update(
                 "UPDATE `" . $p . "alliance_bank`
                     SET `" . $bankCol . "` = `" . $bankCol . "` - :n,
                         `updated_at` = :now
-                  WHERE `alliance_id` = :aid
+                  WHERE `alliance_id` = :aid AND `" . $bankCol . "` >= :n
                   LIMIT 1;",
                 array(':n' => $realPaid, ':now' => time(), ':aid' => $allianceId)
             );
 
+            if (self::db()->rowCount() !== 1) {
+                return array('ok' => false, 'msg' => 'El banco de tu alianza no tiene suficientes ' . $moneda . '.');
+            }
+
             if (class_exists('AllianceBankHelper') && method_exists('AllianceBankHelper', 'log')) {
                 try {
-                    AllianceBankHelper::log($allianceId, $leaderId, 'withdraw', $bankCol, $realPaid, $bankBalance - $realPaid, 'Inscripción torneo #' . $tournamentId);
+                    AllianceBankHelper::log($allianceId, $leaderId, 'withdraw', $bankCol, $realPaid, 0, 'Inscripción torneo #' . $tournamentId);
                 } catch (Exception $e) { /* silencioso */ }
             }
+        }
+
+        // ✅ v3.8 — GATE atómico de cupo (idéntico a registerPlayer)
+        self::db()->update(
+            "UPDATE %%PVP_TOURNAMENTS%% SET `current_players` = `current_players` + 1
+             WHERE `id` = :tid AND `status` = 'registration' AND `current_players` < `max_players`;",
+            array(':tid' => $tournamentId)
+        );
+        if (self::db()->rowCount() !== 1) {
+            // Devolver el pago que ya se hizo
+            if ($source === 'user') {
+                PVPHelper::addRealAmount($leaderId, $realPaid, $leaderRail, 'pvp_tournament_refund', 'Torneo lleno');
+            } else {
+                PVPHelper::addBalanceToAllianceBank($allianceId, $realPaid, $leaderRail, 'pvp_tournament_refund', 'Torneo lleno');
+            }
+            return array('ok' => false, 'msg' => 'El torneo está lleno o las inscripciones están cerradas.');
         }
 
         try {
@@ -515,29 +570,59 @@ class PVPTournamentHelper
                     ':now' => TIMESTAMP,
                 )
             );
+        } catch (Exception $e) {
+            // ✅ v3.8 — Liberar cupo + reembolsar según source
+            try {
+                self::db()->update(
+                    "UPDATE %%PVP_TOURNAMENTS%% SET `current_players` = `current_players` - 1
+                     WHERE `id` = :tid AND `current_players` > 0;",
+                    array(':tid' => $tournamentId)
+                );
+            } catch (Throwable $e2) {}
+            if ($source === 'user') {
+                PVPHelper::addRealAmount($leaderId, $realPaid, $leaderRail, 'pvp_tournament_refund', 'Error al inscribir alianza');
+                if (!$isIntl) {
+                    self::logNtx20($leaderId, +$realPaid, 'earn_pvp_tournament', 'Reembolso torneo #' . $tournamentId . ' (error)', $tournamentId);
+                }
+            } else {
+                PVPHelper::addBalanceToAllianceBank($allianceId, $realPaid, $leaderRail, 'pvp_tournament_refund', 'Error al inscribir alianza');
+            }
+            return array('ok' => false, 'msg' => 'Error al inscribir la alianza.');
+        }
 
+        try {
             // Actualizar pool del riel + total legacy
             if ($isIntl) {
                 self::db()->update(
-                    "UPDATE %%PVP_TOURNAMENTS%% 
+                    "UPDATE %%PVP_TOURNAMENTS%%
                      SET `pool_untx20` = `pool_untx20` + :real,
-                         `prize_pool`   = `prize_pool` + :real2,
-                         `current_players` = `current_players` + 1
+                         `prize_pool`   = `prize_pool` + :real2
                      WHERE `id` = :tid;",
                     array(':real' => $realPaid, ':real2' => $realPaid, ':tid' => $tournamentId)
                 );
             } else {
                 self::db()->update(
-                    "UPDATE %%PVP_TOURNAMENTS%% 
+                    "UPDATE %%PVP_TOURNAMENTS%%
                      SET `pool_ntx20` = `pool_ntx20` + :real,
-                         `prize_pool` = `prize_pool` + :real2,
-                         `current_players` = `current_players` + 1
+                         `prize_pool` = `prize_pool` + :real2
                      WHERE `id` = :tid;",
                     array(':real' => $realPaid, ':real2' => $realPaid, ':tid' => $tournamentId)
                 );
             }
         } catch (Exception $e) {
-            // Devolver según source
+            // ✅ v3.8 — Pool fallido tras INSERT → borrar la fila antes de
+            // reembolsar (antes quedaba inscrita jugando gratis).
+            try {
+                self::db()->delete(
+                    "DELETE FROM %%PVP_TOURNAMENT_PLAYERS%% WHERE `tournament_id` = :tid AND `alliance_id` = :aid AND `final_position` = 0;",
+                    array(':tid' => $tournamentId, ':aid' => $allianceId)
+                );
+                self::db()->update(
+                    "UPDATE %%PVP_TOURNAMENTS%% SET `current_players` = `current_players` - 1
+                     WHERE `id` = :tid AND `current_players` > 0;",
+                    array(':tid' => $tournamentId)
+                );
+            } catch (Throwable $e2) {}
             if ($source === 'user') {
                 PVPHelper::addRealAmount($leaderId, $realPaid, $leaderRail, 'pvp_tournament_refund', 'Error al inscribir alianza');
                 if (!$isIntl) {
@@ -588,17 +673,26 @@ class PVPTournamentHelper
             return array('ok' => false, 'msg' => 'Faltan jugadores: ' . $current . '/' . $min . '.');
         }
 
-        // Generar bracket
-        self::generateBracket($tournamentId);
-
-        // Arrancar la primera ronda
-        self::startNextRound($tournamentId);
-
-        // Cambiar status a running
+        // ✅ v3.8 — Lock atómico de cierre: solo el primer proceso pasa de
+        // 'registration' a 'running' (rowCount). Antes dos llamadas simultáneas
+        // (cron + click) generaban el bracket DOS veces.
         self::db()->update(
-            "UPDATE %%PVP_TOURNAMENTS%% SET `status` = 'running', `starts_at` = :now WHERE `id` = :tid;",
+            "UPDATE %%PVP_TOURNAMENTS%% SET `status` = 'running', `starts_at` = :now
+             WHERE `id` = :tid AND `status` = 'registration';",
             array(':now' => TIMESTAMP, ':tid' => $tournamentId)
         );
+        if (self::db()->rowCount() !== 1) {
+            return array('ok' => false, 'msg' => 'El torneo ya fue iniciado por otro proceso.');
+        }
+
+        // Generar bracket (crea la ronda 1 con sus matches)
+        self::generateBracket($tournamentId);
+
+        // ✅ v3.8 — NO llamar startNextRound() aquí: con la ronda 1 recién
+        // creada contaba "ganadores" de matches pendientes/bye → con 7
+        // jugadores pagaba TODO el pool al jugador del bye, marcaba finished,
+        // luego pisaba el estado a 'running' y al final pagaba OTRA VEZ
+        // (doble pago). La ronda 1 la resuelve el cron (resolveRound).
 
         PVPHelper::log('tournament', $tournamentId, 'registration_closed', 0, array(
             'players' => $current,
@@ -617,7 +711,7 @@ class PVPTournamentHelper
                 '¡Torneo comenzado!',
                 'El torneo #' . $tournamentId . ' ha comenzado. Ronda 1 en curso.<br>'
                 . 'Premio acumulado de tu riel: ' . number_format($pool) . ' ' . $moneda . '.<br>'
-                . '<a href="game.php?page=pvp&tab=tournaments">Ver bracket</a>'
+                . '<a href="game.php?page=pvp&mode=tournaments">Ver bracket</a>'
             );
         }
 
@@ -637,6 +731,18 @@ class PVPTournamentHelper
         }
 
         if (in_array($t['status'], array('finished', 'cancelled'), true)) {
+            return array('ok' => false, 'msg' => 'El torneo ya está cerrado.');
+        }
+
+        // ✅ v3.8 — Lock atómico ANTES de reembolsar (rowCount): solo el
+        // primer proceso cancela. Antes dos runs del cron solapados pasaban
+        // ambos el check de estado y reembolsaban DOS veces a todos.
+        self::db()->update(
+            "UPDATE %%PVP_TOURNAMENTS%% SET `status` = 'cancelled', `finished_at` = :now
+             WHERE `id` = :tid AND `status` NOT IN ('finished','cancelled');",
+            array(':now' => TIMESTAMP, ':tid' => $tournamentId)
+        );
+        if (self::db()->rowCount() !== 1) {
             return array('ok' => false, 'msg' => 'El torneo ya está cerrado.');
         }
 
@@ -687,11 +793,6 @@ class PVPTournamentHelper
                 }
             }
         }
-
-        self::db()->update(
-            "UPDATE %%PVP_TOURNAMENTS%% SET `status` = 'cancelled', `finished_at` = :now WHERE `id` = :tid;",
-            array(':now' => TIMESTAMP, ':tid' => $tournamentId)
-        );
 
         PVPHelper::log('tournament', $tournamentId, 'cancelled', 0, array(
             'reason'   => $reason,
@@ -841,6 +942,22 @@ class PVPTournamentHelper
             return false;
         }
 
+        // ✅ v3.8 — GUARD: la última ronda debe estar COMPLETAMENTE resuelta
+        // antes de avanzar. Antes se contaban ganadores de matches aún
+        // 'pending': al cerrar inscripciones (ronda 1 recién creada), un bye
+        // daba "1 ganador" → finishTournament pagaba TODO el pool al jugador
+        // del bye y marcaba finished; luego el estado se pisaba a 'running'
+        // y al resolverse de verdad pagaba OTRA VEZ (doble pago del pool).
+        $pendingMatches = $db->selectSingle(
+            "SELECT COUNT(*) AS c FROM %%PVP_TOURNAMENT_MATCHES%%
+             WHERE `tournament_id` = :tid AND `round_id` = :rid AND `status` = 'pending';",
+            array(':tid' => $tournamentId, ':rid' => (int) $lastRound['id']),
+            'c'
+        );
+        if ((int) $pendingMatches > 0) {
+            return false; // la ronda aún está en juego
+        }
+
         $nextNumber = (int) $lastRound['round_number'] + 1;
 
         // Ganadores de la última ronda (en winners)
@@ -943,7 +1060,7 @@ class PVPTournamentHelper
                     (int) $p['user_id'],
                     'Nueva ronda del torneo',
                     'La ronda ' . $nextNumber . ' del torneo #' . $tournamentId . ' ha comenzado.<br>'
-                    . '<a href="game.php?page=pvp&tab=tournaments">Ver bracket</a>'
+                    . '<a href="game.php?page=pvp&mode=tournaments">Ver bracket</a>'
                 );
             }
         }
@@ -987,22 +1104,47 @@ class PVPTournamentHelper
             $winner = self::determineMatchWinner((int) $m['id']);
 
             if ($winner === 'tie') {
-                // Empate → pasan los dos (no se elimina a nadie)
+                // ✅ v3.8 — Empate = ambos ELIMINADOS. El comentario decía
+                // "pasan los dos" pero el código no eliminaba a nadie ni los
+                // avanzaba: quedaban en `remaining` y cobraban premios
+                // (posiciones 2/3) sin haber ganado nada.
                 $db->update(
-                    "UPDATE %%PVP_TOURNAMENT_MATCHES%% SET `status` = 'finished', `resolved_at` = :now 
+                    "UPDATE %%PVP_TOURNAMENT_MATCHES%% SET `status` = 'finished', `resolved_at` = :now
                      WHERE `id` = :id;",
                     array(':now' => TIMESTAMP, ':id' => (int) $m['id'])
                 );
+                foreach (array((int) $m['player1_id'], (int) $m['player2_id']) as $tp) {
+                    if ($tp > 0) {
+                        $db->update(
+                            "UPDATE %%PVP_TOURNAMENT_PLAYERS%%
+                             SET `eliminated` = 1, `eliminated_round` = :rn
+                             WHERE `id` = :pid AND `eliminated` = 0;",
+                            array(':rn' => (int) $round['round_number'], ':pid' => $tp)
+                        );
+                    }
+                }
                 continue;
             }
 
             if ($winner === 0) {
-                // No hubo actividad → ambos eliminados
+                // No hubo actividad → ambos eliminados (✅ v3.8 — antes el
+                // comentario lo decía pero NO se eliminaba a nadie: quedaban
+                // en `remaining` cobrando premios).
                 $db->update(
-                    "UPDATE %%PVP_TOURNAMENT_MATCHES%% SET `status` = 'finished', `resolved_at` = :now 
+                    "UPDATE %%PVP_TOURNAMENT_MATCHES%% SET `status` = 'finished', `resolved_at` = :now
                      WHERE `id` = :id;",
                     array(':now' => TIMESTAMP, ':id' => (int) $m['id'])
                 );
+                foreach (array((int) $m['player1_id'], (int) $m['player2_id']) as $tp) {
+                    if ($tp > 0) {
+                        $db->update(
+                            "UPDATE %%PVP_TOURNAMENT_PLAYERS%%
+                             SET `eliminated` = 1, `eliminated_round` = :rn
+                             WHERE `id` = :pid AND `eliminated` = 0;",
+                            array(':rn' => (int) $round['round_number'], ':pid' => $tp)
+                        );
+                    }
+                }
                 continue;
             }
 
@@ -1055,30 +1197,10 @@ class PVPTournamentHelper
             array(':mid' => $matchId)
         );
 
-        $dmg = array($p1 => 0, $p2 => 0);
-        foreach ($rows as $r) {
-            $uid = (int) $r['attacker_id'];
-            if (isset($dmg[$uid])) {
-                $dmg[$uid] = (int) $r['total'];
-            }
-        }
-
-        // Los IDs aquí son de tournament_players.id, no user_id
-        // Obtener los user_ids reales
-        $playerRows = $db->select(
-            "SELECT `id`, `user_id`, `alliance_id` FROM %%PVP_TOURNAMENT_PLAYERS%% 
-             WHERE `id` IN (:p1, :p2) LIMIT 2;",
-            array(':p1' => $p1, ':p2' => $p2)
-        );
-
-        $userMap = array();
-        foreach ($playerRows as $pr) {
-            $userMap[(int) $pr['id']] = ((int) $pr['is_alliance'] === 1)
-                ? (int) $pr['alliance_id']
-                : (int) $pr['user_id'];
-        }
-
-        // Reducir daño a por usuario real
+        // ✅ v3.8 — Los attacker_id de pvp_tournament_attacks se remapean a
+        // tournament_players.id vía findPlayerIdByUser. (Eliminado el bloque
+        // muerto que precalculaba $dmg y $userMap sin usarlos — invitaba a
+        // restaurar la lógica equivocada.)
         $dmgReal = array();
         foreach ($rows as $r) {
             $uid = (int) $r['attacker_id'];
@@ -1131,11 +1253,20 @@ class PVPTournamentHelper
 
         // Eliminar al perdedor
         if ($loser > 0) {
+            // ✅ v3.8 — Guardar el NÚMERO de ronda: antes se guardaba
+            // `round_id` (autoincrement de pvp_tournament_rounds, desplazado
+            // entre torneos y con riesgo de overflow en la columna tinyint).
+            $roundNumber = (int) $db->selectSingle(
+                "SELECT `round_number` FROM %%PVP_TOURNAMENT_ROUNDS%% WHERE `id` = :rid LIMIT 1;",
+                array(':rid' => (int) $match['round_id']),
+                'round_number'
+            );
+
             $db->update(
-                "UPDATE %%PVP_TOURNAMENT_PLAYERS%% 
-                 SET `eliminated` = 1, `eliminated_round` = :r 
+                "UPDATE %%PVP_TOURNAMENT_PLAYERS%%
+                 SET `eliminated` = 1, `eliminated_round` = :r
                  WHERE `id` = :pid;",
-                array(':r' => (int) $match['round_id'], ':pid' => $loser)
+                array(':r' => $roundNumber, ':pid' => $loser)
             );
         }
 
@@ -1174,13 +1305,56 @@ class PVPTournamentHelper
         if (empty($t)) return false;
         if (in_array($t['status'], array('finished', 'cancelled'), true)) return false;
 
-        // Ganador = último match final resuelto
-        $lastMatch = $db->selectSingle(
-            "SELECT `winner_id` FROM %%PVP_TOURNAMENT_MATCHES%% 
-             WHERE `tournament_id` = :tid AND `bracket_type` = 'winners' AND `winner_id` > 0
-             ORDER BY `id` DESC LIMIT 1;",
+        // ✅ v3.8 — LOCK atómico de pago ANTES de repartir (rowCount) + pools
+        // a 0 en el mismo UPDATE: antes el guard era check-then-act y los
+        // pools nunca se ponían a 0 → dos invocaciones concurrentes pagaban
+        // TODO el pool DOS veces.
+        $db->update(
+            "UPDATE %%PVP_TOURNAMENTS%% SET
+                `status`      = 'finished',
+                `finished_at` = :now,
+                `pool_ntx20`  = 0,
+                `pool_untx20` = 0,
+                `prize_pool`  = 0
+             WHERE `id` = :tid AND `status` NOT IN ('finished','cancelled');",
+            array(':now' => TIMESTAMP, ':tid' => $tournamentId)
+        );
+
+        if ($db->rowCount() !== 1) {
+            return false; // otro proceso ya pagó este torneo
+        }
+
+        // ✅ v3.8 — Campeón = ganador del ÚLTIMO match de la ÚLTIMA ronda.
+        // Antes era ORDER BY id DESC global: si la final quedó empatada o sin
+        // actividad, coronaba y le pagaba al ganador de una semifinal anterior
+        // (por id arbitrario).
+        $lastRoundRow = $db->selectSingle(
+            "SELECT `id` FROM %%PVP_TOURNAMENT_ROUNDS%%
+             WHERE `tournament_id` = :tid
+             ORDER BY `round_number` DESC LIMIT 1;",
             array(':tid' => $tournamentId)
         );
+
+        $lastMatch = null;
+        if (!empty($lastRoundRow)) {
+            $lastMatch = $db->selectSingle(
+                "SELECT `winner_id` FROM %%PVP_TOURNAMENT_MATCHES%%
+                 WHERE `tournament_id` = :tid AND `round_id` = :rid
+                   AND `bracket_type` = 'winners' AND `winner_id` > 0
+                 ORDER BY `id` DESC LIMIT 1;",
+                array(':tid' => $tournamentId, ':rid' => (int) $lastRoundRow['id'])
+            );
+        }
+
+        if (empty($lastMatch) || (int) $lastMatch['winner_id'] <= 0) {
+            // Fallback: último ganador global (comportamiento anterior)
+            $lastMatch = $db->selectSingle(
+                "SELECT `winner_id` FROM %%PVP_TOURNAMENT_MATCHES%%
+                 WHERE `tournament_id` = :tid AND `bracket_type` = 'winners' AND `winner_id` > 0
+                 ORDER BY `id` DESC LIMIT 1;",
+                array(':tid' => $tournamentId)
+            );
+        }
 
         $winnerPlayerId = !empty($lastMatch) ? (int) $lastMatch['winner_id'] : 0;
 
@@ -1223,6 +1397,14 @@ class PVPTournamentHelper
                     $positions[$pos] = $r;
                 }
             }
+        }
+
+        // ✅ v3.8 — Fallback posición 1: si el campeón quedó eliminado o
+        // descalificado (o winnerPlayerId=0 con bracket lleno), asignar el
+        // primer `remaining` vivo para que el pool NO se destruya sin repartir
+        // (antes el foreach de premios hacía continue y nadie cobraba).
+        if (!isset($positions[1]) && !empty($remaining)) {
+            $positions[1] = $remaining[0];
         }
 
         // Entregar premios
@@ -1287,7 +1469,7 @@ class PVPTournamentHelper
                     '¡Premio de torneo!',
                     'Has ganado el puesto #' . $position . ' en el torneo #' . $tournamentId . '.<br>'
                     . 'Premio: ' . number_format($prize) . ' ' . $moneda . '.<br>'
-                    . '<a href="game.php?page=pvp&tab=tournaments">Ver torneo</a>'
+                    . '<a href="game.php?page=pvp&mode=tournaments">Ver torneo</a>'
                 );
             }
 
@@ -1297,12 +1479,9 @@ class PVPTournamentHelper
             }
         }
 
-        // Cerrar torneo
-        $db->update(
-            "UPDATE %%PVP_TOURNAMENTS%% SET `status` = 'finished', `finished_at` = :now WHERE `id` = :tid;",
-            array(':now' => TIMESTAMP, ':tid' => $tournamentId)
-        );
-
+        // ✅ v3.8 — El cierre del torneo ya se hizo con el lock atómico de
+        // arriba (status='finished' + pools a 0): el UPDATE final anterior
+        // permitía que una segunda invocación repartiera de nuevo.
         PVPHelper::log('tournament', $tournamentId, 'finished', 0, array(
             'pool_ntx20'  => $poolNtx,
             'pool_untx20' => $poolUntx,

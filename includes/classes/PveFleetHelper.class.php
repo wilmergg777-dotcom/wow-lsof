@@ -145,11 +145,21 @@ class PveFleetHelper
 			return null;
 		}
 
-		$sql = 'INSERT INTO %%FLEETS_EVENT%% SET fleetID = :fleetId, `time` = :endTime, `lock` = NULL;';
-		$db->insert($sql, array(
-			':fleetId' => $fleetId,
-			':endTime' => $fleetStartTime,
-		));
+		try {
+			$sql = 'INSERT INTO %%FLEETS_EVENT%% SET fleetID = :fleetId, `time` = :endTime, `lock` = NULL;';
+			$db->insert($sql, array(
+				':fleetId' => $fleetId,
+				':endTime' => $fleetStartTime,
+			));
+		} catch (Throwable $e) {
+			// ✅ v3.8 — Compensación: sin evento, FlyingFleetHandler nunca
+			// procesaría la oleada pirata (quedaría congelada para siempre y
+			// el planeta objetivo esperaría una crisis que nunca llega).
+			try {
+				$db->delete("DELETE FROM %%FLEETS%% WHERE fleet_id = :fid;", array(':fid' => (int) $fleetId));
+			} catch (Throwable $e2) {}
+			return null;
+		}
 
 		$sql = 'INSERT INTO %%LOG_FLEETS%% SET
 			fleet_id                    = :fleetId,
@@ -406,8 +416,14 @@ class PveFleetHelper
 		}
 
 		// Añadir usuario al ACS
-		$sql = "INSERT INTO %%USERS_ACS%% SET userID = :uid, acsID = :aid;";
-		$db->insert($sql, array(':uid' => $userId, ':aid' => $acsId));
+		// ✅ v3.8 — try/catch: dos joins concurrentes pasaban ambos el check
+		// y el INSERT duplicado (PK userID+acsID) reventaba sin control.
+		try {
+			$sql = "INSERT INTO %%USERS_ACS%% SET userID = :uid, acsID = :aid;";
+			$db->insert($sql, array(':uid' => $userId, ':aid' => $acsId));
+		} catch (Throwable $e) {
+			return array('success' => false, 'error' => 'Ya estás en este ACS.');
+		}
 
 		// ─── ✅ MENSAJE 2: Avisar al líder cuando alguien se une (solo si NO es el creador) ───
 		if (!$isNewAcs && $acsLeaderId > 0 && $acsLeaderId !== $userId) {
@@ -437,20 +453,36 @@ class PveFleetHelper
 		}
 
 		// Restar naves del planeta
+		// ✅ v3.8 — Descuento condicional en SQL (guard `col >= :n` + rowCount):
+		// antes la validación era check-then-act contra un snapshot sin lock y
+		// dos requests concurrentes restaban DOS veces (naves fantasma) o
+		// reventaban en STRICT con columnas unsigned.
 		$updateFields = array();
+		$guardFields  = array();
 		$params = array(':id' => $planetId);
 
 		foreach ($shipsToSend as $shipId => $count) {
 			$colName = $resource[$shipId];
 			$updateFields[] = "`$colName` = `$colName` - :col_$shipId";
+			$guardFields[]  = "`$colName` >= :g_$shipId";
 			$params[":col_$shipId"] = $count;
+			$params[":g_$shipId"]   = $count;
 		}
 
 		$updateFields[] = "`deuterium` = `deuterium` - :consumption";
+		$guardFields[]  = "`deuterium` >= :consumption";
 		$params[':consumption'] = $consumption;
 
-		$sql = "UPDATE %%PLANETS%% SET " . implode(', ', $updateFields) . " WHERE id = :id;";
+		$sql = "UPDATE %%PLANETS%% SET " . implode(', ', $updateFields) . "
+			WHERE id = :id AND " . implode(' AND ', $guardFields) . ";";
 		$db->update($sql, $params);
+
+		if ($db->rowCount() !== 1) {
+			return array('success' => false, 'error' => 'Ya no tienes esas naves o deuterio (otra flota salió antes).');
+		}
+
+		// ✅ v3.8 — A partir de aquí, cualquier fallo DEVUELVE naves+deuterio
+		// y limpia el ACS (antes el INSERT fallido dejaba todo perdido).
 
 		// Serializar naves
 		$fleetData = array();
@@ -492,38 +524,62 @@ class PveFleetHelper
 			fleet_mess                  = 0,
 			start_time                  = :timestamp;';
 
-		$db->insert($sql, array(
-			':owner'            => $userId,
-			':mission'          => MISSION_PVE_EMPIRE,
-			':fleetAmount'      => $fleetAmount,
-			':fleetArray'       => $fleetArrayStr,
-			':universe'         => (int) $planet['universe'],
-			':fleetStartTime'   => $fleetStartTime,
-			':fleetStayTime'    => $fleetStayTime,
-			':fleetEndTime'     => $fleetEndTime,
-			':planetId'         => $planetId,
-			':startGalaxy'      => (int) $planet['galaxy'],
-			':startSystem'      => (int) $planet['system'],
-			':startPlanet'      => (int) $planet['planet'],
-			':empireEndId'      => $endId,
-			':targetGalaxy'     => (int) $empire['galaxy'],
-			':targetSystem'     => (int) $empire['system'],
-			':targetPlanet'     => (int) $empire['planet'],
-			':acsId'            => $acsId,
-			':timestamp'        => TIMESTAMP,
-		));
+		try {
+			$db->insert($sql, array(
+				':owner'            => $userId,
+				':mission'          => MISSION_PVE_EMPIRE,
+				':fleetAmount'      => $fleetAmount,
+				':fleetArray'       => $fleetArrayStr,
+				':universe'         => (int) $planet['universe'],
+				':fleetStartTime'   => $fleetStartTime,
+				':fleetStayTime'    => $fleetStayTime,
+				':fleetEndTime'     => $fleetEndTime,
+				':planetId'         => $planetId,
+				':startGalaxy'      => (int) $planet['galaxy'],
+				':startSystem'      => (int) $planet['system'],
+				':startPlanet'      => (int) $planet['planet'],
+				':empireEndId'      => $endId,
+				':targetGalaxy'     => (int) $empire['galaxy'],
+				':targetSystem'     => (int) $empire['system'],
+				':targetPlanet'     => (int) $empire['planet'],
+				':acsId'            => $acsId,
+				':timestamp'        => TIMESTAMP,
+			));
+		} catch (Throwable $e) {
+			// ✅ v3.8 — Compensación: devolver naves+deuterio y limpiar ACS
+			self::refundAttackFleet($planetId, $shipsToSend, $consumption, $userId, $acsId, $isNewAcs);
+			PVEHelper::log('empire', $empireId, 'attack_fleet_insert_error', $userId, $planetId, array(
+				'error' => $e->getMessage(),
+			));
+			return array('success' => false, 'error' => 'Error al crear la flota (las naves fueron devueltas).');
+		}
 
 		$fleetId = $db->lastInsertId();
 
 		if (empty($fleetId)) {
-			return array('success' => false, 'error' => 'Error al crear la flota.');
+			self::refundAttackFleet($planetId, $shipsToSend, $consumption, $userId, $acsId, $isNewAcs);
+			return array('success' => false, 'error' => 'Error al crear la flota (las naves fueron devueltas).');
 		}
 
-		$sql = 'INSERT INTO %%FLEETS_EVENT%% SET fleetID = :fleetId, `time` = :endTime, `lock` = NULL;';
-		$db->insert($sql, array(
-			':fleetId' => $fleetId,
-			':endTime' => $fleetStartTime,
-		));
+		try {
+			$sql = 'INSERT INTO %%FLEETS_EVENT%% SET fleetID = :fleetId, `time` = :endTime, `lock` = NULL;';
+			$db->insert($sql, array(
+				':fleetId' => $fleetId,
+				':endTime' => $fleetStartTime,
+			));
+		} catch (Throwable $e) {
+			// ✅ v3.8 — Sin evento, FlyingFleetHandler nunca procesaría la
+			// flota (quedaría congelada para siempre): compensar borrándola
+			// y devolviendo las naves.
+			try {
+				$db->delete("DELETE FROM %%FLEETS%% WHERE fleet_id = :fid;", array(':fid' => (int) $fleetId));
+			} catch (Throwable $e2) {}
+			self::refundAttackFleet($planetId, $shipsToSend, $consumption, $userId, $acsId, $isNewAcs);
+			PVEHelper::log('empire', $empireId, 'attack_event_insert_error', $userId, $planetId, array(
+				'error' => $e->getMessage(),
+			));
+			return array('success' => false, 'error' => 'Error al programar la flota (las naves fueron devueltas).');
+		}
 
 		$sql = 'INSERT INTO %%LOG_FLEETS%% SET
 			fleet_id                    = :fleetId,
@@ -743,6 +799,16 @@ class PveFleetHelper
 				$userId = (int) $userId;
 				if ($userId <= 0 || $userId === $invitedBy) continue;
 
+				// ✅ v3.8 — Validar que el invitado EXISTE y es del mismo
+				// universo (el caso 'ally' ya lo filtraba): antes IDs
+				// arbitrarios creaban invitaciones fantasma y mensajes a
+				// usuarios inexistentes.
+				$validUser = $db->selectSingle(
+					"SELECT id FROM %%USERS%% WHERE id = :uid AND universe = :uni LIMIT 1;",
+					array(':uid' => $userId, ':uni' => Universe::current())
+				);
+				if (empty($validUser)) continue;
+
 				$sql = "SELECT id FROM %%PVE_ACS_INVITES%% 
 				        WHERE acs_id = :acsId AND invited_user_id = :uid 
 				        LIMIT 1;";
@@ -890,9 +956,18 @@ class PveFleetHelper
 		}
 
 		$db->update(
-			"UPDATE %%PVE_ACS_INVITES%% SET status = 'accepted', responded_at = :now WHERE id = :id;",
-			array(':now' => TIMESTAMP, ':id' => $inviteId)
+			"UPDATE %%PVE_ACS_INVITES%% SET status = 'accepted', responded_at = :now
+			 WHERE id = :id AND invited_user_id = :uid AND status = 'pending';",
+			array(':now' => TIMESTAMP, ':id' => $inviteId, ':uid' => $userId)
 		);
+
+		// ✅ v3.8 — rowCount: solo el proceso que REALMENTE cambió el estado
+		// obtiene el ACS. Antes dos peticiones simultáneas aceptaban la misma
+		// invitación, y una rechazada entre el SELECT y el UPDATE igual se
+		// aceptaba (el UPDATE no exigía status='pending').
+		if ($db->rowCount() !== 1) {
+			return null;
+		}
 
 		return (int) $invite['acs_id'];
 	}
@@ -1031,7 +1106,7 @@ class PveFleetHelper
 			fleet_end_galaxy            = :targetGalaxy,
 			fleet_end_system            = :targetSystem,
 			fleet_end_planet            = :targetPlanet,
-			fleet_end_type              = 1,
+			fleet_end_type              = :endType,
 			fleet_resource_metal        = 0,
 			fleet_resource_crystal      = 0,
 			fleet_resource_deuterium    = 0,
@@ -1041,6 +1116,9 @@ class PveFleetHelper
 			fleet_mess                  = 0,
 			start_time                  = :timestamp;';
 
+		// ✅ v3.8 — fleet_end_type del PLANETA real (1=planeta, 3=luna): antes
+		// se hardcodeaba a 1 y un contrataque a una luna aterrizaba mal
+		// (misión 22 con tipo equivocado).
 		$db->insert($sql, array(
 			':targetOwner'      => (int) $targetUserId,
 			':mission'          => MISSION_PVE_COUNTER,
@@ -1058,6 +1136,7 @@ class PveFleetHelper
 			':targetGalaxy'     => (int) $targetPlanet['galaxy'],
 			':targetSystem'     => (int) $targetPlanet['system'],
 			':targetPlanet'     => (int) $targetPlanet['planet'],
+			':endType'          => (int) $targetPlanet['planet_type'],
 			':timestamp'        => TIMESTAMP,
 		));
 
@@ -1067,11 +1146,20 @@ class PveFleetHelper
 			return null;
 		}
 
-		$sql = 'INSERT INTO %%FLEETS_EVENT%% SET fleetID = :fleetId, `time` = :endTime, `lock` = NULL;';
-		$db->insert($sql, array(
-			':fleetId' => $fleetId,
-			':endTime' => $fleetStartTime,
-		));
+		try {
+			$sql = 'INSERT INTO %%FLEETS_EVENT%% SET fleetID = :fleetId, `time` = :endTime, `lock` = NULL;';
+			$db->insert($sql, array(
+				':fleetId' => $fleetId,
+				':endTime' => $fleetStartTime,
+			));
+		} catch (Throwable $e) {
+			// ✅ v3.8 — Compensación: borrar la flota sin evento (quedaría
+			// congelada para siempre en la cola de flotas).
+			try {
+				$db->delete("DELETE FROM %%FLEETS%% WHERE fleet_id = :fid;", array(':fid' => (int) $fleetId));
+			} catch (Throwable $e2) {}
+			return null;
+		}
 
 		$sql = 'INSERT INTO %%LOG_FLEETS%% SET
 			fleet_id                    = :fleetId,
@@ -1129,6 +1217,53 @@ class PveFleetHelper
 	/* ============================================================
 	 *  UTILIDADES
 	 * ============================================================ */
+
+	/**
+	 * ✅ v3.8 — Compensación de sendEmpireAttackFleet: devuelve las naves y
+	 * el deuterio al planeta de origen y limpia la membresía del ACS (y el
+	 * propio ACS si era nuevo). Best-effort: nunca lanza.
+	 */
+	private static function refundAttackFleet(int $planetId, array $shipsToSend, int $consumption, int $userId, int $acsId, bool $isNewAcs): void
+	{
+		global $resource;
+		$db = Database::get();
+
+		try {
+			$updateFields = array();
+			$params = array(':id' => $planetId);
+			foreach ($shipsToSend as $shipId => $count) {
+				$colName = isset($resource[$shipId]) ? $resource[$shipId] : '';
+				if ($colName === '' || $count <= 0) continue;
+				$updateFields[] = "`$colName` = `$colName` + :col_$shipId";
+				$params[":col_$shipId"] = (int) $count;
+			}
+			if ($consumption > 0) {
+				$updateFields[] = "`deuterium` = `deuterium` + :consumption";
+				$params[':consumption'] = (int) $consumption;
+			}
+			if (!empty($updateFields)) {
+				$db->update(
+					"UPDATE %%PLANETS%% SET " . implode(', ', $updateFields) . " WHERE id = :id;",
+					$params
+				);
+			}
+		} catch (Throwable $e) {}
+
+		try {
+			if ($acsId > 0) {
+				$db->delete(
+					"DELETE FROM %%USERS_ACS%% WHERE userID = :uid AND acsID = :aid;",
+					array(':uid' => $userId, ':aid' => $acsId)
+				);
+			}
+			if ($isNewAcs && $acsId > 0) {
+				$db->delete(
+					"DELETE FROM %%AKS%% WHERE id = :aid;",
+					array(':aid' => $acsId)
+				);
+			}
+		} catch (Throwable $e) {}
+	}
 
 	/**
 	 * Helper para enviar mensajes internos SIN emojis 4-byte

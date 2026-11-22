@@ -212,37 +212,64 @@ class PVEAchievementHelper
 		$now = TIMESTAMP;
 
 		if (empty($row)) {
-			$db->insert(
-				"INSERT INTO %%PVE_ACHIEVEMENTS%% SET
-					user_id              = :uid,
-					consecutive_months   = :consec,
-					total_months         = :total,
-					last_survived_month  = :month,
-					updated_at           = :now;",
-				array(
-					':uid'    => $userId,
-					':consec' => $consecutive,
-					':total'  => $total,
-					':month'  => $currentMonth,
-					':now'    => $now,
-				)
-			);
-		} else {
+			try {
+				$db->insert(
+					"INSERT INTO %%PVE_ACHIEVEMENTS%% SET
+						user_id              = :uid,
+						consecutive_months   = :consec,
+						total_months         = :total,
+						last_survived_month  = :month,
+						updated_at           = :now;",
+					array(
+						':uid'    => $userId,
+						':consec' => $consecutive,
+						':total'  => $total,
+						':month'  => $currentMonth,
+						':now'    => $now,
+					)
+				);
+			} catch (Throwable $eDup) {
+				// ✅ v3.8 — Carrera: otro proceso ya creó la fila → caer a la
+				// vía UPDATE condicional de abajo (en vez de reventar).
+			}
+		}
+
+		if (!empty($row) || !empty($eDup ?? null)) {
+			// ✅ v3.8 — Guard anti-doble: `last_survived_month <> :mes` hace
+			// que solo el PRIMER proceso del mes cuente. Antes dos cierres de
+			// crisis concurrentes para el mismo usuario incrementaban
+			// consecutive_months/total_months dos veces.
 			$db->update(
 				"UPDATE %%PVE_ACHIEVEMENTS%% SET
 					consecutive_months   = :consec,
 					total_months         = :total,
 					last_survived_month  = :month,
 					updated_at           = :now
-				WHERE user_id = :uid;",
+				WHERE user_id = :uid AND last_survived_month <> :month2;",
 				array(
 					':uid'    => $userId,
 					':consec' => $consecutive,
 					':total'  => $total,
 					':month'  => $currentMonth,
+					':month2' => $currentMonth,
 					':now'    => $now,
 				)
 			);
+
+			if ($db->rowCount() !== 1) {
+				// Otro proceso ya registró este mes → devolver el estado real
+				$row2 = $db->selectSingle(
+					"SELECT consecutive_months, total_months FROM %%PVE_ACHIEVEMENTS%% WHERE user_id = :uid LIMIT 1;",
+					array(':uid' => $userId)
+				);
+				$c = !empty($row2) ? (int) $row2['consecutive_months'] : $consecutive;
+				$t = !empty($row2) ? (int) $row2['total_months'] : $total;
+				return array(
+					'consecutive'    => $c,
+					'total'          => $t,
+					'newly_unlocked' => array(),
+				);
+			}
 		}
 
 		$newlyUnlocked = self::checkSurvivalAchievements($userId, $consecutive);
@@ -357,38 +384,27 @@ class PVEAchievementHelper
 			return array();
 		}
 
-		$exists = $db->selectSingle(
-			"SELECT user_id FROM %%PVE_ACHIEVEMENTS%% WHERE user_id = :uid LIMIT 1;",
-			array(':uid' => $userId)
-		);
-
 		$now = TIMESTAMP;
 
-		if (empty($exists)) {
-			$db->insert(
-				"INSERT INTO %%PVE_ACHIEVEMENTS%% SET
-					user_id      = :uid,
-					`$column`    = :val,
-					updated_at   = :now;",
-				array(
-					':uid' => $userId,
-					':val' => $amount,
-					':now' => $now,
-				)
-			);
-		} else {
-			$db->update(
-				"UPDATE %%PVE_ACHIEVEMENTS%% SET
-					`$column`  = `$column` + :val,
-					updated_at = :now
-				WHERE user_id = :uid;",
-				array(
-					':uid' => $userId,
-					':val' => $amount,
-					':now' => $now,
-				)
-			);
-		}
+		// ✅ v3.8 — UPSERT atómico en una sola sentencia: antes era
+		// check-then-act y dos procesos que inicializaban al mismo usuario
+		// lanzaban duplicate-key SIN capturar (abortaba a mitad de resolución
+		// en recordBossKill/recordBossDamage del torneo). La tabla tiene
+		// UNIQUE uk_user(user_id) → ON DUPLICATE KEY UPDATE es seguro.
+		$db->insert(
+			"INSERT INTO %%PVE_ACHIEVEMENTS%% SET
+				user_id      = :uid,
+				`$column`    = :val,
+				updated_at   = :now
+			ON DUPLICATE KEY UPDATE
+				`$column`    = `$column` + :val,
+				updated_at   = :now;",
+			array(
+				':uid' => $userId,
+				':val' => $amount,
+				':now' => $now,
+			)
+		);
 
 		if ($type === 'tournament') {
 			return self::checkTournamentAchievements($userId);
@@ -606,14 +622,24 @@ class PVEAchievementHelper
 		}
 
 		try {
+			// ✅ v3.8 — Flag condicional + rowCount: solo el primer proceso
+			// que desbloquea el logro acredita la DM. Antes el UPDATE era
+			// incondicional: dos procesos concurrentes pasaban ambos el
+			// check de la bandera y daban la DM DOS veces.
 			$db->update(
 				"UPDATE %%PVE_ACHIEVEMENTS%% SET
 					`" . $ach['field_flag'] . "` = 1,
 					`" . $ach['field_date'] . "` = :now,
 					updated_at = :now
-				WHERE user_id = :uid;",
+				WHERE user_id = :uid
+				  AND (`" . $ach['field_flag'] . "` IS NULL OR `" . $ach['field_flag'] . "` = 0);",
 				array(':now' => $now, ':uid' => $userId)
 			);
+
+			if ($db->rowCount() !== 1) {
+				// Ya estaba concedido (por este u otro proceso)
+				return false;
+			}
 
 			// ═════════════════════════════════════════════════════════
 			// MATERIA OSCURA — recurso universal, NO depende del riel

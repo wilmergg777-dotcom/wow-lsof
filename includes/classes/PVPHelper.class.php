@@ -262,7 +262,10 @@ class PVPHelper
                     `config_value` = VALUES(`config_value`),
                     `updated_at`   = VALUES(`updated_at`);";
 
-        $db->update($sql, array(
+        // ✅ v3.8 — insert(): la query empieza por INSERT y Database::update()
+        // valida el tipo con getQueryType() → lanzaba "Incorrect Update Query"
+        // siempre que se llamara (método inservible desde el día 1).
+        $db->insert($sql, array(
             ':key'   => $key,
             ':value' => (string) $value,
             ':now'   => TIMESTAMP,
@@ -422,6 +425,13 @@ class PVPHelper
             $sql = "UPDATE %%USERS%% SET `ntx20` = `ntx20` - :n
                     WHERE `id` = :uid AND `ntx20` >= :n;";
             $db->update($sql, array(':n' => $amount, ':uid' => $userId));
+
+            // ✅ v3.8 — rowCount: el guard SQL puede dejar el UPDATE en 0 filas
+            // si un request concurrente ya gastó el saldo → devolver false,
+            // no true (antes inscripciones sin pago efectivo).
+            if ($db->rowCount() !== 1) {
+                return false;
+            }
 
             if (isset($GLOBALS['USER']['id']) && (int) $GLOBALS['USER']['id'] === $userId) {
                 $GLOBALS['USER']['ntx20'] = max(0, (int) $GLOBALS['USER']['ntx20'] - $amount);
@@ -594,6 +604,13 @@ class PVPHelper
                     WHERE `id` = :uid AND `" . $col . "` >= :n;";
             $db->update($sql, array(':n' => $realAmount, ':uid' => $userId));
 
+            // ✅ v3.8 — rowCount: el guard SQL puede dejar el UPDATE en 0 filas
+            // si otro request concurrente ya gastó el saldo → inscripción
+            // SIN pago efectivo. Ahora devuelve false.
+            if ($db->rowCount() !== 1) {
+                return false;
+            }
+
             // Refrescar sesión global
             if (isset($GLOBALS['USER']['id']) && (int) $GLOBALS['USER']['id'] === $userId) {
                 $GLOBALS['USER'][$col] = max(0, ((int) ($GLOBALS['USER'][$col] ?? 0)) - $realAmount);
@@ -715,7 +732,11 @@ class PVPHelper
 
             if (empty($bank)) {
                 $now = time();
-                $db->update(
+                // ✅ v3.8 — insert() (antes update() con un INSERT: lanzaba
+                // "Incorrect Update Query" y el catch devolvía false → las
+                // alianzas SIN fila de banco nunca recibían premios ni
+                // reembolsos aunque el dinero ya se había cobrado a los jugadores).
+                $db->insert(
                     "INSERT INTO `" . $p . "alliance_bank`
                         (`alliance_id`, `metal`, `crystal`, `deuterium`, `darkmatter`,
                          `ntx20`, `untx20`, `level`, `daily_limit`, `tesorero_id`,
@@ -843,7 +864,10 @@ class PVPHelper
     {
         try {
             $db   = Database::get();
-            $sql  = "SELECT `id` FROM %%USERS%% WHERE `authlevel` >= 0;";
+            // ✅ v3.8 — Excluir cuentas fantasma PVE (is_pve=1, IDs >= 900000000):
+            // antes recibían/contaban como destinatarios y se les iteraba igual.
+            $sql  = "SELECT `id` FROM %%USERS%% WHERE `authlevel` >= 0
+                     AND `id` < 900000000 AND `is_pve` = 0;";
             $rows = $db->select($sql);
 
             if (empty($rows)) {

@@ -124,10 +124,17 @@ class PVEBastionWaveHelper
                 }
 
                 // Tiempo de vuelo aleatorio
-                $flightMin = random_int(
-                    max(1, (int) PVEHelper::get('bastion_pirate_flight_min', 30)),
-                    max(1, (int) PVEHelper::get('bastion_pirate_flight_max', 90))
-                );
+                // ✅ v3.8 — Normalizar min/max ANTES de random_int: si un admin
+                // configura flight_min=120 y flight_max=30, random_int(120,30)
+                // lanza ValueError y next_wave_at nunca se reprograma (el cron
+                // reintenta cada 5 min para siempre). Mismo patrón que
+                // PveFleetHelper::sendCrisisFleet().
+                $flightMinC = max(1, (int) PVEHelper::get('bastion_pirate_flight_min', 30));
+                $flightMaxC = max(1, (int) PVEHelper::get('bastion_pirate_flight_max', 90));
+                if ($flightMaxC < $flightMinC) {
+                    $flightMaxC = $flightMinC;
+                }
+                $flightMin = random_int($flightMinC, $flightMaxC);
                 $arrivalTime = $now + ($flightMin * 60);
 
                 // Crear row de wave (pending)
@@ -187,14 +194,9 @@ class PVEBastionWaveHelper
                         )
                     );
 
-                    // Contador global del evento
-                    // ★ v1.1 — Fix: antes era un no-op (SET x = x). Ahora incrementa correctamente.
-                    $db->update(
-                        "UPDATE %%PVE_BASTION_EVENT%% SET
-                            total_waves_resolved = total_waves_resolved + 1
-                         WHERE id = :id;",
-                        array(':id' => $eventId)
-                    );
+                    // ✅ v3.8 — total_waves_resolved ya NO se incrementa aquí
+                    // (contaba waves CREADAS); ahora se incrementa en
+                    // resolveWaveArrival al realmente resolverlas.
 
                     PVEHelper::log(self::LOG_TYPE, $eventId, 'wave_spawned', 0, 0, array(
                         'wave_id'     => $waveId,
@@ -207,6 +209,10 @@ class PVEBastionWaveHelper
                     ));
                 } else {
                     // No se pudo enviar la flota — marcar como fallida
+                    // ✅ v3.8 — Reprogramar next_wave_at AUNQUE falle el envío:
+                    // antes solo se hacía en el branch de éxito, así que un
+                    // fallo persistente dejaba el cron reintentando cada 5 min
+                    // sin reprogramar y el bastión dejaba de recibir oleadas.
                     $db->update(
                         "UPDATE %%PVE_BASTION_WAVES%% SET
                             resolved    = 1,
@@ -214,6 +220,11 @@ class PVEBastionWaveHelper
                             resolved_at = :now
                          WHERE id = :id;",
                         array(':now' => $now, ':id' => $waveId)
+                    );
+                    $db->update(
+                        "UPDATE %%PVE_BASTION_GHOSTS%% SET next_wave_at = :next
+                         WHERE id = :id;",
+                        array(':next' => $now + 300, ':id' => (int) $ghost['id'])
                     );
                     $stats['errors']++;
 
@@ -228,6 +239,15 @@ class PVEBastionWaveHelper
                     'error'    => $e->getMessage(),
                 ));
                 $stats['errors']++;
+
+                // ✅ v3.8 — Reintentos acotados: reprogramar también en error
+                try {
+                    $db->update(
+                        "UPDATE %%PVE_BASTION_GHOSTS%% SET next_wave_at = :next
+                         WHERE id = :id;",
+                        array(':next' => TIMESTAMP + 300, ':id' => (int) $ghost['id'])
+                    );
+                } catch (Throwable $e2) {}
             }
         }
 
@@ -275,6 +295,36 @@ class PVEBastionWaveHelper
             $result['result'] = $wave['result'];
             return $result;
         }
+
+        // ✅ v3.8 — CLAIM atómico: marcar resolved=1 ANTES de resolver el
+        // combate. El check anterior era check-then-act: dos procesos
+        // (doble llegada de flota / cron solapado) pasaban ambos el check
+        // y ejecutaban combate+reparto DOS veces (kills, DM y logros dobles).
+        $db->update(
+            "UPDATE %%PVE_BASTION_WAVES%% SET resolved = 1
+             WHERE id = :id AND resolved = 0;",
+            array(':id' => $waveId)
+        );
+        if ($db->rowCount() !== 1) {
+            // Otro proceso ganó el claim
+            $waveNow = $db->selectSingle(
+                "SELECT result FROM %%PVE_BASTION_WAVES%% WHERE id = :id;",
+                array(':id' => $waveId)
+            );
+            $result['ok']     = true;
+            $result['result'] = !empty($waveNow) ? $waveNow['result'] : 'pending';
+            return $result;
+        }
+
+        // ✅ v3.8 — Contador del evento movido AQUÍ (antes se incrementaba al
+        // CREAR la wave, con lo que "total_waves_resolved" contaba creadas,
+        // no resueltas).
+        $db->update(
+            "UPDATE %%PVE_BASTION_EVENT%% SET
+                total_waves_resolved = total_waves_resolved + 1
+             WHERE id = :id;",
+            array(':id' => (int) $wave['event_id'])
+        );
 
         $event = PVEBastionHelper::getEvent((int) $wave['event_id']);
         if (empty($event)) return $result;
@@ -351,6 +401,18 @@ class PVEBastionWaveHelper
         // Aplicar daño al HP del bastión
         $applyResult = PVEBastionHelper::applyPirateDamageToBastion((int) $ghost['id'], $damageToBastion);
 
+        // ✅ v3.8 — Releer el HP real tras aplicar el daño: $ghost se cargó
+        // ANTES del combate y el mensaje final mostraba un HP desactualizado
+        // (podía decir "HP > 0" en un bastión que ya cayó).
+        $freshGhost = $db->selectSingle(
+            "SELECT hp_current, hp_max, status, phase FROM %%PVE_BASTION_GHOSTS%%
+             WHERE id = :id LIMIT 1;",
+            array(':id' => (int) $ghost['id'])
+        );
+        if (!empty($freshGhost)) {
+            foreach ($freshGhost as $k => $v) { $ghost[$k] = $v; }
+        }
+
         $result['ok']                = true;
         $result['pirates_killed']    = $piratesKilled;
         $result['pirates_survived']  = $piratesSurvived;
@@ -377,7 +439,8 @@ class PVEBastionWaveHelper
             $piratesKilled,
             $piratesSurvived,
             $defendersLost,
-            (int) $wave['is_boss_wave'] === 1
+            (int) $wave['is_boss_wave'] === 1,
+            $result['result']
         );
 
         // ═══════════════════════════════════════════════════════════
@@ -597,6 +660,12 @@ class PVEBastionWaveHelper
         $columnMap = PVEGhostHelper::$columnMap;
 
         foreach ($columnMap as $unitId => $colName) {
+            // ✅ v3.8 — SOLO naves (200-299) y defensas/missiles (400-599):
+            // $columnMap también incluye EDIFICIOS (1 => metal_mine …), pero
+            // $survivingUnits del combate nunca contiene edificios → el bucle
+            // anterior ejecutaba `SET metal_mine = 0, …` y BORRABA toda la
+            // infraestructura del planeta bastión tras la primera oleada.
+            if ((int) $unitId < 200 || (int) $unitId > 599) continue;
             if (!in_array($colName, $realCols, true)) continue;
 
             $value = isset($survivingUnits[$unitId]) ? (int) $survivingUnits[$unitId] : 0;
@@ -635,7 +704,8 @@ class PVEBastionWaveHelper
         int $piratesKilled,
         int $piratesSurvived,
         int $defendersLost,
-        bool $isBoss
+        bool $isBoss,
+        string $waveResult = 'partial'
     ): void {
         if ($piratesKilled <= 0 && $defendersLost <= 0) return;
 
@@ -742,17 +812,20 @@ class PVEBastionWaveHelper
             }
 
             // Actualizar contadores de la registración
+            // ✅ v3.8 — waves_survived SOLO si el bastión no cayó en esta
+            // oleada (antes se incrementaba también con result='breached').
             $db->update(
                 "UPDATE %%PVE_BASTION_REGISTRATIONS%% SET
                     pirates_killed      = pirates_killed + :pk,
                     boss_pirates_killed = boss_pirates_killed + :bpk,
-                    waves_survived      = waves_survived + 1,
+                    waves_survived      = waves_survived + :ws,
                     waves_total         = waves_total + 1,
                     last_hit            = :now
                  WHERE id = :rid;",
                 array(
                     ':pk'  => $piratesKilled,
                     ':bpk' => ($bossKillForId > 0) ? 1 : 0,
+                    ':ws'  => ($waveResult === 'breached') ? 0 : 1,
                     ':now' => TIMESTAMP,
                     ':rid' => $registrationId,
                 )

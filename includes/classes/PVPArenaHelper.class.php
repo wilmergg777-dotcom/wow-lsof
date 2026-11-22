@@ -369,28 +369,57 @@ class PVPArenaHelper
         $moneda  = PVPHelper::getCurrencyLabel($userId);
         $isIntl  = ($riel === 'QVAPAY');
 
+        // ✅ v3.8 — GATE atómico de cupo ANTES de cobrar: el check previo era
+        // lectura obsoleta — dos joins concurrentes superaban `max_players` y
+        // ambos calculaban el mismo equipo (3 en un equipo de 2v2). El UPDATE
+        // condicional reclama el cupo (rowCount) y falla si está lleno.
+        $db->update(
+            "UPDATE %%PVP_ARENAS%% SET `current_players` = `current_players` + 1
+             WHERE `id` = :aid AND `status` = 'waiting' AND `current_players` < `max_players`;",
+            array(':aid' => $arenaId)
+        );
+        if ($db->rowCount() !== 1) {
+            return array('ok' => false, 'msg' => 'La arena está llena o ya no acepta jugadores.');
+        }
+
+        $releaseSlot = function () use ($db, $arenaId) {
+            // ✅ v3.8 — Devolver el cupo reclamado si algo falla después
+            try {
+                $db->update(
+                    "UPDATE %%PVP_ARENAS%% SET `current_players` = `current_players` - 1
+                     WHERE `id` = :aid AND `current_players` > 0;",
+                    array(':aid' => $arenaId)
+                );
+            } catch (Throwable $e) {}
+        };
+
         // Fee en BASE NTX-20 (guardado en la arena)
         $feeBase  = (int) $arena['entry_fee'];
         $realPaid = self::getRealPaidByPlayer($feeBase, $userId);
 
         // Verificar saldo en su riel
         if (!PVPHelper::hasBalance($userId, $feeBase)) {
+            $releaseSlot();
             return array('ok' => false, 'msg' => 'No tienes suficientes ' . $moneda . '. Necesitas ' . number_format($realPaid) . '.');
         }
 
         // Descontar del riel correcto (removeBalance loguea NTX20 solo si CUP)
         if (!PVPHelper::removeBalance($userId, $feeBase, 'pvp_arena_join', 'Entrada arena #' . $arenaId)) {
+            $releaseSlot();
             return array('ok' => false, 'msg' => 'No se pudo descontar la entrada.');
         }
 
         $now      = TIMESTAMP;
         $teamSize = PVPHelper::getModeTeamSize($arena['mode']);
-        $newCount = (int) $arena['current_players'] + 1;
-        $team     = 0; // equipo 0 = primeros
 
-        if ($newCount > $teamSize) {
-            $team = 1; // equipo 1 = segundos
-        }
+        // ✅ v3.8 — Equipo calculado por COUNT real (no por el contador
+        // obsoleto): primeros teamSize jugadores → equipo 0, resto → 1.
+        $playersSoFar = (int) $db->selectSingle(
+            "SELECT COUNT(*) AS c FROM %%PVP_ARENA_PLAYERS%% WHERE `arena_id` = :aid;",
+            array(':aid' => $arenaId),
+            'c'
+        );
+        $team = ($playersSoFar < $teamSize) ? 0 : 1;
 
         // Insertar
         try {
@@ -410,22 +439,20 @@ class PVPArenaHelper
                 )
             );
 
-            // Actualizar pools separados + count
+            // Actualizar pools separados (el cupo YA se reclamó en el gate)
             if ($isIntl) {
                 $db->update(
-                    "UPDATE %%PVP_ARENAS%% 
+                    "UPDATE %%PVP_ARENAS%%
                      SET `pool_untx20`     = `pool_untx20` + :real,
-                         `prize_pool`      = `prize_pool` + :real2,
-                         `current_players` = `current_players` + 1
+                         `prize_pool`      = `prize_pool` + :real2
                      WHERE `id` = :aid;",
                     array(':real' => $realPaid, ':real2' => $realPaid, ':aid' => $arenaId)
                 );
             } else {
                 $db->update(
-                    "UPDATE %%PVP_ARENAS%% 
+                    "UPDATE %%PVP_ARENAS%%
                      SET `pool_ntx20`      = `pool_ntx20` + :real,
-                         `prize_pool`      = `prize_pool` + :real2,
-                         `current_players` = `current_players` + 1
+                         `prize_pool`      = `prize_pool` + :real2
                      WHERE `id` = :aid;",
                     array(':real' => $realPaid, ':real2' => $realPaid, ':aid' => $arenaId)
                 );
@@ -446,7 +473,8 @@ class PVPArenaHelper
 
             return array('ok' => true, 'msg' => 'Te uniste a la arena #' . $arenaId . '.');
         } catch (Exception $e) {
-            // Devolver en su riel
+            // ✅ v3.8 — Devolver en su riel + devolver el cupo reclamado
+            $releaseSlot();
             PVPHelper::addRealAmount($userId, $realPaid, $riel, 'pvp_arena_refund', 'Error al unirse');
             if (!$isIntl) {
                 self::logNtx20($userId, +$realPaid, 'earn_pvp_arena', 'Reembolso arena #' . $arenaId . ' (error al unirse)', (int) $arenaId);
@@ -484,9 +512,22 @@ class PVPArenaHelper
             return array('ok' => false, 'msg' => 'Solo puedes cancelar antes de que arranque.');
         }
 
+        // ✅ v3.8 — Lock atómico ANTES de reembolsar: solo el primer proceso
+        // cancela (rowCount). Antes un doble click (o cron + usuario) pasaban
+        // ambos el check de estado y reembolsaban DOS veces.
+        $db->update(
+            "UPDATE %%PVP_ARENAS%% SET `status` = 'cancelled', `finished_at` = :now
+             WHERE `id` = :aid AND `status` = 'waiting';",
+            array(':now' => TIMESTAMP, ':aid' => $arenaId)
+        );
+        if ($db->rowCount() !== 1) {
+            return array('ok' => false, 'msg' => 'La arena ya no puede cancelarse.');
+        }
+
         // Devolver a cada jugador en su riel
         $players  = self::getArenaPlayers($arenaId);
         $feeBase  = (int) $arena['entry_fee'];
+        $refunded = 0;
 
         foreach ($players as $p) {
             $puid = (int) $p['user_id'];
@@ -494,26 +535,23 @@ class PVPArenaHelper
                 $rielP     = PVPHelper::getPlayerMethod($puid);
                 $realPaid  = self::getRealPaidByPlayer($feeBase, $puid);
 
-                PVPHelper::addRealAmount($puid, $realPaid, $rielP, 'pvp_arena_refund', 'Arena #' . $arenaId . ' cancelada');
-
-                if ($rielP === 'CUP') {
-                    self::logNtx20($puid, +$realPaid, 'earn_pvp_arena', 'Reembolso arena #' . $arenaId . ' cancelada', (int) $arenaId);
+                // ✅ v3.8 — Contar solo reembolsos reales (si addRealAmount
+                // falla, el jugador no cobró pero antes contaba igual)
+                if (PVPHelper::addRealAmount($puid, $realPaid, $rielP, 'pvp_arena_refund', 'Arena #' . $arenaId . ' cancelada')) {
+                    $refunded++;
+                    if ($rielP === 'CUP') {
+                        self::logNtx20($puid, +$realPaid, 'earn_pvp_arena', 'Reembolso arena #' . $arenaId . ' cancelada', (int) $arenaId);
+                    }
                 }
             }
         }
 
-        // Marcar como cancelada
-        $db->update(
-            "UPDATE %%PVP_ARENAS%% SET `status` = 'cancelled', `finished_at` = :now WHERE `id` = :aid;",
-            array(':now' => TIMESTAMP, ':aid' => $arenaId)
-        );
-
         PVPHelper::log('arena', $arenaId, 'cancelled', $userId, array(
-            'refunded_players' => count($players),
+            'refunded_players' => $refunded,
             'fee_base'         => $feeBase,
         ));
 
-        return array('ok' => true, 'msg' => 'Arena cancelada. Se devolvió la entrada a ' . count($players) . ' jugador(es).');
+        return array('ok' => true, 'msg' => 'Arena cancelada. Se devolvió la entrada a ' . $refunded . ' jugador(es).');
     }
 
 
@@ -574,7 +612,7 @@ class PVPArenaHelper
                 'La arena #' . $arenaId . ' (' . $arena['mode'] . ') ha comenzado.<br>'
                 . 'Duración: ' . round($duration / 3600) . ' horas.<br>'
                 . 'Bote de tu riel: ' . number_format($poolP) . ' ' . $monedaP . '.<br>'
-                . '<a href="game.php?page=pvp&tab=arenas">Ir a la arena</a>'
+                . '<a href="game.php?page=pvp&mode=arenas">Ir a la arena</a>'
             );
         }
 
@@ -612,6 +650,19 @@ class PVPArenaHelper
         foreach ($rows as $row) {
             $arenaId = (int) $row['id'];
             $feeBase = (int) $row['entry_fee'];
+
+            // ✅ v3.8 — Claim atómico ANTES de reembolsar: solo el primer
+            // proceso expira esta arena (rowCount). Antes dos runs del cron
+            // solapados leían las mismas arenas 'waiting' y reembolsaban DOS
+            // veces a todos sus jugadores.
+            $db->update(
+                "UPDATE %%PVP_ARENAS%% SET `status` = 'cancelled', `finished_at` = :now
+                 WHERE `id` = :aid AND `status` = 'waiting';",
+                array(':now' => $now, ':aid' => $arenaId)
+            );
+            if ($db->rowCount() !== 1) {
+                continue; // otro proceso se la llevó
+            }
 
             // Devolver a cada uno en su riel
             $players = self::getArenaPlayers($arenaId);
@@ -659,8 +710,7 @@ class PVPArenaHelper
         return $count;
     }
 
-
-    /* ============================================================ 
+    /* ============================================================
      *  RESOLVER ARENAS ACTIVAS (cron)
      * ============================================================ */
 
@@ -823,15 +873,22 @@ class PVPArenaHelper
         $days     = self::getClaimDeadlineDays();
         $deadline = $now + ($days * 86400);
 
+        // ✅ v3.8 — UPDATE condicional + rowCount: solo el primer proceso
+        // finaliza la arena. Antes dos runs concurrentes aplicaban +1
+        // pvp_points a los ganadores y enviaban notificaciones DOS veces.
         self::db()->update(
-            "UPDATE %%PVP_ARENAS%% 
+            "UPDATE %%PVP_ARENAS%%
              SET `status`         = 'finished',
                  `winner_team`    = :wt,
                  `finished_at`    = :now,
                  `claim_deadline` = :deadline
-             WHERE `id` = :aid;",
+             WHERE `id` = :aid AND `status` NOT IN ('finished','cancelled');",
             array(':wt' => $winnerTeam, ':now' => $now, ':deadline' => $deadline, ':aid' => $arenaId)
         );
+
+        if (self::db()->rowCount() !== 1) {
+            return false;
+        }
 
         PVPHelper::log('arena', $arenaId, 'finished', 0, array(
             'winner_team' => $winnerTeam,
@@ -866,7 +923,7 @@ class PVPArenaHelper
             PVPHelper::sendNotification(
                 $puid,
                 $isWinner ? '¡Victoria en arena!' : 'Derrota en arena',
-                $msg . '<br><a href="game.php?page=pvp&tab=arenas">Ver arena</a>'
+                $msg . '<br><a href="game.php?page=pvp&mode=arenas">Ver arena</a>'
             );
         }
 
@@ -965,17 +1022,30 @@ class PVPArenaHelper
             return array('ok' => false, 'msg' => 'El bote está vacío.');
         }
 
-        // Entregar en el riel correcto
-        if (!PVPHelper::addRealAmount($userId, $individual, $riel, 'pvp_arena_prize', 'Premio arena #' . $arenaId)) {
-            return array('ok' => false, 'msg' => 'Error al entregar el premio.');
-        }
-
-        // Marcar como reclamado
+        // ✅ v3.8 — CLAIM del flag ANTES de pagar (UPDATE condicional +
+        // rowCount): antes era check-then-act — dos requests concurrentes
+        // leían paid=1, ambos pasaban y cobraban el premio DOS veces. Si el
+        // pago falla después, se revierte el flag para poder reintentar.
         self::db()->update(
-            "UPDATE %%PVP_ARENA_PLAYERS%% SET `paid` = 2 
-             WHERE `arena_id` = :aid AND `user_id` = :uid;",
+            "UPDATE %%PVP_ARENA_PLAYERS%% SET `paid` = 2
+             WHERE `arena_id` = :aid AND `user_id` = :uid AND `paid` <> 2;",
             array(':aid' => $arenaId, ':uid' => $userId)
         );
+
+        if (self::db()->rowCount() !== 1) {
+            return array('ok' => false, 'msg' => 'Ya has reclamado tu premio.');
+        }
+
+        // Entregar en el riel correcto
+        if (!PVPHelper::addRealAmount($userId, $individual, $riel, 'pvp_arena_prize', 'Premio arena #' . $arenaId)) {
+            // Revertir el claim para permitir reintento
+            self::db()->update(
+                "UPDATE %%PVP_ARENA_PLAYERS%% SET `paid` = 1
+                 WHERE `arena_id` = :aid AND `user_id` = :uid AND `paid` = 2;",
+                array(':aid' => $arenaId, ':uid' => $userId)
+            );
+            return array('ok' => false, 'msg' => 'Error al entregar el premio.');
+        }
 
         PVPHelper::log('arena', $arenaId, 'prize_claimed', $userId, array(
             'amount' => $individual,

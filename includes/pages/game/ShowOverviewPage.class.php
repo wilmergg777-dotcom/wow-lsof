@@ -907,29 +907,33 @@ class ShowOverviewPage extends AbstractGamePage
 		
 		// ============================================
 		// 🆕 ASTROIO v2.6 - HOOK PVP: Arenas + Torneos
+		// ✅ v3.8 — El gate real es el lock global en pvp_config
+		// (PVPProcessor::shouldRun, UPDATE condicional + rowCount). Antes el
+		// gate era $_SESSION POR USUARIO: con N usuarios online corría N veces
+		// solapado cada 5 min, y cualquier jugador podía forzar la ejecución
+		// global a voluntad con ?force_pvp_cron=1 (ahora solo admins).
 		// ============================================
 		if (class_exists('PVPHelper') && class_exists('PVPProcessor') && !empty($USER['id'])) {
-			$cacheKeyPvp = 'pvp_last_run';
-			$nowPvp      = TIMESTAMP;
-			$lastPvp     = isset($_SESSION[$cacheKeyPvp]) ? (int)$_SESSION[$cacheKeyPvp] : 0;
+			$forcePvpCron = isset($_GET['force_pvp_cron'])
+				&& (int) $_GET['force_pvp_cron'] === 1
+				&& (int) ($USER['authlevel'] ?? 0) >= 1;
 
-			$forcePvpCron = isset($_GET['force_pvp_cron']) && (int) $_GET['force_pvp_cron'] === 1;
-
-			if ($forcePvpCron || ($nowPvp - $lastPvp) > 300) {
-				try {
-					PVPProcessor::run($forcePvpCron);
-					$_SESSION[$cacheKeyPvp] = $nowPvp;
-				} catch (Exception $e) {
-					error_log('[PVP CRON] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
-					if (class_exists('PVPHelper')) {
-						try {
-							PVPHelper::log('cron', 0, 'cron_error', 0, array(
-								'error' => $e->getMessage(),
-								'file'  => $e->getFile(),
-								'line'  => $e->getLine(),
-							));
-						} catch (Exception $e2) {}
-					}
+			// ✅ v3.8 — El gate ÚNICO vive dentro de run() (shouldRun con lock
+			// global en pvp_config). No se consulta fuera para no consumir el
+			// lock dos veces: si la página ganara el UPDATE y run() lo
+			// reintentara, devolvería "skipped" y el cron nunca correría.
+			try {
+				PVPProcessor::run($forcePvpCron);
+			} catch (Exception $e) {
+				error_log('[PVP CRON] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+				if (class_exists('PVPHelper')) {
+					try {
+						PVPHelper::log('cron', 0, 'cron_error', 0, array(
+							'error' => $e->getMessage(),
+							'file'  => $e->getFile(),
+							'line'  => $e->getLine(),
+						));
+					} catch (Exception $e2) {}
 				}
 			}
 		}

@@ -157,20 +157,52 @@ class PVPProcessor
 
     /**
      * ¿Debe ejecutarse el cron? (no se ejecutó en los últimos RUN_INTERVAL segundos)
+     *
+     * ✅ v3.8 — Lock GLOBAL en pvp_config (UPDATE condicional + rowCount):
+     * antes el gate era $_SESSION, que es POR USUARIO y no existe en CLI →
+     * con N usuarios online el ciclo corría N veces solapado cada 5 min
+     * (cada ejecución disparaba expireArenas/finishArena/cancelTournament →
+     * materializaba las carreras de dobles reembolsos/premios). Ahora solo
+     * el proceso que gana el UPDATE condicional ejecuta el ciclo completo.
      */
     public static function shouldRun()
     {
-        if (!isset($_SESSION)) {
-            // Sin sesión no podemos cachear → ejecutar (raro)
-            return true;
+        try {
+            $db = Database::get();
+
+            $db->update(
+                "UPDATE %%PVP_CONFIG%% SET `config_value` = :now, `updated_at` = :now2
+                 WHERE `config_key` = 'cron_last_run'
+                   AND CAST(`config_value` AS UNSIGNED) <= :minAgo;",
+                array(
+                    ':now'    => (string) TIMESTAMP,
+                    ':now2'   => TIMESTAMP,
+                    ':minAgo' => TIMESTAMP - self::RUN_INTERVAL,
+                )
+            );
+
+            if ($db->rowCount() === 1) {
+                return true; // ganamos el lock exclusivo
+            }
+        } catch (Throwable $e) {
+            // La fila aún no existe → crearla y correr (primer arranque)
+            try {
+                $db->insert(
+                    "INSERT INTO %%PVP_CONFIG%% (`config_key`, `config_value`, `updated_at`)
+                     VALUES ('cron_last_run', :v, :now)
+                     ON DUPLICATE KEY UPDATE `updated_at` = :now2;",
+                    array(':v' => (string) TIMESTAMP, ':now' => TIMESTAMP, ':now2' => TIMESTAMP)
+                );
+                return true;
+            } catch (Throwable $e2) {}
         }
 
-        $lastRun = isset($_SESSION[self::SESSION_KEY]) ? (int) $_SESSION[self::SESSION_KEY] : 0;
-        return (TIMESTAMP - $lastRun) >= self::RUN_INTERVAL;
+        return false;
     }
 
     /**
-     * Marca la última ejecución.
+     * Marca la última ejecución (sesión, solo informativo — el lock real es
+     * pvp_config desde v3.8).
      */
     private static function markRan()
     {
@@ -253,19 +285,22 @@ class PVPProcessor
         $now = TIMESTAMP;
 
         // Arenas waiting que expiran en menos de 1h
+        // ✅ v3.8 — Ventana de RUN_INTERVAL (no 60s): con el cron global cada
+        // RUN_INTERVAL s, una ventana de 60s podía saltarse arenas o duplicar
+        // avisos si dos runs caían en el mismo minuto.
         $expire = self::getArenaExpireSeconds();
         $threshold = $now + self::NOTIFY_BEFORE;
         $limitTime = $threshold - $expire;
 
         $rows = $db->select(
-            "SELECT `id`, `created_at`, `entry_fee`, `mode` 
-             FROM %%PVP_ARENAS%% 
-             WHERE `status` = 'waiting' 
-               AND `created_at` >= :limit 
+            "SELECT `id`, `created_at`, `entry_fee`, `mode`
+             FROM %%PVP_ARENAS%%
+             WHERE `status` = 'waiting'
+               AND `created_at` >= :limit
                AND `created_at` < :limit2;",
             array(
                 ':limit'  => $limitTime,
-                ':limit2' => $limitTime + 60,
+                ':limit2' => $limitTime + self::RUN_INTERVAL,
             )
         );
 
@@ -294,7 +329,7 @@ class PVPProcessor
                     'Aviso: arena por expirar',
                     'La arena #' . $arenaId . ' (' . $arena['mode'] . ') expirará en 1 hora si no se llena.<br>'
                     . 'Entrada: ' . number_format($realFee) . ' ' . $moneda . '.<br>'
-                    . '<a href="game.php?page=pvp&tab=arenas">Ver arena</a>'
+                    . '<a href="game.php?page=pvp&mode=arenas">Ver arena</a>'
                 );
                 $sent++;
             }
@@ -313,15 +348,19 @@ class PVPProcessor
         $now = TIMESTAMP;
 
         // Torneos en registration que arrancan en 1h
+        // ✅ v3.8 — Ventana estrecha de RUN_INTERVAL: antes la condición
+        // (regEnds >= now AND <= now+1h) seguía siendo verdadera durante TODA
+        // la última hora → cada run del cron reenviaba el aviso a todos los
+        // inscritos (~12 mensajes/hora por jugador).
         $rows = $db->select(
-            "SELECT `id`, `type`, `registration_ends_at` 
-             FROM %%PVP_TOURNAMENTS%% 
-             WHERE `status` = 'registration' 
-               AND `registration_ends_at` >= :now 
-               AND `registration_ends_at` <= :limit;",
+            "SELECT `id`, `type`, `registration_ends_at`
+             FROM %%PVP_TOURNAMENTS%%
+             WHERE `status` = 'registration'
+               AND `registration_ends_at` >= :w1
+               AND `registration_ends_at` < :w2;",
             array(
-                ':now'   => $now,
-                ':limit' => $now + self::NOTIFY_BEFORE,
+                ':w1' => $now + self::NOTIFY_BEFORE,
+                ':w2' => $now + self::NOTIFY_BEFORE + self::RUN_INTERVAL,
             )
         );
 
@@ -347,7 +386,7 @@ class PVPProcessor
                     '¡Tu torneo comienza pronto!',
                     'El torneo #' . $tid . ' (' . $t['type'] . ') arranca en menos de 1 hora.<br>'
                     . 'Cierre de inscripciones: ' . date('d/m/Y H:i', $regEnds) . '<br>'
-                    . '<a href="game.php?page=pvp&tab=tournaments">Ver torneo</a>'
+                    . '<a href="game.php?page=pvp&mode=tournaments">Ver torneo</a>'
                 );
                 $sent++;
             }
@@ -367,15 +406,18 @@ class PVPProcessor
         $now = TIMESTAMP;
 
         // Arenas finalizadas cuyo claim_deadline está por expirar en 24h
+        // ✅ v3.8 — Ventana estrecha en el MOMENTO del aviso (24h antes del
+        // deadline, ancho RUN_INTERVAL): antes la condición era verdadera
+        // durante las 24h enteras → ~288 avisos por ganador en un día.
         $rows = $db->select(
-            "SELECT `id`, `winner_team`, `prize_pool`, `pool_ntx20`, `pool_untx20`, `claim_deadline` 
-             FROM %%PVP_ARENAS%% 
-             WHERE `status` = 'finished' 
-               AND `claim_deadline` > :now 
-               AND `claim_deadline` <= :limit;",
+            "SELECT `id`, `winner_team`, `prize_pool`, `pool_ntx20`, `pool_untx20`, `claim_deadline`
+             FROM %%PVP_ARENAS%%
+             WHERE `status` = 'finished'
+               AND `claim_deadline` >= :w1
+               AND `claim_deadline` < :w2;",
             array(
-                ':now'   => $now,
-                ':limit' => $now + self::NOTIFY_PRIZE_BEFORE,
+                ':w1' => $now + self::NOTIFY_PRIZE_BEFORE,
+                ':w2' => $now + self::NOTIFY_PRIZE_BEFORE + self::RUN_INTERVAL,
             )
         );
 
@@ -432,7 +474,7 @@ class PVPProcessor
                     'Tienes un premio pendiente de la arena #' . $arenaId . '.<br>'
                     . 'Premio estimado: <b>' . number_format($estimated) . ' ' . $moneda . '</b><br>'
                     . 'Reclámalo antes de 24h o se perderá.<br>'
-                    . '<a href="game.php?page=pvp&tab=arenas">Reclamar premio</a>'
+                    . '<a href="game.php?page=pvp&mode=arenas">Reclamar premio</a>'
                 );
                 $sent++;
             }

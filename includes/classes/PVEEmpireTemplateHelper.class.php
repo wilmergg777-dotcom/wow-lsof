@@ -187,8 +187,11 @@ class PVEEmpireTemplateHelper
 
         // Comprobar slug único
         if (self::getTemplateBySlug($clean['slug']) !== null) {
-            // Añadir sufijo
-            $clean['slug'] .= '_' . substr(md5((string)mt_rand()), 0, 4);
+            // ✅ v3.8 — Truncar ANTES del sufijo: la columna es varchar(32)
+            // UNIQUE y sanitize() ya trunca a 32 → slug + '_' + 4 chars = 37
+            // y el INSERT moría con STRICT_ALL_TABLES (error 1406, la
+            // plantilla no se creaba y createTemplate devolvía 0 en silencio).
+            $clean['slug'] = substr($clean['slug'], 0, 27) . '_' . substr(md5((string)mt_rand()), 0, 4);
         }
 
         try {
@@ -398,7 +401,9 @@ class PVEEmpireTemplateHelper
         // Reconstruir data para createTemplate
         $data = [
             'name'              => $template['name'] . ' (Copia)',
-            'slug'              => $template['slug'] . '_copy_' . substr(md5((string)mt_rand()), 0, 4),
+            // ✅ v3.8 — Truncar antes del sufijo (_copy_ = 6 + 4 chars):
+            // slug completo superaba varchar(32) y el INSERT fallaba en STRICT.
+            'slug'              => substr($template['slug'], 0, 21) . '_copy_' . substr(md5((string)mt_rand()), 0, 4),
             'description'       => $template['description'],
             'hp_mult'           => $template['hp_mult'],
             'res_metal'         => $template['res_metal'],
