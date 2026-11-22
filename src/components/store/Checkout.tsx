@@ -92,6 +92,12 @@ export function CheckoutView() {
     : null
 
   const confirm = async () => {
+    // Como en Amazon: mirar es libre, comprar exige cuenta
+    if (user.name === 'Invitado') {
+      toast.error('Para completar la compra necesitas una cuenta: regístrate o inicia sesión')
+      openView('login')
+      return
+    }
     if (!name.trim() || !address.trim()) {
       toast.error('Escribe tu nombre y la dirección de entrega')
       return
@@ -222,6 +228,28 @@ export function CheckoutView() {
   return (
     <div className="p-4 max-w-[1200px] mx-auto">
       <h1 className="text-[28px] font-bold text-[#0F1111] mb-4">Finalizar compra</h1>
+
+      {/* Aviso para invitados: puedes mirar, pero comprar exige cuenta */}
+      {user.name === 'Invitado' && (
+        <div className="bg-[#FEF3C7] border border-[#B45309]/40 rounded-lg p-4 mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex-1">
+            <p className="text-[14px] font-bold text-[#B45309]">
+              Estás comprando como Invitado
+            </p>
+            <p className="text-[13px] text-[#B45309] mt-0.5">
+              Como en Amazon: revisar ofertas es gratis, pero para confirmar el pedido necesitas
+              una cuenta. Tus artículos ya están guardados en el carrito.
+            </p>
+          </div>
+          <button
+            onClick={() => openView('login')}
+            className="bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full px-6 py-2 cursor-pointer shrink-0"
+          >
+            Iniciar sesión o registrarme
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* Formulario + mapa */}
         <div className="lg:col-span-3 flex flex-col gap-4">

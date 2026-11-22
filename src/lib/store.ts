@@ -15,6 +15,7 @@ export type View =
   | 'category'
   | 'product'
   | 'cart'
+  | 'login' // registro e inicio de sesión
   | 'ministores' // lista de mini tiendas
   | 'ministore' // detalle de una mini tienda
   | 'manage-store' // panel del dueño de la mini tienda

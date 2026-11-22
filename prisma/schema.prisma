@@ -30,9 +30,20 @@ model Offer {
 model SiteSettings {
   id                String   @id @default("main")
   miniStoresEnabled Boolean  @default(true)
-  coinRate          Int      @default(100) // cuántas monedas vale $1 real
+  coinRate          Int      @default(100) // cuántas monedas vale 1 CUP real
   catalogSeeded     Boolean  @default(false) // ya se publicaron las ofertas iniciales de bienvenida
   updatedAt         DateTime @updatedAt
+}
+
+// Cuenta registrada de Violetero. Como en Amazon: cualquiera
+// puede mirar ofertas y mini tiendas SIN cuenta, pero para
+// comprar hay que registrarse e iniciar sesión.
+model User {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  password  String // hash con sal (scrypt), nunca se guarda el texto plano
+  role      String   @default("comprador") // comprador | repartidor | administrador
+  createdAt DateTime @default(now())
 }
 
 // Mini tienda creada por un usuario vendedor

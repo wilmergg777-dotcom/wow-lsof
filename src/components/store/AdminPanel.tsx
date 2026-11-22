@@ -44,6 +44,8 @@ import { PhotoInput } from './PhotoInput'
 type Tab = 'general' | 'inventario' | 'ofertas' | 'recargas' | 'cobros'
 
 export function AdminView() {
+  const user = useStore((s) => s.user)
+  const openView = useStore((s) => s.openView)
   const [tab, setTab] = useState<Tab>('general')
   const [settings, setSettings] = useState<Settings | null>(null)
   const [stores, setStores] = useState<MiniStore[]>([])
@@ -91,6 +93,28 @@ export function AdminView() {
     } finally {
       setSaving(false)
     }
+  }
+
+  // Solo la cuenta del administrador puede entrar al panel
+  if (user.role !== 'administrador') {
+    return (
+      <div className="p-6 max-w-2xl mx-auto">
+        <div className="bg-white rounded-lg border border-[#e3e6e6] p-10 text-center">
+          <ShieldCheck className="w-14 h-14 text-[#5B21B6] mx-auto" strokeWidth={1.4} />
+          <h1 className="text-[22px] font-bold text-[#0F1111] mt-4">Zona del administrador</h1>
+          <p className="text-[14px] text-[#565959] mt-2">
+            Esta área es solo para la cuenta del administrador de {STORE_NAME}. Inicia sesión con
+            esa cuenta para gestionar la web.
+          </p>
+          <button
+            onClick={() => openView('login')}
+            className="mt-5 bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[14px] font-bold rounded-full px-8 py-2 cursor-pointer"
+          >
+            Iniciar sesión
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (loading) return <p className="text-center py-16 text-[#565959]">Cargando panel…</p>

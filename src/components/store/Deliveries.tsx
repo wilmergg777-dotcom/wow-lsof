@@ -14,6 +14,7 @@ import { MiniMap } from './MiniMap'
 
 export function DeliveriesView() {
   const user = useStore((s) => s.user)
+  const openView = useStore((s) => s.openView)
   const [available, setAvailable] = useState<Order[]>([])
   const [mine, setMine] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
@@ -64,6 +65,28 @@ export function DeliveriesView() {
   }
 
   if (loading) return <p className="text-center py-16 text-[#565959]">Cargando entregas…</p>
+
+  // Los entregas son para cuentas de mensajero (turbo)
+  if (user.role !== 'repartidor') {
+    return (
+      <div className="p-6 max-w-2xl mx-auto">
+        <div className="bg-white rounded-lg border border-[#e3e6e6] p-10 text-center">
+          <Bike className="w-14 h-14 text-[#5B21B6] mx-auto" strokeWidth={1.4} />
+          <h1 className="text-[22px] font-bold text-[#0F1111] mt-4">Entregas para mensajeros</h1>
+          <p className="text-[14px] text-[#565959] mt-2">
+            Para hacer domicilios y ganar por cada entrega necesitas una cuenta de mensajero
+            (turbo). Regístrate eligiendo "Mensajero (turbo)" e inicia sesión.
+          </p>
+          <button
+            onClick={() => openView('login')}
+            className="mt-5 bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[14px] font-bold rounded-full px-8 py-2 cursor-pointer"
+          >
+            Iniciar sesión o registrarme
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-4 max-w-[1100px] mx-auto flex flex-col gap-4">

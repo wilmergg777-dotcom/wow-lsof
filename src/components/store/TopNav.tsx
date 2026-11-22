@@ -177,7 +177,7 @@ export function TopNav() {
           <USFlag /> ES <ChevronDown className="w-3 h-3" />
         </button>
 
-        {/* Identidad: nombre + rol del usuario */}
+        {/* Identidad: cuenta del usuario (invitado mira, logueado compra) */}
         <div className="relative hidden md:block">
           <button
             onClick={() => {
@@ -188,44 +188,59 @@ export function TopNav() {
           >
             <span className="text-[11px]">Hola, {user.name}</span>
             <span className="text-[13px] font-bold flex items-center gap-0.5">
-              <UserRound className="w-3.5 h-3.5" /> {ROLE_LABELS[user.role]}{' '}
+              <UserRound className="w-3.5 h-3.5" />{' '}
+              {user.name === 'Invitado' ? 'Entrar' : ROLE_LABELS[user.role]}{' '}
               <ChevronDown className="w-3 h-3" />
             </span>
           </button>
 
-          {/* Panel para cambiar nombre y rol */}
-          {nameOpen && (
-            <div className="absolute right-0 top-full mt-1 w-64 bg-white rounded-lg shadow-xl border border-[#d5d9d9] p-4 text-[#0F1111] z-50">
-              <label className="block text-[12px] font-bold mb-1">Tu nombre</label>
-              <input
-                value={nameDraft}
-                onChange={(e) => setNameDraft(e.target.value)}
-                className="w-full border border-[#888c8c] rounded px-2.5 py-1.5 text-[13px] outline-none focus:border-[#e77600] mb-3"
-              />
-              <label className="block text-[12px] font-bold mb-1">Modo (rol) del usuario</label>
-              <select
-                value={user.role}
-                onChange={(e) => setUser({ name: nameDraft.trim() || user.name, role: e.target.value as Role })}
-                className="w-full border border-[#888c8c] rounded px-2.5 py-1.5 text-[13px] bg-white outline-none mb-3 cursor-pointer"
-              >
-                {(Object.keys(ROLE_LABELS) as Role[]).map((r) => (
-                  <option key={r} value={r}>
-                    {ROLE_LABELS[r]}
-                  </option>
-                ))}
-              </select>
+          {/* Panel de la cuenta */}
+          {nameOpen && user.name === 'Invitado' && (
+            <div className="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-xl border border-[#d5d9d9] p-4 text-[#0F1111] z-50">
+              <p className="text-[14px] font-bold">¿Ya tienes cuenta?</p>
+              <p className="text-[12px] text-[#565959] mt-1 mb-3">
+                Puedes mirar todo sin cuenta, pero para comprar y usar el carrito necesitas
+                iniciar sesión.
+              </p>
               <button
                 onClick={() => {
-                  setUser({ name: nameDraft.trim() || user.name, role: user.role })
                   setNameOpen(false)
+                  openView('login')
+                }}
+                className="w-full bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full py-2 cursor-pointer mb-2"
+              >
+                Iniciar sesión
+              </button>
+              <button
+                onClick={() => {
+                  setNameOpen(false)
+                  openView('login')
+                }}
+                className="w-full border border-[#d5d9d9] hover:bg-[#f7fafa] text-[#0F1111] text-[13px] font-bold rounded-full py-2 cursor-pointer"
+              >
+                Crear cuenta nueva
+              </button>
+            </div>
+          )}
+          {nameOpen && user.name !== 'Invitado' && (
+            <div className="absolute right-0 top-full mt-1 w-64 bg-white rounded-lg shadow-xl border border-[#d5d9d9] p-4 text-[#0F1111] z-50">
+              <p className="text-[14px] font-bold">{user.name}</p>
+              <p className="text-[12px] text-[#565959] mt-0.5 mb-3">
+                Cuenta de {ROLE_LABELS[user.role].toLowerCase()} de {STORE_NAME}
+              </p>
+              <button
+                onClick={() => {
+                  setUser({ name: 'Invitado', role: 'comprador' })
+                  setNameOpen(false)
+                  goHome()
                   toastIdentity()
                 }}
-                className="w-full bg-[#FFD814] hover:bg-[#F7CA00] text-[#0F1111] text-[13px] font-bold rounded-full py-1.5 cursor-pointer"
+                className="w-full border border-[#d5d9d9] hover:bg-[#f7fafa] text-[#0F1111] text-[13px] font-bold rounded-full py-2 cursor-pointer"
               >
-                Guardar
+                Cerrar sesión
               </button>
               <p className="text-[11px] text-[#565959] mt-2">
-                Cada rol ve sus opciones: vender, repartir o administrar.
+                Tu carrito se guarda aunque cierres sesión.
               </p>
             </div>
           )}
@@ -291,9 +306,10 @@ export function SubNav() {
   const openCategory = useStore((s) => s.openCategory)
   const user = useStore((s) => s.user)
 
-  // Enlaces extra según el rol elegido
+  // Enlaces extra según la cuenta (el rol viene del registro/login)
   const roleLinks: { label: string; view: Parameters<typeof openView>[0] }[] = []
-  if (user.role === 'vendedor') roleLinks.push({ label: 'Mi Mini Tienda', view: 'manage-store' })
+  if (user.name !== 'Invitado')
+    roleLinks.push({ label: 'Mi Mini Tienda', view: 'manage-store' })
   if (user.role === 'repartidor') roleLinks.push({ label: 'Entregas', view: 'deliveries' })
   if (user.role === 'administrador') roleLinks.push({ label: 'Administración', view: 'admin' })
 
