@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ChevronRight, ChevronLeft, Coins, Package, Plus, Store } from 'lucide-react'
 import { toast } from 'sonner'
 import { useStore, STORE_NAME } from '@/lib/store'
-import { itemCoins, itemDiscount, useCatalog, type CatalogItem } from '@/lib/catalog'
+import { itemChange, itemCoins, itemDiscount, useCatalog, type CatalogItem } from '@/lib/catalog'
 import { api, type Settings } from '@/lib/api'
 import { formatCoins, formatPrice } from '@/lib/products'
 import { HeroCarousel } from './HeroCarousel'
@@ -77,6 +77,20 @@ export function ProductCard({ item, rate = 0 }: { item: CatalogItem; rate?: numb
             -{pct}% Oferta
           </span>
         )}
+        {/* Cambio de precio frente al anterior: bajó (verde) o subió (rojo) */}
+        {(() => {
+          const ch = itemChange(item)
+          if (!ch || pct > 0) return null
+          return ch.dir === 'down' ? (
+            <span className="self-start bg-[#007600]/10 text-[#007600] text-[11px] font-bold px-1.5 py-0.5 rounded-sm mb-1">
+              Bajó {ch.pct}%
+            </span>
+          ) : (
+            <span className="self-start bg-[#CC0C39]/10 text-[#CC0C39] text-[11px] font-bold px-1.5 py-0.5 rounded-sm mb-1">
+              Subió {ch.pct}%
+            </span>
+          )
+        })()}
         <p className="text-[14px] text-[#0F1111] leading-snug line-clamp-2">{item.name}</p>
         <p
           className={`text-[12px] font-bold mt-1 ${

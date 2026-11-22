@@ -19,6 +19,7 @@ import {
   Package,
   Plus,
   Store,
+  Tag,
   Trash2,
   UserCheck,
   X,
@@ -156,13 +157,43 @@ function HeroFlowers({ tall = false }: { tall?: boolean }) {
   )
 }
 
-// Precios en las dos monedas: dinero real + monedas internas
-function DualPrice({ cash, coins, big = false }: { cash: number; coins: number; big?: boolean }) {
+// Precios en las dos monedas: dinero real + monedas internas.
+// Si el producto tiene precio anterior, se muestra tachado con
+// el % de cambio (subió en rojo, bajó en verde)
+function DualPrice({
+  cash,
+  coins,
+  oldPrice,
+  big = false,
+}: {
+  cash: number
+  coins: number
+  oldPrice?: number | null
+  big?: boolean
+}) {
+  const changed = oldPrice && oldPrice > 0 && oldPrice !== cash
+  const pct = changed ? Math.abs(Math.round((1 - cash / (oldPrice as number)) * 100)) : 0
   return (
     <div className="mt-2">
-      <p className={`${big ? 'text-[21px]' : 'text-[17px]'} font-bold text-[#0F1111] leading-none`}>
-        {formatPrice(cash)}
-      </p>
+      <div className="flex items-baseline gap-2 flex-wrap">
+        {changed && (
+          <span className="text-[12px] text-[#565959] line-through">
+            {formatPrice(oldPrice as number)}
+          </span>
+        )}
+        <p className={`${big ? 'text-[21px]' : 'text-[17px]'} font-bold text-[#0F1111] leading-none`}>
+          {formatPrice(cash)}
+        </p>
+      </div>
+      {changed && pct > 0 && (
+        <p
+          className={`text-[12px] font-bold mt-0.5 ${
+            cash < (oldPrice as number) ? 'text-[#007600]' : 'text-[#CC0C39]'
+          }`}
+        >
+          {cash < (oldPrice as number) ? 'Bajó' : 'Subió'} {pct}% frente al precio anterior
+        </p>
+      )}
       <p
         className="text-[13px] font-bold text-[#5B21B6] flex items-center gap-1 mt-1"
         title="Precio en monedas internas de la tienda"
@@ -227,6 +258,89 @@ function StockEditor({
         className="text-[12px] font-bold bg-[#FFD814] hover:bg-[#F7CA00] rounded-full px-3 py-1 cursor-pointer disabled:opacity-60"
       >
         Guardar
+      </button>
+    </div>
+  )
+}
+
+// Editor de precio del producto: al cambiarlo, el precio anterior
+// queda guardado automáticamente y se muestra tachado con el %
+// de cambio en las tarjetas (subió o bajó)
+function PriceEditor({
+  productId,
+  ownerName,
+  current,
+  onSaved,
+}: {
+  productId: string
+  ownerName: string
+  current: number
+  onSaved: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [val, setVal] = useState(String(current))
+  const [saving, setSaving] = useState(false)
+  useEffect(() => setVal(String(current)), [current])
+  const save = async () => {
+    const p = parseFloat(val)
+    if (!p || p <= 0) {
+      toast.error('El precio debe ser mayor que 0')
+      return
+    }
+    if (p === current) {
+      setOpen(false)
+      return
+    }
+    setSaving(true)
+    try {
+      await api(`/api/miniproducts/${productId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ownerName, price: p }),
+      })
+      toast.success(
+        `Precio actualizado a ${formatPrice(p)}: el precio anterior queda guardado y se ve tachado`
+      )
+      setOpen(false)
+      onSaved()
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="text-[12px] font-bold text-[#5B21B6] hover:underline flex items-center gap-1 cursor-pointer shrink-0"
+      >
+        <Tag className="w-3.5 h-3.5" /> Cambiar precio
+      </button>
+    )
+  }
+  return (
+    <div className="flex items-center gap-1 shrink-0">
+      <input
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        type="number"
+        min="1"
+        aria-label="Precio nuevo en CUP"
+        className="w-24 border border-[#888c8c] rounded px-2 py-1 text-[13px] outline-none focus:border-[#e77600]"
+      />
+      <button
+        onClick={save}
+        disabled={saving}
+        className="text-[12px] font-bold bg-[#FFD814] hover:bg-[#F7CA00] rounded-full px-3 py-1 cursor-pointer disabled:opacity-60"
+      >
+        Guardar
+      </button>
+      <button
+        onClick={() => setOpen(false)}
+        aria-label="Cerrar editor de precio"
+        className="text-[#565959] hover:text-[#0F1111] cursor-pointer p-1"
+      >
+        <X className="w-3.5 h-3.5" />
       </button>
     </div>
   )
@@ -515,7 +629,7 @@ export function MiniStoreDetail() {
                   {p.description}
                 </p>
                 <div className="mt-2">
-                  <DualPrice cash={p.price} coins={p.priceCoins} />
+                  <DualPrice cash={p.price} coins={p.priceCoins} oldPrice={p.oldPrice} />
                 </div>
                 <p
                   className={`text-[12px] font-bold mt-1 ${
@@ -1002,8 +1116,21 @@ export function ManageStoreView() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[14px] font-bold text-[#0F1111] truncate">{p.name}</p>
-                    <p className="text-[12px] text-[#565959] flex items-center gap-1.5">
+                    <p className="text-[12px] text-[#565959] flex items-center gap-1.5 flex-wrap">
                       {formatPrice(p.price)}
+                      {p.oldPrice && p.oldPrice !== p.price && (
+                        <span className="line-through">{formatPrice(p.oldPrice)}</span>
+                      )}
+                      {p.oldPrice && p.oldPrice !== p.price && (
+                        <span
+                          className={`font-bold ${
+                            p.price < p.oldPrice ? 'text-[#007600]' : 'text-[#CC0C39]'
+                          }`}
+                        >
+                          {p.price < p.oldPrice ? 'Bajó' : 'Subió'}{' '}
+                          {Math.abs(Math.round((1 - p.price / p.oldPrice) * 100))}%
+                        </span>
+                      )}
                       <span className="text-[#5B21B6] font-bold flex items-center gap-0.5">
                         <Coins className="w-3 h-3" /> {formatCoins(p.priceCoins)}
                       </span>
@@ -1015,6 +1142,14 @@ export function ManageStoreView() {
                     >
                       {p.stock <= 0 ? 'Agotado' : `Almacén: ${p.stock}`} · Vendidos: {p.sold}
                     </p>
+                    <div className="mt-1">
+                      <PriceEditor
+                        productId={p.id}
+                        ownerName={user.name}
+                        current={p.price}
+                        onSaved={refreshStore}
+                      />
+                    </div>
                   </div>
                   <StockEditor
                     productId={p.id}

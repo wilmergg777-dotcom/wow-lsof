@@ -66,7 +66,7 @@ export async function GET() {
           category: s.category,
           price: p.price,
           priceCoins: p.priceCoins,
-          oldPrice: null,
+          oldPrice: p.oldPrice ?? null,
           photo: p.photo,
           stock: p.stock,
           store: s.name,

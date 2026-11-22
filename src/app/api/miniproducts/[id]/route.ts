@@ -23,6 +23,7 @@ export async function PATCH(
   const data: {
     stock?: number
     price?: number
+    oldPrice?: number | null
     priceCoins?: number
   } = {}
   if (body.stock !== undefined) {
@@ -30,7 +31,18 @@ export async function PATCH(
   }
   if (body.price !== undefined) {
     const p = Number(body.price)
-    if (p > 0) data.price = p
+    if (p > 0) {
+      // Al cambiar el precio se guarda el precio anterior
+      // automáticamente (para mostrarlo tachado y el % de cambio)
+      if (body.oldPrice === undefined && p !== product.price) {
+        data.oldPrice = product.price
+      }
+      data.price = p
+    }
+  }
+  if (body.oldPrice !== undefined) {
+    const o = body.oldPrice === null || body.oldPrice === '' ? null : Number(body.oldPrice)
+    data.oldPrice = o && o > 0 ? o : null
   }
   if (body.priceCoins !== undefined) {
     data.priceCoins = Math.max(0, Math.floor(Number(body.priceCoins) || 0))

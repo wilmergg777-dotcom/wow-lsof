@@ -33,6 +33,7 @@ export type MiniProduct = {
   name: string
   description: string
   price: number // dinero real (CUP)
+  oldPrice: number | null // precio anterior (para mostrar el cambio)
   priceCoins: number // monedas internas
   emoji: string
   photo: string | null

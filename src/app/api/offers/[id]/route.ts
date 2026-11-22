@@ -10,6 +10,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params
   const body = await req.json()
 
+  const existing = await db.offer.findUnique({ where: { id } })
+  if (!existing) {
+    return NextResponse.json({ error: 'La oferta ya no existe' }, { status: 404 })
+  }
+
   const data: Record<string, unknown> = {}
   if (body.title !== undefined) {
     if (!String(body.title).trim()) {
@@ -23,6 +28,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const p = Number(body.price)
     if (!p || p <= 0) {
       return NextResponse.json({ error: 'Precio inválido' }, { status: 400 })
+    }
+    // Al cambiar el precio se guarda el precio anterior
+    // automáticamente (para mostrarlo tachado y el % de cambio)
+    if (body.oldPrice === undefined && p !== existing.price) {
+      data.oldPrice = existing.price
     }
     data.price = p
   }

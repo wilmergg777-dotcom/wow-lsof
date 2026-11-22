@@ -68,7 +68,8 @@ model MiniProduct {
   store       MiniStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name        String
   description String    @default("")
-  price       Float // precio en dinero real ($)
+  price       Float // precio en dinero real (CUP)
+  oldPrice    Float? // precio anterior (se guarda solo al cambiar el precio)
   priceCoins  Int       @default(0) // precio en monedas internas
   emoji       String    @default("📦")
   photo       String? // foto del producto (data URL)

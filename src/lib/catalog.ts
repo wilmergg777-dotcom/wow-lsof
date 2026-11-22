@@ -49,6 +49,18 @@ export const itemDiscount = (it: CatalogItem) =>
     ? Math.round((1 - it.price / it.oldPrice) * 100)
     : 0
 
+// Cambio de precio frente al precio anterior:
+// { dir: 'down', pct: 15 } = bajó un 15% · { dir: 'up', pct: 10 } = subió un 10%
+// null = no hay precio anterior o es igual al actual
+export const itemChange = (
+  it: CatalogItem
+): { dir: 'down' | 'up'; pct: number } | null => {
+  if (!it.oldPrice || it.oldPrice <= 0 || it.oldPrice === it.price) return null
+  const pct = Math.abs(Math.round((1 - it.price / it.oldPrice) * 100))
+  if (pct <= 0) return null
+  return it.price < it.oldPrice ? { dir: 'down', pct } : { dir: 'up', pct }
+}
+
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 

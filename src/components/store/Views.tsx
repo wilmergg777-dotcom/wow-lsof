@@ -17,7 +17,7 @@ import {
 import { toast } from 'sonner'
 import { useStore, STORE_NAME } from '@/lib/store'
 import { cashToCoins, formatCoins, formatPrice, CATEGORIES } from '@/lib/products'
-import { findItem, itemCoins, itemDiscount, searchCatalog, useCatalog, type CatalogItem } from '@/lib/catalog'
+import { findItem, itemChange, itemCoins, itemDiscount, searchCatalog, useCatalog, type CatalogItem } from '@/lib/catalog'
 import { api, type Settings } from '@/lib/api'
 import { ProductCard, ProductRow } from './Cards'
 
@@ -427,6 +427,19 @@ export function ProductDetail() {
                 <span className="text-[13px] text-[#CC0C39]">Oferta con descuento</span>
               </div>
             )}
+            {/* Si el precio SUBIÓ respecto al anterior, se avisa con claridad */}
+            {(() => {
+              const ch = itemChange(item)
+              if (!ch || ch.dir !== 'up') return null
+              return (
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[15px] font-bold text-[#CC0C39]">
+                    Subió {ch.pct}%
+                  </span>
+                  <span className="text-[13px] text-[#565959]">frente al precio anterior</span>
+                </div>
+              )
+            })()}
             {item.oldPrice && (
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="text-[13px] text-[#565959]">Precio anterior:</span>
