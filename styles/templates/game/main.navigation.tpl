@@ -1777,3 +1777,13 @@ function astroio_switchTab(tab) {
 })();
 /* ═══════════════════════════════════════════════════════════ */
 </script>
+{* ═══ ASTROIO v7.0 — pulido visual sidebar (mockup8_3): solo colores/bordes, sin tocar lógica ═══ *}
+{literal}
+<style>
+#leftmenu { background: rgba(10,15,28,.94) !important }
+#leftmenu a { border-radius:9px !important; transition:.15s ease !important }
+#leftmenu a:hover { background:rgba(0,224,255,.12) !important; box-shadow:0 0 8px rgba(0,224,255,.15) }
+#leftmenu .menu_tab_btn { border-radius:10px !important }
+.res-bar .res-values, #header .res-values { color:#fff }
+</style>
+{/literal}

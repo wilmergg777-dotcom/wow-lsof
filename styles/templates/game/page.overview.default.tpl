@@ -2,1883 +2,859 @@
 {block name="script" append}{/block}
 {block name="content"}
 
+{* ═══════════════════════════════════════════════════════════════════
+   ASTROIO v7.0 — VISTA PRINCIPAL "CENTRO DE MANDO" (mockup8_3/8_4)
+   Layout aprobado: header Centro de mando, banner BOOST x3, tarjeta
+   Planeta Principal con botones de acción, radar táctico de flotas,
+   clima del planeta con chips de factores, próximos pasos (colas),
+   eventos/PvE/PvP/rifas/lotería, y sidebar: Potenciadores, Tu
+   comandante y Lotería. Todos los IDs/vars del overview v6.6 intactos
+   (xb_banner, traveler_*, ov_pve_*, ov_pvp_*, ov_buff_timer, .timer).
+   ═══════════════════════════════════════════════════════════════════ *}
+
 <style>
-/* ============================================================== */
-/* ============ ASTROIO - OVERVIEW ESTILO XNOVA MODERNO ========= */
-/* ============================================================== */
-
+/* ═══ CENTRO DE MANDO (mockup8_3) — prefijo cm_ ═══ */
 :root {
-    --bg-dark: rgba(11, 16, 30, 0.55);
-    --bg-dark-strong: rgba(11, 16, 30, 0.80);
-    --bg-card: rgba(15, 23, 42, 0.75);
-    --bg-card-hover: rgba(30, 41, 59, 0.85);
-    --bg-inner: rgba(0, 0, 0, 0.35);
-    --border-color: #1e293b;
-    --border-glow: #3b82f6;
-    --text-main: #cbd5e1;
-    --text-muted: #94a3b8;
-    --text-title: #ffffff;
-    --accent-blue: #3b82f6;
-    --accent-cyan: #00e0ff;
-    --accent-purple: #8b5cf6;
-    --accent-gold: #fbbf24;
-    --accent-green: #4aff88;
-    --accent-red: #ef4444;
+    --cm-bg:      rgba(13, 20, 38, 0.92);
+    --cm-bg2:     rgba(17, 26, 46, 0.85);
+    --cm-border:  #22314f;
+    --cm-cyan:    #38bdf8;
+    --cm-cyan2:   #00e0ff;
+    --cm-blue:    #3b82f6;
+    --cm-purple:  #8b5cf6;
+    --cm-gold:    #fbbf24;
+    --cm-green:   #4aff88;
+    --cm-red:     #ef4444;
+    --cm-text:    #e2e8f0;
+    --cm-muted:   #94a3b8;
 }
+.cm_shell { display:flex; gap:16px; align-items:flex-start; width:100%; box-sizing:border-box; padding:4px 2px 20px; min-width:0 }
+.cm_shell > div, .cm_shell > aside { min-width:0 }
+.cm_main  { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:14px }
+.cm_side  { flex:0 0 300px; width:300px; min-width:0; display:flex; flex-direction:column; gap:14px }
+.cm_card  { background:var(--cm-bg); border:1px solid var(--cm-border); border-radius:14px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,.35); box-sizing:border-box }
 
-/* ====== FONDO GENERAL ====== */
-html, body {
-    background-color: transparent !important;
-    margin: 0;
-    padding: 0;
-    min-height: 100%;
-}
+/* ═══ Cabecera ═══ */
+.cm_head { display:flex; flex-direction:column; gap:2px; padding:2px 4px 8px }
+.cm_head h1 { margin:0; color:#fff; font-size:26px; font-weight:900; letter-spacing:.4px; text-shadow:none }
+.cm_head h1 b { color:var(--cm-cyan) }
+.cm_head p { margin:0; color:var(--cm-muted); font-size:12.5px }
 
-/* ====== CONTENEDOR PRINCIPAL ====== */
-.xnova-wrapper {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 15px;
-    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-    color: var(--text-main);
-    background-color: rgba(11, 16, 30, 0.55);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    border-radius: 14px;
-}
+/* ═══ Banner BOOST x3 ═══ */
+.cm_boost { display:flex; align-items:center; gap:14px; background:linear-gradient(90deg, rgba(139,92,246,.28), rgba(59,130,246,.18) 60%, rgba(13,20,38,.6)); border:1px solid rgba(139,92,246,.55); border-radius:14px; padding:14px 16px; position:relative; overflow:hidden }
+.cm_boost > div { min-width:0; overflow-wrap:break-word }
+.cm_boost:before { content:''; position:absolute; inset:0; background:radial-gradient(circle at 12% 50%, rgba(139,92,246,.35), transparent 45%); pointer-events:none }
+.cm_boost .b_icon { flex:0 0 44px; width:44px; height:44px; border-radius:12px; background:rgba(139,92,246,.3); border:1px solid rgba(139,92,246,.6); display:flex; align-items:center; justify-content:center; font-size:22px }
+.cm_boost .b_title { color:#fff; font-weight:900; font-size:14px; letter-spacing:.4px }
+.cm_boost .b_title b { color:#c4b5fd }
+.cm_boost .b_sub { color:var(--cm-muted); font-size:11px; margin-top:2px }
+.cm_boost .b_grow { flex:1 }
+.cm_boost .b_chip { background:rgba(251,191,36,.15); border:1px solid rgba(251,191,36,.55); color:var(--cm-gold); font-size:10px; font-weight:900; letter-spacing:1px; border-radius:999px; padding:5px 12px; white-space:nowrap }
+.cm_boost .b_timerbox { background:rgba(2,6,12,.65); border:1px solid var(--cm-border); border-radius:10px; padding:7px 13px; color:#fff; font-weight:900; font-size:16px; font-family:'Courier New', monospace; letter-spacing:1px; white-space:nowrap }
+.cm_boost .xb_close { position:absolute; top:8px; right:8px; background:rgba(2,6,12,.5); border:1px solid var(--cm-border); color:var(--cm-muted); border-radius:8px; width:24px; height:24px; font-size:11px; cursor:pointer; padding:0; line-height:1 }
+.cm_boost .xb_close:hover { color:#fff; border-color:var(--cm-cyan) }
+.cm_boost[data-phase="active"] { background:linear-gradient(90deg, rgba(74,255,136,.22), rgba(56,189,248,.14) 60%, rgba(13,20,38,.6)); border-color:rgba(74,255,136,.5) }
 
-/* ====== BARRA SUPERIOR ====== */
-.xnova-topbar {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 10px 20px;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-    font-size: 11px;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-.xnova-topbar .onligne {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(74, 255, 136, 0.1);
-    border: 1px solid rgba(74, 255, 136, 0.3);
-    padding: 4px 12px;
-    border-radius: 6px;
-    color: var(--accent-green);
-}
-.xnova-topbar .ticket a {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: linear-gradient(135deg, #0066cc, #0099ff);
-    color: #fff;
-    padding: 6px 14px;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 10px;
-    transition: all 0.25s ease;
-    box-shadow: 0 2px 8px rgba(0, 102, 204, 0.4);
-}
-.xnova-topbar .ticket a:hover {
-    background: linear-gradient(135deg, #0099ff, #00ccff);
-    box-shadow: 0 0 15px rgba(0, 224, 255, 0.6);
-    transform: translateY(-1px);
-}
+/* ═══ Planeta Principal ═══ */
+.cm_planet .p_top { display:flex; align-items:center; gap:10px; flex-wrap:wrap }
+.cm_planet .p_title { color:#fff; font-weight:900; font-size:17px; letter-spacing:1.2px }
+.cm_planet .p_coords { display:inline-flex; align-items:center; gap:6px; background:rgba(56,189,248,.12); border:1px solid rgba(56,189,248,.45); color:var(--cm-cyan); font-size:11px; font-weight:800; border-radius:999px; padding:4px 11px; text-decoration:none }
+.cm_planet .p_coords b { color:#fff }
+.cm_planet .p_type { display:inline-flex; background:rgba(0,224,255,.08); border:1px solid rgba(0,224,255,.3); color:#67e8f9; font-size:10px; font-weight:800; border-radius:999px; padding:4px 10px; letter-spacing:.6px; text-transform:uppercase }
+.cm_planet .p_grow { flex:1 }
+.cm_planet .p_body { display:flex; gap:16px; margin-top:14px; align-items:stretch }
+.cm_planet .p_img { flex:0 0 150px; width:150px; min-height:112px; border-radius:12px; border:1px solid var(--cm-border); background-color:#0a0f1c; background-size:cover; background-position:center; position:relative; overflow:hidden }
+.cm_planet .p_img span { position:absolute; left:8px; bottom:8px; background:rgba(2,6,12,.75); color:#fff; font-size:9px; font-weight:800; letter-spacing:1px; border-radius:6px; padding:3px 8px; text-transform:uppercase }
+.cm_stats { flex:1; display:grid; grid-template-columns:repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap:10px }
+.cm_stat { background:var(--cm-bg2); border:1px solid var(--cm-border); border-radius:10px; padding:10px 12px; display:flex; align-items:center; gap:10px; transition:.2s ease }
+.cm_stat:hover { border-color:rgba(56,189,248,.5) }
+.cm_stat .ic { flex:0 0 30px; width:30px; height:30px; border-radius:9px; background:rgba(56,189,248,.12); display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--cm-cyan) }
+.cm_stat .lbl { color:var(--cm-muted); font-size:9.5px; text-transform:uppercase; letter-spacing:.8px }
+.cm_stat .val { color:#fff; font-size:13px; font-weight:800; margin-top:1px }
+.cm_stat .val a { color:#fff }
+.cm_planet .p_actions { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap }
+.cm_btn_grad { flex:1; min-width:0; display:inline-flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(90deg,#3b82f6,#60a5fa); border:1px solid rgba(96,165,250,.7); color:#fff !important; border-radius:11px; padding:11px 16px; font-weight:800; font-size:12.5px; text-decoration:none !important; cursor:pointer; transition:.2s ease; text-transform:none; letter-spacing:.3px; box-shadow:0 6px 18px rgba(59,130,246,.35); font-family:inherit }
+.cm_btn_grad:hover { box-shadow:0 8px 24px rgba(59,130,246,.5); transform:translateY(-1px); filter:brightness(1.06) }
+.cm_btn_ghost { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; gap:8px; background:rgba(56,189,248,.08); border:1px solid rgba(56,189,248,.45); color:var(--cm-cyan) !important; border-radius:11px; padding:11px 16px; font-weight:800; font-size:12.5px; text-decoration:none !important; transition:.2s ease; text-transform:none; letter-spacing:.3px; font-family:inherit }
+.cm_btn_ghost:hover { background:rgba(56,189,248,.16); color:#fff !important }
 
-/* ====== HERO BANNER ====== */
-.xnova-hero {
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.75), rgba(30, 27, 75, 0.75));
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-    margin-bottom: 15px;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-.xnova-hero::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(circle at center, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
-    pointer-events: none;
-}
-.xnova-hero h1 {
-    font-size: 28px;
-    font-weight: 900;
-    color: #fff;
-    letter-spacing: 5px;
-    margin: 0;
-    text-shadow: 0 0 30px rgba(0, 224, 255, 0.8);
-    position: relative;
-    z-index: 1;
-}
+/* ═══ Fila radar + clima ═══ */
+.cm_row2 { display:grid; grid-template-columns:1.25fr 1fr; gap:14px; align-items:stretch }
+.cm_sec_title { display:flex; align-items:center; gap:9px; margin-bottom:12px }
+.cm_sec_title h2 { margin:0; color:#fff; font-size:14px; font-weight:900; letter-spacing:.4px }
+.cm_sec_title .t_grow { flex:1 }
+.cm_sec_title .t_btn { background:linear-gradient(90deg,#3b82f6,#60a5fa); color:#fff !important; border:none; border-radius:9px; padding:8px 14px; font-weight:800; font-size:11.5px; text-decoration:none !important; text-transform:none; letter-spacing:.3px; box-shadow:0 4px 14px rgba(59,130,246,.35); font-family:inherit; cursor:pointer }
+.cm_sec_title .t_link { color:var(--cm-cyan); font-size:11px; font-weight:700; text-decoration:none; text-transform:none }
 
-/* ============================================================== */
-/* ============ 🆕 BANNER BOOST FIN DE SEMANA ================== */
-/* ============================================================== */
-.xb_banner {
-    margin: 0 0 15px 0;
-    padding: 14px 50px 14px 20px;
-    border-radius: 12px;
-    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
+/* Radar táctico (reusa fleet-card del overview) */
+.cm_fleetlist { display:flex; flex-direction:column; gap:12px }
+.fleet-card { background:var(--cm-bg2); border:1px solid var(--cm-border); border-left:3px solid var(--cm-blue); border-radius:12px; padding:12px 14px; transition:.2s ease }
+.fleet-card.is-attack    { border-left-color:var(--cm-red) }
+.fleet-card.is-expedition{ border-left-color:var(--cm-green) }
+.fleet-card.is-incoming  { border-left-color:var(--cm-red); background:rgba(239,68,68,.07) }
+.fleet-card.is-transport { border-left-color:var(--cm-cyan) }
+.fleet-card.is-espionage { border-left-color:var(--cm-purple) }
+.fleet-card.is-deploy    { border-left-color:var(--cm-gold) }
+.fleet-header { margin-bottom:8px }
+.fleet-mission { color:#fff; font-size:12.5px; font-weight:800 }
+.fleet-card.is-attack .fleet-mission { color:#fca5a5 }
+.fleet-card.is-expedition .fleet-mission { color:#86efac }
+.fleet-radar { position:relative; height:64px; margin:6px 0 4px }
+.radar-line { position:absolute; left:4%; right:4%; top:50%; height:2px; background:linear-gradient(90deg, rgba(56,189,248,.15), rgba(56,189,248,.55), rgba(56,189,248,.15)); transform:translateY(-50%) }
+.planet-node { position:absolute; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; align-items:center; gap:1px; z-index:2 }
+.planet-node.start-node { left:0 }
+.planet-node.center-node { left:50%; transform:translate(-50%,-50%) }
+.planet-node.end-node { right:0 }
+.planet-node .planet-icon { font-size:15px; filter:drop-shadow(0 0 5px rgba(56,189,248,.6)) }
+.planet-node .planet-name { color:var(--cm-muted); font-size:8.5px; letter-spacing:.5px; text-transform:uppercase }
+.planet-node .planet-coords { color:#cbd5e1; font-size:9.5px; font-weight:700 }
+.traveler-container { position:absolute; top:50%; left:3%; transform:translate(-50%,-50%); z-index:3; display:flex; flex-direction:column; align-items:center; gap:3px }
+.traveler-ship { width:26px; height:26px; border-radius:50%; background:rgba(2,6,12,.85); border:1px solid rgba(56,189,248,.6); display:flex; align-items:center; justify-content:center; font-size:12px; box-shadow:0 0 10px rgba(56,189,248,.35) }
+.traveler-timer { background:rgba(2,6,12,.85); border:1px solid rgba(56,189,248,.5); color:var(--cm-cyan); border-radius:7px; font-size:9.5px; font-weight:900; padding:2px 6px; font-family:'Courier New', monospace; white-space:nowrap }
+.hud-tooltip { display:none; position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); z-index:9; width:190px; background:rgba(10,14,22,.97); border:1px solid var(--cm-border); border-radius:10px; padding:9px 11px; box-shadow:0 10px 26px rgba(0,0,0,.55); text-align:left }
+.traveler-container:hover .hud-tooltip { display:block }
+.hud-tooltip .tooltip-title { color:var(--cm-cyan); font-size:10px; font-weight:900; letter-spacing:.6px; text-transform:uppercase; margin-bottom:5px }
+.hud-tooltip .tooltip-section-title { color:var(--cm-muted); font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.7px; margin:6px 0 3px }
+.hud-tooltip .tooltip-row { display:flex; justify-content:space-between; gap:8px; color:var(--cm-text); font-size:10.5px; padding:1.5px 0 }
+.fleet_ships { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px }
+.fleet_ships .ship-chip { background:rgba(56,189,248,.08); border:1px solid rgba(56,189,248,.3); color:#bae6fd; font-size:10px; font-weight:700; border-radius:7px; padding:3px 8px }
+.cm_fleet_empty { text-align:center; color:var(--cm-muted); font-size:11.5px; padding:22px 10px; border:1px dashed var(--cm-border); border-radius:12px }
 
-.xb_banner[data-phase="countdown"] {
-    background: linear-gradient(135deg, rgba(0, 68, 136, 0.88), rgba(0, 119, 204, 0.88));
-    border: 1px solid rgba(0, 224, 255, 0.6);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 22px rgba(0, 224, 255, 0.35);
-}
+/* ═══ Clima ═══ */
+.cm_clima { display:flex; flex-direction:column; gap:10px }
+.cm_clima .cl_head { display:flex; align-items:center; gap:10px }
+.cm_clima .cl_emoji { font-size:26px; filter:drop-shadow(0 0 6px rgba(56,189,248,.4)) }
+.cm_clima .cl_name { color:#fff; font-weight:900; font-size:14px }
+.cm_clima .cl_desc { color:var(--cm-muted); font-size:11px; font-style:italic; margin-top:1px }
+.cm_clima .cl_factors { display:flex; flex-wrap:wrap; gap:7px; margin-top:11px }
+.cm_clima .cl_factor { border-radius:8px; padding:5px 10px; font-size:10.5px; font-weight:800; border:1px solid }
+.cm_clima .cl_factor.positive { background:rgba(74,255,136,.1); border-color:rgba(74,255,136,.4); color:var(--cm-green) }
+.cm_clima .cl_factor.negative { background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.4); color:#fca5a5 }
+.cm_clima .cl_factor.neutral  { background:rgba(148,163,184,.08); border-color:rgba(148,163,184,.3); color:var(--cm-muted) }
+.cm_clima .cl_predict { display:flex; align-items:center; gap:8px; background:rgba(56,189,248,.07); border:1px solid rgba(56,189,248,.28); border-radius:10px; padding:8px 11px; color:var(--cm-text); font-size:11.5px }
+.cm_clima .cl_alert { border-radius:10px; padding:8px 11px; font-size:11px; font-weight:700; border:1px solid }
+.cm_clima .cl_alert.danger  { background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.4); color:#fecaca }
+.cm_clima .cl_alert.success { background:rgba(74,255,136,.08); border-color:rgba(74,255,136,.35); color:#bbf7d0 }
+.cm_clima .cl_luna { border-top:1px dashed var(--cm-border); padding-top:10px; display:flex; align-items:flex-start; gap:10px }
+.cm_buff { display:flex; align-items:center; justify-content:space-between; gap:10px; background:rgba(74,255,136,.1); border:1px solid rgba(74,255,136,.4); border-radius:10px; padding:9px 12px }
+.cm_buff .bf_name { color:var(--cm-green); font-weight:900; font-size:11.5px; text-transform:uppercase; letter-spacing:.5px }
+.cm_buff .bf_desc { color:#fff; font-size:11px; margin-top:1px }
+.cm_buff .bf_time { text-align:right }
+.cm_buff .bf_lbl { color:var(--cm-muted); font-size:8.5px; text-transform:uppercase; letter-spacing:1px }
+.cm_buff .bf_val { color:var(--cm-green); font-size:14px; font-weight:900; font-family:'Courier New', monospace }
 
-.xb_banner[data-phase="active"] {
-    background: linear-gradient(135deg, rgba(0, 136, 68, 0.88), rgba(0, 204, 102, 0.88));
-    border: 1px solid rgba(74, 255, 136, 0.75);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 28px rgba(74, 255, 136, 0.55);
-    animation: xb-pulse 2s ease-in-out infinite;
-}
-@keyframes xb-pulse {
-    0%, 100% { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 28px rgba(74, 255, 136, 0.55); }
-    50%      { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 45px rgba(74, 255, 136, 0.85); }
-}
+/* ═══ Estado: online + admins + boleto ═══ */
+.cm_status { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:0 4px; margin-top:-6px }
+.cm_status .st_chip { display:inline-flex; align-items:center; gap:6px; background:var(--cm-bg); border:1px solid var(--cm-border); border-radius:999px; padding:6px 12px; color:var(--cm-muted); font-size:11px; font-weight:700; text-decoration:none; text-transform:none; letter-spacing:0 }
+.cm_status .st_chip i { font-style:normal }
+.cm_status .st_chip b { color:#4aff88; font-weight:900 }
+.cm_status .st_chip a { color:var(--cm-cyan); text-decoration:none; font-weight:800 }
+.cm_status .st_ticket { border-color:rgba(56,189,248,.45); color:var(--cm-cyan) }
+.cm_status .st_ticket:hover { background:rgba(56,189,248,.1); color:#fff }
 
-.xb_content {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    position: relative;
-    z-index: 2;
-    flex-wrap: wrap;
-}
-.xb_icon {
-    font-size: 24px;
-    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7));
-    animation: xb-icon-bounce 1.8s ease-in-out infinite;
-}
-@keyframes xb-icon-bounce {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50%      { transform: translateY(-3px) rotate(-8deg); }
-}
-.xb_text {
-    color: #ffffff;
-    font-size: 15px;
-    font-weight: 800;
-    letter-spacing: 1.3px;
-    text-transform: uppercase;
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
-}
-.xb_banner[data-phase="active"] .xb_text {
-    animation: xb-text-glow 1.5s ease-in-out infinite;
-}
-@keyframes xb-text-glow {
-    0%, 100% { text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9); }
-    50%      { text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9), 0 0 22px rgba(74, 255, 136, 1); }
-}
+/* ═══ Próximos pasos (colas de construcción) ═══ */
+.cm_steps { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap:12px }
+.cm_step { background:var(--cm-bg2); border:1px solid var(--cm-border); border-radius:12px; padding:13px 14px; display:flex; flex-direction:column; gap:7px; transition:.2s ease }
+.cm_step:hover { border-color:rgba(56,189,248,.5) }
+.cm_step .st_top { display:flex; align-items:center; gap:9px }
+.cm_step .st_ic { flex:0 0 32px; width:32px; height:32px; border-radius:10px; background:rgba(56,189,248,.12); display:flex; align-items:center; justify-content:center; font-size:15px }
+.cm_step .st_name { color:#fff; font-weight:800; font-size:12.5px }
+.cm_step .st_status { color:var(--cm-muted); font-size:11px; line-height:1.5; min-height:30px }
+.cm_step .st_status b { color:#fff }
+.cm_step .st_status .timer { color:var(--cm-cyan); font-weight:900; font-family:'Courier New', monospace; font-size:11.5px }
+.cm_step .st_btn { margin-top:auto; text-align:center; background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.45); color:var(--cm-cyan) !important; border-radius:9px; padding:8px 10px; font-weight:800; font-size:11.5px; text-decoration:none !important; text-transform:none; transition:.2s ease; font-family:inherit }
+.cm_step .st_btn:hover { background:rgba(56,189,248,.18); color:#fff !important }
+.cm_step.busy { border-color:rgba(251,191,36,.45) }
+.cm_step.busy .st_ic { background:rgba(251,191,36,.12) }
 
-#xb_timer {
-    font-family: 'Courier New', monospace;
-    font-weight: 900;
-    color: #ffffff;
-    background: rgba(0, 0, 0, 0.45);
-    padding: 3px 12px;
-    border-radius: 6px;
-    margin-left: 6px;
-    display: inline-block;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    letter-spacing: 1px;
-    min-width: 110px;
-    text-align: center;
-}
+/* ═══ Eventos en curso (ov_ev) ═══ */
+.ov_events_grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap:12px }
+.ov_ev_card { background:var(--cm-bg2); border:1px solid var(--cm-border); border-radius:12px; padding:12px 14px; text-decoration:none; transition:.2s ease; display:block }
+.ov_ev_card:hover { border-color:rgba(56,189,248,.5); transform:translateY(-1px) }
+.ov_ev_header { display:flex; align-items:center; gap:9px; margin-bottom:9px }
+.ov_ev_icon { width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:14px; border:1px solid }
+.ov_ev_name { color:#fff; font-weight:800; font-size:12.5px }
+.ov_ev_progress_bar { height:7px; border-radius:4px; background:rgba(2,6,12,.7); overflow:hidden; border:1px solid rgba(148,163,184,.15) }
+.ov_ev_progress_fill { height:100%; background:linear-gradient(90deg,#3b82f6,#60a5fa); border-radius:4px; transition:width .3s ease }
+.ov_ev_progress_fill.complete { background:linear-gradient(90deg,#22c55e,#4aff88) }
+.ov_ev_footer { display:flex; justify-content:space-between; gap:8px; margin-top:8px; font-size:10.5px }
+.ov_ev_progress { color:var(--cm-muted); font-weight:700 }
+.ov_ev_reward { color:var(--cm-gold); font-weight:800 }
 
-.xb_close {
-    position: absolute;
-    top: 50%;
-    right: 14px;
-    transform: translateY(-50%);
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    color: #ffffff;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 13px;
-    line-height: 1;
-    padding: 0;
-    font-weight: bold;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 3;
-    font-family: inherit;
-}
-.xb_close:hover {
-    background: rgba(255, 0, 0, 0.65);
-    border-color: #ff4444;
-    transform: translateY(-50%) scale(1.15) rotate(90deg);
-    box-shadow: 0 0 12px rgba(255, 68, 68, 0.8);
-}
+/* ═══ Widgets PvE / PvP / rifas / lotería (reusar lógica, piel nueva) ═══ */
+.ov_pve_grid, .ov_pvp_grid, .ov_raffles_grid, .ov_lottery_grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap:12px }
+.ov_pve_card, .ov_pvp_card, .ov_raf_card, .ov_lot_card { background:var(--cm-bg2); border:1px solid var(--cm-border); border-radius:12px; padding:12px 14px; text-decoration:none; display:block; transition:.2s ease }
+.ov_pve_card:hover, .ov_pvp_card:hover, .ov_raf_card:hover, .ov_lot_card:hover { border-color:rgba(56,189,248,.5); transform:translateY(-1px) }
+.ov_pve_card.state-active, .ov_pvp_card.state-active { border-color:rgba(239,68,68,.55); background:rgba(239,68,68,.06) }
+.ov_pve_header, .ov_pvp_header, .ov_raf_header, .ov_lot_header { display:flex; align-items:center; gap:8px; margin-bottom:7px }
+.ov_pve_icon, .ov_pvp_icon, .ov_raf_icon, .ov_lot_icon { font-size:15px }
+.ov_pve_name, .ov_pvp_name, .ov_raf_name, .ov_lot_name { color:#fff; font-weight:800; font-size:12px }
+.ov_pve_status, .ov_pvp_status, .ov_raf_prize { color:var(--cm-text); font-size:11px; margin-bottom:7px }
+.ov_pve_status.highlight, .ov_pvp_status.highlight { color:var(--cm-gold); font-weight:800 }
+.ov_pve_footer, .ov_pvp_footer, .ov_raf_footer, .ov_lot_footer { display:flex; justify-content:space-between; gap:8px; font-size:10.5px }
+.ov_pve_time, .ov_pvp_time { font-weight:800; color:var(--cm-cyan); font-family:'Courier New', monospace }
+.ov_pve_time.off, .ov_pvp_time.off { color:var(--cm-muted) }
+.ov_pve_time.warn, .ov_pvp_time.warn { color:var(--cm-gold) }
+.ov_pve_time.danger, .ov_pvp_time.danger { color:#fca5a5 }
+.ov_raf_time, .ov_lot_time { color:var(--cm-cyan); font-weight:800; font-family:'Courier New', monospace }
+.ov_raf_time.warn, .ov_lot_time.warn { color:var(--cm-gold) }
+.ov_raf_time.danger, .ov_lot_time.danger { color:#fca5a5 }
+.ov_raf_price, .ov_lot_price, .ov_lot_jackpot { color:var(--cm-gold); font-weight:800 }
+.ov_raf_progress_bar, .ov_lot_progress_bar { height:7px; border-radius:4px; background:rgba(2,6,12,.7); overflow:hidden; border:1px solid rgba(148,163,184,.15); margin-bottom:7px }
+.ov_raf_progress_fill, .ov_lot_progress_fill { height:100%; background:linear-gradient(90deg,#f59e0b,#fbbf24); border-radius:4px }
 
-@media (max-width: 700px) {
-    .xb_banner { padding: 12px 45px 12px 12px; }
-    .xb_text   { font-size: 12px; letter-spacing: 0.8px; }
-    .xb_icon   { font-size: 18px; }
-    #xb_timer  { font-size: 12px; padding: 2px 8px; min-width: 90px; }
-}
+/* ═══ Novedades ═══ */
+.cm_news .xnova-card-body { color:var(--cm-text) }
 
-/* ====== DISEÑO DE 2 COLUMNAS ====== */
-.xnova-layout {
-    display: flex;
-    gap: 15px;
-}
-.xnova-main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    min-width: 0;
-}
-.xnova-sidebar {
-    width: 340px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
+/* ═══ Sidebar derecha ═══ */
+.cm_side .sec_title { color:#fff; font-weight:900; font-size:13px; letter-spacing:.4px; margin-bottom:11px; display:flex; align-items:center; gap:8px }
+.cm_side .sec_title .t_grow { flex:1 }
+.cm_side .sec_title .t_link { color:var(--cm-cyan); font-size:10.5px; font-weight:700; text-decoration:none; text-transform:none }
+.booster_card { display:flex; align-items:center; gap:10px; background:var(--cm-bg2); border:1px solid var(--cm-border); border-radius:11px; padding:9px 11px; margin-bottom:8px }
+.booster_card.inactive { opacity:.55; filter:grayscale(.4) }
+.booster_card .booster_icon { flex:0 0 30px; width:30px; height:30px; border-radius:9px; background:rgba(56,189,248,.1); display:flex; align-items:center; justify-content:center; font-size:14px }
+.booster_card .booster_name { color:#fff; font-weight:800; font-size:11.5px }
+.booster_card .booster_bonus { color:var(--cm-cyan); font-size:10px; font-weight:800 }
+.booster_card .booster_state { margin-left:auto; text-align:right }
+.booster_card .state_active { color:var(--cm-green); font-size:10px; font-weight:800; font-family:'Courier New', monospace }
+.booster_card .state_inactive { color:var(--cm-muted); font-size:10px; font-weight:700 }
+.cmd_card { display:flex; align-items:center; gap:12px }
+.cmd_card .cmd_avatar { flex:0 0 46px; width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg,#1d4ed8,#60a5fa); display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 0 14px rgba(59,130,246,.45) }
+.cmd_card .cmd_name { color:#fff; font-weight:900; font-size:14px }
+.cmd_card .cmd_rank { color:var(--cm-gold); font-size:9.5px; font-weight:900; letter-spacing:1px; text-transform:uppercase; margin-top:2px }
+.cmd_stats { display:flex; gap:8px; margin-top:12px }
+.cmd_stats .cs { flex:1; background:var(--cm-bg2); border:1px solid var(--cm-border); border-radius:10px; padding:8px 6px; text-align:center }
+.cmd_stats .cs b { display:block; color:#fff; font-size:13px }
+.cmd_stats .cs span { color:var(--cm-muted); font-size:8.5px; text-transform:uppercase; letter-spacing:.7px }
 
-/* ====== TARJETAS GENÉRICAS ====== */
-.xnova-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    transition: transform 0.2s ease, border-color 0.2s ease;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-.xnova-card:hover {
-    border-color: rgba(59, 130, 246, 0.5);
-}
-.xnova-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-title);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-.xnova-card-header span.icon {
-    color: var(--accent-cyan);
-    margin-right: 8px;
-}
-
-/* ============================================================ */
-/* ====== RADAR TÁCTICO COMPACTO (OVERVIEW) =================== */
-/* ============================================================ */
-.fleet-card {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    margin-bottom: 6px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    overflow: visible;
-    position: relative;
-}
-
-.fleet-card.is-attack { border-left: 3px solid var(--accent-red); }
-.fleet-card.is-incoming { border-left: 3px solid var(--accent-red); background: rgba(239, 68, 68, 0.08); }
-.fleet-card.is-espionage { border-left: 3px solid var(--accent-gold); }
-.fleet-card.is-deploy { border-left: 3px solid var(--accent-blue); }
-.fleet-card.is-transport { border-left: 3px solid var(--accent-green); }
-.fleet-card.is-expedition { border-left: 3px solid var(--accent-cyan); }
-
-.fleet-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 3px 8px;
-    background: rgba(0,0,0,0.3);
-    border-bottom: 1px solid rgba(255,255,255,0.03);
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.is-attack .fleet-mission { color: var(--accent-red); text-shadow: 0 0 5px var(--accent-red); }
-.is-incoming .fleet-mission { color: var(--accent-red); text-shadow: 0 0 5px var(--accent-red); font-weight: 900; }
-.is-espionage .fleet-mission { color: var(--accent-gold); text-shadow: 0 0 5px var(--accent-gold); }
-.is-deploy .fleet-mission { color: var(--accent-blue); text-shadow: 0 0 5px var(--accent-blue); }
-.is-transport .fleet-mission { color: var(--accent-green); text-shadow: 0 0 5px var(--accent-green); }
-.is-expedition .fleet-mission { color: var(--accent-cyan); text-shadow: 0 0 5px var(--accent-cyan); }
-
-.fleet-radar { 
-    padding: 4px 10px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: space-between; 
-    position: relative; 
-    height: 40px;
-}
-.planet-node { 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center; 
-    z-index: 2; 
-    text-align: center; 
-    width: 70px; 
-}
-.planet-icon { font-size: 16px; line-height: 1; margin-bottom: 0px; filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); }
-.planet-name { font-size: 7px; font-weight: bold; color: #fff; text-transform: uppercase; white-space: nowrap; }
-.planet-coords { font-size: 8px; color: var(--text-muted); font-family: 'Courier New', monospace; margin-top: 0px; }
-
-.radar-track-container { flex: 1; position: relative; height: 100%; margin: 0 5px; display: flex; align-items: center; }
-.radar-line { position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background-image: linear-gradient(to right, var(--border-color) 50%, transparent 50%); background-size: 6px 100%; z-index: 1; transform: translateY(-50%); }
-
-.center-node { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; cursor: help; }
-.center-node .planet-name { color: #fff; }
-
-.end-node { position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 2; opacity: 0.5; }
-
-.traveler-container { position: absolute; top: 50%; left: 3%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; z-index: 3; transition: left 1s linear; cursor: help; }
-.traveler-ship { font-size: 18px; line-height: 1; filter: drop-shadow(0 0 5px rgba(255,255,255,0.8)); }
-.is-incoming .traveler-ship { filter: drop-shadow(0 0 8px var(--accent-red)); }
-.is-expedition .traveler-ship { filter: drop-shadow(0 0 8px var(--accent-cyan)); }
-.is-attack .traveler-ship { filter: drop-shadow(0 0 8px var(--accent-red)); }
-.traveler-timer { margin-top: 1px; font-size: 8px; font-weight: bold; color: var(--accent-gold); background: rgba(0,0,0,0.9); padding: 0px 4px; border-radius: 3px; border: 1px solid rgba(255, 184, 0, 0.5); white-space: nowrap; font-family: 'Courier New', monospace; }
-
-/* ====== TOOLTIP PERSONALIZADO (Desglose) ====== */
-.hud-tooltip {
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    margin-bottom: 10px;
-    background: rgba(15, 23, 42, 0.95);
-    border: 1px solid var(--accent-cyan);
-    border-radius: 6px;
-    padding: 8px 10px;
-    width: 190px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 224, 255, 0.2);
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.2s ease-in-out;
-    z-index: 100;
-    pointer-events: none;
-    font-size: 10px;
-    color: var(--text-main);
-    text-align: left;
-}
-.hud-tooltip::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    margin-left: -6px;
-    border-width: 6px;
-    border-style: solid;
-    border-color: var(--accent-cyan) transparent transparent transparent;
-}
-.traveler-container:hover .hud-tooltip {
-    opacity: 1;
-    visibility: visible;
-    margin-bottom: 6px;
-}
-.tooltip-title {
-    font-weight: bold;
-    color: var(--accent-cyan);
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 3px;
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    font-size: 9px;
-    letter-spacing: 0.5px;
-}
-.tooltip-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 2px;
-}
-.tooltip-row span:last-child {
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
-    color: #fff;
-}
-.tooltip-section-title {
-    color: var(--accent-gold);
-    margin-top: 6px;
-    margin-bottom: 3px;
-    font-weight: bold;
-    font-size: 9px;
-}
-
-/* ====== TARJETA DEL PLANETA ====== */
-.xnova-planet-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-.xnova-planet-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 12px;
-}
-.xnova-planet-header .title-group {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.xnova-planet-header .title-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: rgba(0, 224, 255, 0.1);
-    color: var(--accent-cyan);
-    border: 1px solid var(--accent-cyan);
-    font-size: 16px;
-    box-shadow: 0 0 15px rgba(0, 224, 255, 0.2);
-}
-.xnova-planet-header .title-text {
-    font-size: 18px;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: 0.5px;
-}
-.xnova-planet-header .edit-btn {
-    color: var(--accent-cyan);
-    text-decoration: none;
-    font-size: 10px;
-    font-weight: 700;
-    background: rgba(0, 224, 255, 0.1);
-    padding: 4px 10px;
-    border-radius: 6px;
-    border: 1px solid rgba(0, 224, 255, 0.4);
-    transition: all 0.2s ease;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-left: 10px;
-}
-.xnova-planet-header .edit-btn:hover {
-    background: rgba(0, 224, 255, 0.2);
-    box-shadow: 0 0 15px rgba(0, 224, 255, 0.5);
-}
-.xnova-planet-header .action-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(0, 224, 255, 0.4);
-    color: var(--accent-cyan);
-    padding: 5px 10px;
-    border-radius: 6px;
-    font-size: 10px;
-    font-weight: 700;
-    font-family: 'Courier New', monospace;
-    text-decoration: none;
-    box-shadow: 0 0 10px rgba(0, 224, 255, 0.1);
-}
-.xnova-planet-body {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
-}
-.xnova-planet-image {
-    width: 180px;
-    height: 180px;
-    border-radius: 12px;
-    background-size: cover;
-    background-position: center;
-    border: 2px solid rgba(0, 224, 255, 0.4);
-    box-shadow: 0 0 25px rgba(0, 224, 255, 0.2);
-    flex-shrink: 0;
-    position: relative;
-}
-.xnova-planet-image .planet-badge {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    background: rgba(0, 0, 0, 0.8);
-    border: 1px solid rgba(0, 224, 255, 0.5);
-    border-radius: 6px;
-    padding: 3px 10px;
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--accent-cyan);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-.xnova-planet-stats {
-    flex: 1;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-.xnova-stat-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    padding: 12px;
-    transition: all 0.2s ease;
-}
-.xnova-stat-item:hover {
-    background: rgba(0, 0, 0, 0.5);
-    border-color: rgba(0, 224, 255, 0.3);
-}
-.xnova-stat-item .icon {
-    font-size: 20px;
-    color: var(--accent-cyan);
-    width: 26px;
-    text-align: center;
-    text-shadow: 0 0 10px rgba(0, 224, 255, 0.5);
-}
-.xnova-stat-item .info {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-}
-.xnova-stat-item .label {
-    font-size: 9px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 600;
-}
-.xnova-stat-item .value {
-    font-size: 13px;
-    font-weight: 700;
-    color: #fff;
-    margin-top: 4px;
-}
-.xnova-stat-item .value a {
-    color: var(--accent-cyan);
-    text-decoration: none;
-}
-
-/* ============================================================== */
-/* ============ 🆕 ASTROIO v6.5 - BLOQUE DE CLIMA ============== */
-/* ============================================================== */
-.xnova-clima-block {
-    background: linear-gradient(135deg, rgba(15, 30, 50, 0.9), rgba(8, 20, 35, 0.95));
-    border: 1px solid rgba(0, 224, 255, 0.35);
-    border-radius: 12px;
-    padding: 14px 16px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 224, 255, 0.05);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-.xnova-clima-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--accent-cyan);
-    border-bottom: 1px solid rgba(0, 224, 255, 0.2);
-    padding-bottom: 6px;
-}
-.xnova-clima-section {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
-}
-.xnova-clima-emoji {
-    font-size: 34px;
-    line-height: 1;
-    filter: drop-shadow(0 0 10px rgba(0, 224, 255, 0.5));
-    flex-shrink: 0;
-}
-.xnova-clima-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-}
-.xnova-clima-name {
-    font-size: 14px;
-    font-weight: 800;
-    color: #ffffff;
-    text-shadow: 0 0 8px rgba(0, 224, 255, 0.5);
-    letter-spacing: 0.5px;
-}
-.xnova-clima-desc {
-    font-size: 11px;
-    color: var(--text-muted);
-    font-style: italic;
-    line-height: 1.3;
-}
-.xnova-clima-factors {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 4px;
-}
-.xnova-clima-factor {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    padding: 2px 8px;
-    font-size: 10px;
-    font-weight: 700;
-    font-family: 'Courier New', monospace;
-    color: #fff;
-}
-.xnova-clima-factor.positive { color: var(--accent-green); border-color: rgba(74, 255, 136, 0.4); }
-.xnova-clima-factor.negative { color: var(--accent-red); border-color: rgba(239, 68, 68, 0.4); }
-.xnova-clima-factor.neutral { color: var(--text-muted); }
-.xnova-clima-predict {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-top: 8px;
-    border-top: 1px dashed rgba(0, 224, 255, 0.2);
-    font-size: 11px;
-    color: var(--text-muted);
-}
-.xnova-clima-predict b {
-    color: var(--accent-gold);
-}
-.xnova-clima-predict .pred-emoji {
-    font-size: 18px;
-    line-height: 1;
-    filter: drop-shadow(0 0 6px rgba(255, 204, 0, 0.4));
-}
-.xnova-clima-alert {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-}
-.xnova-clima-alert.danger {
-    background: rgba(239, 68, 68, 0.12);
-    border: 1px solid rgba(239, 68, 68, 0.5);
-    color: #ff8f8f;
-}
-.xnova-clima-alert.success {
-    background: rgba(74, 255, 136, 0.1);
-    border: 1px solid rgba(74, 255, 136, 0.5);
-    color: #88ffaa;
-}
-
-@media (max-width: 700px) {
-    .xnova-clima-block { padding: 10px 12px; gap: 8px; }
-    .xnova-clima-emoji { font-size: 26px; }
-    .xnova-clima-name { font-size: 12px; }
-    .xnova-clima-desc { font-size: 10px; }
-    .xnova-clima-factor { font-size: 9px; padding: 1px 6px; }
-}
-
-/* ====== GRID DE ACCIONES ====== */
-.xnova-action-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 15px;
-}
-.xnova-action-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-    transition: all 0.25s ease;
-    display: flex;
-    flex-direction: column;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-.xnova-action-card:hover {
-    border-color: var(--accent-cyan);
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0, 224, 255, 0.2);
-}
-.xnova-action-image {
-    height: 80px;
-    background-size: cover;
-    background-position: center;
-    position: relative;
-    border-bottom: 1px solid var(--border-color);
-    background-color: rgba(11, 16, 30, 0.75);
-}
-.xnova-action-image::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(15, 23, 42, 0.85), transparent);
-}
-.xnova-action-content {
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-}
-.xnova-action-title {
-    font-size: 12px;
-    font-weight: 700;
-    color: #fff;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-.xnova-action-status {
-    font-size: 10px;
-    color: var(--text-muted);
-    min-height: 28px;
-}
-.xnova-action-status b {
-    color: var(--accent-gold);
-}
-.xnova-action-btn {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.85));
-    border: 1px solid var(--border-color);
-    color: var(--accent-cyan);
-    padding: 7px;
-    border-radius: 6px;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: center;
-    text-decoration: none;
-    display: block;
-    margin-top: auto;
-}
-.xnova-action-btn:hover {
-    background: linear-gradient(135deg, #0066cc, #0099ff);
-    color: #fff;
-    border-color: var(--accent-cyan);
-    box-shadow: 0 0 15px rgba(0, 224, 255, 0.4);
-}
-
-/* ====== ESTILOS PARA WIDGETS ====== */
-.xnova-main .ov_pve_section,
-.xnova-main .ov_pvp_section,
-.xnova-main .ov_raffles_section,
-.xnova-main .ov_lottery_section,
-.xnova-main .ov_events_section {
-    margin-top: 0;
-}
-
-.xnova-main .ov_events_title,
-.xnova-main .ov_raffles_title,
-.xnova-main .ov_lottery_title,
-.xnova-main .ov_pve_title,
-.xnova-main .ov_pvp_title {
-    padding: 10px 15px !important;
-    border-radius: 10px !important;
-    font-weight: 700 !important;
-    font-size: 12px !important;
-    letter-spacing: 1px !important;
-    text-transform: uppercase !important;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
-    margin-bottom: 10px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    border-left: 4px solid var(--accent-blue) !important;
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.85)) !important;
-    color: #ffffff !important;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-.xnova-main .ov_pve_title { border-left-color: var(--accent-purple) !important; background: linear-gradient(135deg, rgba(46, 16, 101, 0.85), rgba(30, 27, 75, 0.85)) !important; }
-.xnova-main .ov_pvp_title { border-left-color: var(--accent-red) !important; background: linear-gradient(135deg, rgba(74, 13, 13, 0.85), rgba(26, 35, 50, 0.85)) !important; }
-.xnova-main .ov_events_title { border-left-color: var(--accent-cyan) !important; background: linear-gradient(135deg, rgba(0, 68, 136, 0.85), rgba(0, 119, 204, 0.85)) !important; }
-.xnova-main .ov_raffles_title { border-left-color: var(--accent-cyan) !important; background: linear-gradient(135deg, rgba(0, 68, 136, 0.85), rgba(0, 119, 204, 0.85)) !important; }
-.xnova-main .ov_lottery_title { border-left-color: var(--accent-gold) !important; background: linear-gradient(135deg, rgba(74, 20, 140, 0.85), rgba(0, 119, 204, 0.85)) !important; }
-.xnova-sidebar .boosters_title { border-left-color: var(--accent-gold) !important; background: linear-gradient(135deg, rgba(74, 20, 140, 0.85), rgba(0, 119, 204, 0.85)) !important; padding: 8px 12px !important; font-size: 11px !important; margin-bottom: 8px !important; }
-
-.xnova-main .ov_events_all, .xnova-main .ov_raffles_all, .xnova-main .ov_lottery_all, .xnova-main .ov_pve_all, .xnova-main .ov_pvp_all {
-    font-size: 10px !important; font-weight: 600 !important; text-decoration: none !important; transition: all 0.25s ease !important; color: var(--accent-cyan) !important;
-}
-.xnova-main .ov_events_all:hover, .xnova-main .ov_raffles_all:hover, .xnova-main .ov_lottery_all:hover, .xnova-main .ov_pve_all:hover, .xnova-main .ov_pvp_all:hover {
-    color: #ffffff !important; text-shadow: 0 0 8px rgba(0, 224, 255, 0.8) !important;
-}
-
-.xnova-main .ov_events_grid, .xnova-main .ov_raffles_grid, .xnova-main .ov_lottery_grid, .xnova-main .ov_pve_grid, .xnova-main .ov_pvp_grid {
-    display: flex !important; flex-wrap: wrap !important; gap: 10px !important; background: transparent !important; border: none !important; padding: 0 !important;
-}
-
-.xnova-user-card {
-    background: repeating-linear-gradient(
-        -45deg,
-        rgba(11, 16, 30, 0.70),
-        rgba(11, 16, 30, 0.70) 10px,
-        rgba(14, 22, 40, 0.70) 10px,
-        rgba(14, 22, 40, 0.70) 20px
-    );
-    border: 1px solid rgba(0, 224, 255, 0.3);
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 224, 255, 0.05);
-    margin-bottom: 12px;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-.xnova-user-card .uc-header {
-    font-size: 14px;
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: 0.5px;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-.xnova-user-card .uc-stats {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-.xnova-user-card .uc-stat-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 12px;
-}
-.xnova-user-card .uc-stat-row .lbl {
-    color: var(--text-muted);
-    font-weight: 500;
-}
-.xnova-user-card .uc-stat-row .val {
-    color: #fff;
-    font-weight: 700;
-}
-.xnova-user-card .uc-stat-row .val.cyan {
-    color: var(--accent-cyan);
-}
-
-.xnova-sidebar .boosters_section { margin-top: 0; }
-.xnova-sidebar .boosters_grid {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-}
-
-.xnova-sidebar .booster_card {
-    min-width: 0 !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    padding: 10px !important;
-    background: var(--bg-card) !important;
-    border: 1px solid var(--border-color) !important;
-    border-radius: 10px !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
-    min-height: 85px !important;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    transition: all 0.3s ease !important;
-}
-
-.xnova-sidebar .booster_card.active {
-    border: 1px solid #fbbf24 !important;
-    border-left: 4px solid #fde047 !important;
-    background: linear-gradient(135deg, rgba(120, 53, 15, 0.75), rgba(180, 83, 9, 0.75)) !important;
-    box-shadow:
-        0 0 20px rgba(251, 191, 36, 0.55),
-        0 0 35px rgba(251, 191, 36, 0.25),
-        inset 0 0 20px rgba(251, 191, 36, 0.15) !important;
-    animation: booster-active-glow 2s ease-in-out infinite;
-}
-@keyframes booster-active-glow {
-    0%, 100% {
-        box-shadow:
-            0 0 20px rgba(251, 191, 36, 0.55),
-            0 0 35px rgba(251, 191, 36, 0.25),
-            inset 0 0 20px rgba(251, 191, 36, 0.15);
-    }
-    50% {
-        box-shadow:
-            0 0 28px rgba(251, 191, 36, 0.85),
-            0 0 45px rgba(251, 191, 36, 0.45),
-            inset 0 0 25px rgba(251, 191, 36, 0.25);
-    }
-}
-.xnova-sidebar .booster_card.active .booster_icon {
-    filter: drop-shadow(0 0 10px rgba(251, 191, 36, 1)) !important;
-    animation: booster-icon-pulse 1.5s ease-in-out infinite;
-}
-@keyframes booster-icon-pulse {
-    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(251, 191, 36, 1)); }
-    50%      { transform: scale(1.1); filter: drop-shadow(0 0 16px rgba(253, 224, 71, 1)); }
-}
-.xnova-sidebar .booster_card.active .booster_name {
-    color: #fef08a !important;
-    text-shadow: 0 0 8px rgba(251, 191, 36, 0.9) !important;
-    font-weight: 800 !important;
-}
-.xnova-sidebar .booster_card.active .booster_bonus {
-    color: #fde047 !important;
-    text-shadow: 0 0 12px rgba(251, 191, 36, 1) !important;
-    font-weight: 800 !important;
-    font-size: 14px !important;
-}
-.xnova-sidebar .booster_card.active .state_active {
-    background: rgba(251, 191, 36, 0.3) !important;
-    color: #fef3c7 !important;
-    border: 1px solid #fbbf24 !important;
-    box-shadow: 0 0 10px rgba(251, 191, 36, 0.6) !important;
-    font-weight: 800 !important;
-}
-
-.xnova-sidebar .booster_card.inactive {
-    border-left: 4px solid #2a3441 !important;
-    opacity: 0.75 !important;
-    background: var(--bg-card) !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
-}
-.xnova-sidebar .booster_card.inactive .booster_icon { filter: grayscale(60%) opacity(0.65) !important; }
-.xnova-sidebar .booster_card.inactive .booster_name { color: #94a3b8 !important; font-weight: 600 !important; }
-.xnova-sidebar .booster_card.inactive .booster_bonus { color: #64748b !important; font-weight: 600 !important; }
-.xnova-sidebar .booster_card.inactive .state_inactive {
-    background: rgba(120, 120, 120, 0.15) !important;
-    color: #94a3b8 !important;
-    border: 1px solid #2a3441 !important;
-    font-weight: 600 !important;
-}
-
-.xnova-sidebar .booster_icon { font-size: 20px !important; margin-bottom: 4px !important; }
-.xnova-sidebar .booster_name { font-size: 11px !important; font-weight: 700 !important; color: #fff !important; white-space: normal !important; line-height: 1.2 !important; margin-bottom: 3px !important; }
-.xnova-sidebar .booster_bonus { font-size: 13px !important; font-weight: 700 !important; color: var(--accent-gold) !important; font-family: 'Courier New', monospace !important; }
-.xnova-sidebar .booster_state { text-align: left !important; margin-top: 6px !important; width: 100%; }
-.xnova-sidebar .state_active { font-size: 9px !important; padding: 2px 5px !important; }
-.xnova-sidebar .state_inactive { font-size: 9px !important; padding: 2px 5px !important; }
-
-.xnova-main .ov_ev_card, .xnova-main .ov_raf_card, .xnova-main .ov_lot_card, .xnova-main .ov_pve_card, .xnova-main .ov_pvp_card {
-    background: var(--bg-card) !important;
-    border: 1px solid var(--border-color) !important;
-    border-radius: 10px !important;
-    padding: 10px !important;
-    text-decoration: none !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 6px !important;
-    transition: all 0.25s ease !important;
-    position: relative !important;
-    flex: 1 1 0 !important;
-    min-width: 180px !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-.xnova-main .ov_ev_card:hover, .xnova-main .ov_raf_card:hover, .xnova-main .ov_lot_card:hover, .xnova-main .ov_pve_card:hover, .xnova-main .ov_pvp_card:hover {
-    border-color: var(--accent-cyan) !important;
-    box-shadow: 0 6px 20px rgba(0, 224, 255, 0.25) !important;
-    transform: translateY(-3px) !important;
-}
-
-.xnova-main .ov_ev_card.ov_ev_daily  { border-left: 4px solid var(--accent-blue) !important; }
-.xnova-main .ov_ev_card.ov_ev_weekly { border-left: 4px solid var(--accent-purple) !important; }
-.xnova-main .ov_ev_card.ov_ev_elite  { border-left: 4px solid var(--accent-gold) !important; }
-.xnova-main .ov_raf_card { border-left: 4px solid var(--accent-cyan) !important; }
-.xnova-main .ov_raf_card.ov_raf_warn { border-left-color: var(--accent-gold) !important; }
-.xnova-main .ov_raf_card.ov_raf_danger { border-left-color: var(--accent-red) !important; }
-.xnova-main .ov_lot_card { border-left: 4px solid var(--accent-gold) !important; }
-.xnova-main .ov_pve_card.ov_pve_crisis  { border-left: 4px solid var(--accent-purple) !important; }
-.xnova-main .ov_pve_card.ov_pve_empire  { border-left: 4px solid var(--accent-gold) !important; }
-.xnova-main .ov_pve_card.ov_pve_rewards { border-left: 4px solid var(--accent-green) !important; }
-.xnova-main .ov_pve_card.ov_pve_boss    { border-left: 4px solid var(--accent-blue) !important; }
-.xnova-main .ov_pvp_card.ov_pvp_arenas      { border-left: 4px solid var(--accent-red) !important; }
-.xnova-main .ov_pvp_card.ov_pvp_tournament  { border-left: 4px solid var(--accent-gold) !important; }
-.xnova-main .ov_pvp_card.ov_pvp_myarena     { border-left: 4px solid var(--accent-blue) !important; }
-.xnova-main .ov_pvp_card.ov_pvp_stats       { border-left: 4px solid var(--accent-green) !important; }
-
-.xnova-main .ov_pve_card.state-active, .xnova-main .ov_pvp_card.state-active {
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4) !important;
-    border-color: var(--accent-red) !important;
-    animation: pulse-active 2s infinite;
-}
-@keyframes pulse-active {
-    0% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
-    50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.7); }
-    100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
-}
-
-.xnova-main .ov_ev_header, .xnova-main .ov_raf_header, .xnova-main .ov_lot_header, .xnova-main .ov_pve_header, .xnova-main .ov_pvp_header {
-    display: flex !important; align-items: center !important; gap: 8px !important; min-width: 0 !important;
-}
-.xnova-main .ov_ev_icon, .xnova-main .ov_raf_icon, .xnova-main .ov_lot_icon, .xnova-main .ov_pve_icon, .xnova-main .ov_pvp_icon {
-    display: inline-flex !important; align-items: center !important; justify-content: center !important;
-    width: 28px !important; height: 28px !important; border-radius: 8px !important; font-size: 14px !important; flex-shrink: 0 !important;
-    border: 1px solid var(--border-color) !important;
-    background: rgba(255,255,255,0.05) !important;
-}
-.xnova-main .ov_ev_icon { color: var(--accent-cyan); border-color: var(--accent-cyan); background: rgba(0, 224, 255, 0.1); }
-.xnova-main .ov_raf_icon { color: var(--accent-cyan); border-color: var(--accent-cyan); background: rgba(0, 224, 255, 0.1); }
-.xnova-main .ov_lot_icon { color: var(--accent-gold); border-color: var(--accent-gold); background: rgba(255, 204, 0, 0.1); }
-.xnova-main .ov_pve_icon { color: var(--accent-purple); border-color: var(--accent-purple); background: rgba(170, 50, 255, 0.1); }
-.xnova-main .ov_pvp_icon { color: var(--accent-red); border-color: var(--accent-red); background: rgba(255, 50, 50, 0.1); }
-
-.xnova-main .ov_ev_name, .xnova-main .ov_raf_name, .xnova-main .ov_lot_name, .xnova-main .ov_pve_name, .xnova-main .ov_pvp_name {
-    font-size: 10px !important; font-weight: 700 !important; color: #ffffff !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; flex: 1 !important; min-width: 0 !important;
-}
-
-.xnova-main .ov_ev_progress_bar, .xnova-main .ov_raf_progress_bar, .xnova-main .ov_lot_progress_bar {
-    height: 5px !important; background: rgba(0, 0, 0, 0.6) !important; border-radius: 3px !important; overflow: hidden !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-.xnova-main .ov_ev_progress_fill, .xnova-main .ov_raf_progress_fill, .xnova-main .ov_lot_progress_fill {
-    height: 100% !important; transition: width 0.4s ease !important;
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.3) inset !important;
-}
-.xnova-main .ov_ev_progress_fill { background: linear-gradient(90deg, #0066cc, #00ccff) !important; }
-.xnova-main .ov_ev_progress_fill.complete { background: linear-gradient(90deg, #008844, #66ff99) !important; }
-.xnova-main .ov_raf_progress_fill { background: linear-gradient(90deg, #008888, #00ffdd) !important; }
-.xnova-main .ov_lot_progress_fill { background: linear-gradient(90deg, #aa7700, #ffcc00) !important; }
-
-.xnova-main .ov_ev_footer, .xnova-main .ov_raf_footer, .xnova-main .ov_lot_footer, .xnova-main .ov_pve_footer, .xnova-main .ov_pvp_footer {
-    display: flex !important; justify-content: space-between !important; align-items: center !important; font-size: 9px !important; font-family: 'Courier New', monospace !important; gap: 8px !important; margin-top: 4px;
-}
-.xnova-main .ov_ev_progress, .xnova-main .ov_raf_time, .xnova-main .ov_lot_time, .xnova-main .ov_pve_time, .xnova-main .ov_pvp_time { color: var(--text-muted) !important; font-weight: 700 !important; }
-.xnova-main .ov_ev_reward, .xnova-main .ov_raf_price, .xnova-main .ov_lot_price, .xnova-main .ov_pve_status, .xnova-main .ov_pvp_status { color: var(--accent-gold) !important; font-weight: 700 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; max-width: 55% !important; }
-.xnova-main .ov_raf_time.warn, .xnova-main .ov_lot_time.warn, .xnova-main .ov_pve_time.warn, .xnova-main .ov_pvp_time.warn { color: var(--accent-gold) !important; }
-.xnova-main .ov_raf_time.danger, .xnova-main .ov_lot_time.danger, .xnova-main .ov_pve_time.danger, .xnova-main .ov_pvp_time.danger { color: var(--accent-red) !important; animation: pulse-text 1.5s infinite; }
-.xnova-main .ov_pve_time.off, .xnova-main .ov_pvp_time.off { color: var(--text-muted) !important; }
-@keyframes pulse-text { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-.xnova-main .ov_pve_status.highlight, .xnova-main .ov_pvp_status.highlight { color: var(--accent-green) !important; text-shadow: 0 0 8px rgba(74, 255, 136, 0.5) !important; }
-
-/* ====== RESPONSIVE ====== */
-@media (max-width: 1100px) {
-    .xnova-layout { flex-direction: column; }
-    .xnova-sidebar { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
-    .xnova-action-grid { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 700px) {
-    .xnova-planet-body { flex-direction: column; align-items: stretch !important; gap: 12px !important; }
-    .xnova-planet-image { width: 100% !important; height: 140px !important; }
-    .xnova-planet-stats { grid-template-columns: repeat(2, 1fr) !important; width: 100% !important; gap: 6px !important; }
-    .xnova-stat-item { padding: 8px !important; gap: 6px !important; }
-    .xnova-stat-item .icon { font-size: 15px !important; width: 18px !important; }
-    .xnova-stat-item .label { font-size: 8px !important; letter-spacing: 0.5px !important; }
-    .xnova-stat-item .value { font-size: 10px !important; margin-top: 2px !important; }
-    .xnova-sidebar { grid-template-columns: 1fr; }
-    .xnova-action-grid { grid-template-columns: 1fr; }
-    .xnova-main .ov_ev_card, .xnova-main .ov_raf_card, .xnova-main .ov_lot_card, .xnova-main .ov_pve_card, .xnova-main .ov_pvp_card { min-width: 100%; }
-    .xnova-sidebar .boosters_grid { grid-template-columns: 1fr !important; }
-
-    .xnova-sidebar {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 8px !important;
-        width: 100% !important;
-    }
-    .xnova-user-card {
-        box-sizing: border-box !important;
-        width: 100% !important;
-        max-width: 100% !important;
-    }
-    .xnova-sidebar .boosters_section { width: 100% !important; align-self: flex-start !important; }
-
-    .xnova-action-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
-    .xnova-action-image { height: 55px !important; }
-    .xnova-action-content { padding: 7px !important; gap: 4px !important; }
-    .xnova-action-title { font-size: 10px !important; letter-spacing: 0.3px !important; }
-    .xnova-action-status { font-size: 8px !important; min-height: 22px !important; }
-    .xnova-action-btn { font-size: 8px !important; padding: 6px 4px !important; }
-
-    .xnova-planet-card { padding: 10px !important; gap: 10px !important; }
-    .xnova-planet-header { padding-bottom: 8px !important; }
-    .xnova-planet-header .title-icon { width: 26px !important; height: 26px !important; font-size: 13px !important; }
-    .xnova-planet-header .title-text { font-size: 14px !important; }
-    .xnova-planet-header .edit-btn { font-size: 8px !important; padding: 3px 6px !important; margin-left: 4px !important; }
-    .xnova-planet-header .action-btn { font-size: 9px !important; padding: 4px 7px !important; }
-
-    .xnova-main .ov_events_grid,
-    .xnova-main .ov_raffles_grid,
-    .xnova-main .ov_lottery_grid,
-    .xnova-main .ov_pve_grid,
-    .xnova-main .ov_pvp_grid {
-        display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 6px !important;
-    }
-    .xnova-main .ov_ev_card,
-    .xnova-main .ov_raf_card,
-    .xnova-main .ov_lot_card,
-    .xnova-main .ov_pve_card,
-    .xnova-main .ov_pvp_card {
-        min-width: 0 !important; max-width: none !important; flex: none !important;
-        padding: 7px !important; gap: 4px !important;
-    }
-
-    .xnova-user-card { padding: 10px !important; margin-bottom: 8px !important; }
-    .xnova-user-card .uc-header { font-size: 12px !important; padding-bottom: 6px !important; margin-bottom: 6px !important; }
-    .xnova-user-card .uc-stat-row { font-size: 10px !important; }
-
-    .xnova-sidebar .boosters_grid { grid-template-columns: repeat(2, 1fr) !important; gap: 5px !important; }
-    .xnova-sidebar .booster_card { min-height: 70px !important; padding: 7px !important; }
-    .xnova-sidebar .booster_icon { font-size: 16px !important; }
-    .xnova-sidebar .booster_name { font-size: 9px !important; }
-    .xnova-sidebar .booster_bonus { font-size: 11px !important; }
-
-    .xnova-wrapper { padding: 8px !important; border-radius: 10px !important; }
-
-    /* Radar en móvil */
-    .fleet-radar { padding: 5px 2px; height: 35px; }
-    .planet-icon { font-size: 14px; }
-    .traveler-ship { font-size: 16px; }
-    .planet-name { font-size: 6px; }
-    .planet-coords { font-size: 7px; }
-    .traveler-timer { font-size: 7px; padding: 0px 2px; margin-top: 0px; }
+/* ═══ Responsive ═══ */
+@media (max-width:1250px) {
+  .cm_shell { flex-direction:column; align-items:stretch }
+  .cm_main { width:100% }
+  .cm_side { width:100%; flex:1 1 auto }
+  .cm_row2 { grid-template-columns:1fr }
+}
+@media (max-width:760px) {
+  .cm_shell { padding:2px 0 14px; gap:12px }
+  .cm_card { padding:12px; border-radius:12px }
+  .cm_head h1 { font-size:21px }
+  .cm_planet .p_body { flex-direction:column }
+  .cm_planet .p_img { width:100%; flex:1 1 auto; min-height:130px }
+  .cm_boost { flex-direction:column; align-items:stretch; gap:9px; padding:12px }
+  .cm_boost .b_grow { display:none }
+  .cm_boost .b_title, .cm_boost .b_sub { white-space:normal !important }
+  .cm_boost .b_timerbox { width:100%; text-align:center; font-size:12px; padding:5px 6px; box-sizing:border-box; letter-spacing:.5px }
+  .cm_boost .b_chip { align-self:flex-start }
+  .cm_boost .b_title { font-size:12.5px }
+  .planet-node.center-node { display:none }
+  .planet-node.end-node { display:none }
+  .cm_btn_grad { min-width:0 }
+  .booster_card .state_active, .booster_card .state_inactive { white-space:normal }
+  .cm_step, .cm_stat, .cm_card, .fleet-card { overflow-wrap:anywhere }
+  .cm_planet .p_actions { flex-direction:column }
+  .cmd_card { flex-direction:row }
 }
 </style>
 
-<div class="xnova-wrapper">
+{* ═══════════════════════ CONTENIDO: CENTRO DE MANDO ═══════════════════════ *}
 
-    <!-- ================= BARRA SUPERIOR ================= -->
-    <div class="xnova-topbar">
-        <div class="onligne">
-            <i class="fas fa-user"></i> {$LNG.ov_online_user} : <span style="font-weight: bold; color: lime;">{$onlineUser + $AdminsOnline|@count|number}</span>
-        </div>
-        <span><i class="fas fa-users"></i> {$LNG.ov_admins_online} : {foreach $AdminsOnline as $ID => $Name}{if !$Name@first}&nbsp;&bull;&nbsp;{/if}<a href="#" onclick="return Dialog.PM({$ID})">{$Name}</a>{foreachelse}{$LNG.ov_no_admins_online}{/foreach}</span>
-        <div class="ticket">
-            <a href="game.php?page=ticket"><i class="fas fa-ticket-alt"></i> {$LNG.ov_ticket}</a>
-        </div>
-    </div>
+<div class="cm_shell">
+	<div class="cm_main">
 
-    <!-- ================= HERO BANNER ================= -->
-    <div class="xnova-hero">
-        <h1>XNOVA AstroIO</h1>
-    </div>
+		{* ─── Cabecera ─── *}
+		<div class="cm_head">
+			<h1>Centro de <b>mando</b></h1>
+			<p>Tus objetivos y la actividad de tu imperio.</p>
+		</div>
 
-    {* ═══════════════════════════════════════════════════════════
-     * 🆕 ASTROIO - BANNER BOOST FIN DE SEMANA
-     * ═══════════════════════════════════════════════════════════ *}
-    {if isset($weekend_boost) && $weekend_boost.show == 1}
-    <div class="xb_banner"
-         id="xb_banner"
-         data-phase="{$weekend_boost.phase}"
-         data-seconds="{$weekend_boost.seconds_left}"
-         data-multiplier="{$weekend_boost.multiplier}">
-        <div class="xb_content">
-            <span class="xb_icon">🎉</span>
-            <span class="xb_text">
-                {if $weekend_boost.phase == 'active'}
-                    Boost Activo ×{$weekend_boost.multiplier} &mdash; Termina en: <span id="xb_timer">--</span>
-                {else}
-                    Boost Fin de Semana en: <span id="xb_timer">--</span>
-                {/if}
-            </span>
-        </div>
-        <button type="button" class="xb_close" onclick="xbDismiss(); return false;" title="Cerrar">✖</button>
-    </div>
-    {/if}
+		{* ─── Estado: jugadores en línea, administradores y soporte (v6.6 intacto) ─── *}
+		<div class="cm_status">
+			<span class="st_chip"><i>&#128100;</i> {$LNG.ov_online_user}: <b>{$onlineUser + $AdminsOnline|@count|number}</b></span>
+			<span class="st_chip"><i>&#128101;</i> {$LNG.ov_admins_online}: {foreach $AdminsOnline as $ID => $Name}{if !$Name@first}&nbsp;&bull;&nbsp;{/if}<a href="#" onclick="return Dialog.PM({$ID})">{$Name}</a>{foreachelse}{$LNG.ov_no_admins_online}{/foreach}</span>
+			<a href="game.php?page=ticket" class="st_chip st_ticket"><i>&#127915;</i> {$LNG.ov_ticket}</a>
+		</div>
 
-    <!-- ================= LAYOUT DE 2 COLUMNAS ================= -->
-    <div class="xnova-layout">
+		{* ═══════════ BANNER BOOST FIN DE SEMANA (mockup8_3) ═══════════ *}
+		{if isset($weekend_boost) && $weekend_boost.show == 1}
+		<div class="cm_boost"
+		     id="xb_banner"
+		     data-phase="{$weekend_boost.phase}"
+		     data-seconds="{$weekend_boost.seconds_left}"
+		     data-multiplier="{$weekend_boost.multiplier}">
+			<div class="b_icon">🎉</div>
+			<div>
+				<div class="b_title">
+					{if $weekend_boost.phase == 'active'}
+						BOOST ACTIVO <b>&times;{$weekend_boost.multiplier}</b>
+					{else}
+						BOOST FIN DE SEMANA <b>&times;{$weekend_boost.multiplier}</b>
+					{/if}
+				</div>
+				<div class="b_sub">Se notifica cuando empieza y mientras avanza &middot; comunidad el s&aacute;bado a las 20:00</div>
+			</div>
+			<div class="b_grow"></div>
+			{if $weekend_boost.phase != 'active'}<span class="b_chip">PR&Oacute;XIMAMENTE</span>{else}<span class="b_chip" style="background:rgba(74,255,136,.12); border-color:rgba(74,255,136,.5); color:#4aff88">ACTIVO</span>{/if}
+			<span class="b_timerbox" id="xb_timer">--</span>
+			<button type="button" class="xb_close" onclick="xbDismiss(); return false;" title="Cerrar">&#10006;</button>
+		</div>
+		{/if}
 
-        <!-- ================= COLUMNA PRINCIPAL ================= -->
-        <div class="xnova-main">
+		{* ═══════════ TARJETA PLANETA PRINCIPAL ═══════════ *}
+		<div class="cm_card cm_planet">
+			<div class="p_top">
+				<span class="p_title">PLANETA PRINCIPAL</span>
+				<span class="p_type">{$LNG["type_planet_{$planet_type}"]}</span>
+				<a href="game.php?page=galaxy&amp;galaxy={$galaxy}&amp;system={$system}" class="p_coords">&#128205; <b>[{$galaxy}:{$system}:{$planet}]</b></a>
+				<div class="p_grow"></div>
+			</div>
+			<div class="p_body">
+				<div class="p_img" style="background-image: url({$dpath}planeten/{$planetimage}.jpg);"><span>PLANETA</span></div>
+				<div class="cm_stats">
+					<div class="cm_stat">
+						<div class="ic">&#128207;</div>
+						<div class="info"><div class="lbl">{$LNG.ov_diameter}</div><div class="val">{$planet_diameter} {$LNG.ov_distance_unit}</div></div>
+					</div>
+					<div class="cm_stat">
+						<div class="ic">&#9641;</div>
+						<div class="info"><div class="lbl">Campos</div><div class="val">{$planet_field_current} / {$planet_field_max}</div></div>
+					</div>
+					<div class="cm_stat">
+						<div class="ic">&#127777;</div>
+						<div class="info"><div class="lbl">{$LNG.ov_temperature}</div><div class="val">{$planet_temp_min}&deg;C ~ {$planet_temp_max}&deg;C</div></div>
+					</div>
+					<div class="cm_stat">
+						<div class="ic">&#128205;</div>
+						<div class="info"><div class="lbl">{$LNG.ov_position}</div><div class="val"><a href="game.php?page=galaxy&amp;galaxy={$galaxy}&amp;system={$system}">[{$galaxy}:{$system}:{$planet}]</a></div></div>
+					</div>
+				</div>
+			</div>
+			<div class="p_actions">
+				<a href="#" onclick="return Dialog.PlanetAction();" class="cm_btn_grad">&#128293; Renombra planeta</a>
+				<a href="game.php?page=galaxy&amp;galaxy={$galaxy}&amp;system={$system}" class="cm_btn_ghost">&#128640; Ver galaxia</a>
+			</div>
+		</div>
 
-            <!-- TARJETA DEL PLANETA PRINCIPAL -->
-            <div class="xnova-planet-card">
-                <div class="xnova-planet-header">
-                    <div class="title-group">
-                        <div class="title-icon"><i class="fas fa-globe"></i></div>
-                        <div class="title-text">Planeta Principal</div>
-                        <a href="#" onclick="return Dialog.PlanetAction();" class="edit-btn">Cambiar Nombre/Eliminar</a>
-                    </div>
-                    <a href="game.php?page=galaxy&amp;galaxy={$galaxy}&amp;system={$system}" class="action-btn"><i class="fas fa-map-marker-alt"></i> [{$galaxy}:{$system}:{$planet}]</a>
-                </div>
+		{* ═══════════ FILA: RADAR TÁCTICO + CLIMA ═══════════ *}
+		<div class="cm_row2">
+			<div class="cm_card xnova-fleet-card">
+				<div class="cm_sec_title">
+					<h2>&#128640; Flotas activas &mdash; radar t&aacute;ctico</h2>
+					<div class="t_grow"></div>
+					<a href="game.php?page=fleet" class="t_btn">Enviar flota &rsaquo;</a>
+				</div>
+				{if $fleets}
+				<div class="cm_fleetlist">
+					{foreach $fleets as $index => $fleet}
 
-                <div class="xnova-planet-body">
-                    <div class="xnova-planet-image" style="background-image: url({$dpath}planeten/{$planetimage}.jpg);">
-                        <div class="planet-badge">{$LNG["type_planet_{$planet_type}"]}</div>
-                    </div>
-                    
-                    <div class="xnova-planet-stats">
-                        <div class="xnova-stat-item">
-                            <div class="icon"><i class="fas fa-ruler-combined"></i></div>
-                            <div class="info">
-                                <span class="label">{$LNG.ov_diameter}</span>
-                                <span class="value">{$planet_diameter} {$LNG.ov_distance_unit}</span>
-                            </div>
-                        </div>
-                        <div class="xnova-stat-item">
-                            <div class="icon"><i class="fas fa-layer-group"></i></div>
-                            <div class="info">
-                                <span class="label">Campos</span>
-                                <span class="value"><a href="#">{$planet_field_current}</a> / <a href="#">{$planet_field_max}</a></span>
-                            </div>
-                        </div>
-                        <div class="xnova-stat-item">
-                            <div class="icon"><i class="fas fa-thermometer-half"></i></div>
-                            <div class="info">
-                                <span class="label">{$LNG.ov_temperature}</span>
-                                <span class="value">{$planet_temp_min}°C a {$planet_temp_max}°C</span>
-                            </div>
-                        </div>
-                        <div class="xnova-stat-item">
-                            <div class="icon"><i class="fas fa-map-marker-alt"></i></div>
-                            <div class="info">
-                                <span class="label">{$LNG.ov_position}</span>
-                                <span class="value"><a href="game.php?page=galaxy&amp;galaxy={$galaxy}&amp;system={$system}">[{$galaxy}:{$system}:{$planet}]</a></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+						{* Lógica de Misión, Iconos, Colores y Fase (v6.6 intacta) *}
+						{assign var="fleetClass" value="is-transport"}
+						{assign var="shipIcon"   value="&#128640;"}
+						{assign var="destIcon"   value="&#129691;"}
+						{assign var="fase"       value="IDA"}
 
-                {* ═══════════════════════════════════════════════════════════
-                 * 🆕 ASTROIO v6.5 - BLOQUE DE CLIMA
-                 * Muestra el clima actual y la predicción del planeta y la luna.
-                 * 🆕 ASTROIO v6.6 - BUFF CLIMÁTICO (Añadido al final del bloque)
-                 * ═══════════════════════════════════════════════════════════ *}
-                {if isset($clima_planeta) && $clima_planeta}
-                <div class="xnova-clima-block">
-                    <div class="xnova-clima-header">
-                        🌦️ Clima del Planeta
-                    </div>
+						{if $fleet.is_incoming}
+							{assign var="fleetClass" value="is-incoming"}
+						{/if}
 
-                    {* ─── Clima actual del planeta ─── *}
-                    <div class="xnova-clima-section">
-                        {assign var="cp_emoji" value="❓"}
-                        {if $clima_planeta.clave == 'despejado'}{assign var="cp_emoji" value="☀️"}
-                        {elseif $clima_planeta.clave == 'brisa_solar'}{assign var="cp_emoji" value="🌤️"}
-                        {elseif $clima_planeta.clave == 'viento_estelar'}{assign var="cp_emoji" value="🍃"}
-                        {elseif $clima_planeta.clave == 'cristalino'}{assign var="cp_emoji" value="✨"}
-                        {elseif $clima_planeta.clave == 'niebla'}{assign var="cp_emoji" value="🌫️"}
-                        {elseif $clima_planeta.clave == 'tormenta_solar'}{assign var="cp_emoji" value="⚡"}
-                        {elseif $clima_planeta.clave == 'meteoros'}{assign var="cp_emoji" value="☄️"}
-                        {elseif $clima_planeta.clave == 'nebulosa'}{assign var="cp_emoji" value="💰"}
-                        {elseif $clima_planeta.clave == 'plasma'}{assign var="cp_emoji" value="🌌"}
-                        {elseif $clima_planeta.clave == 'eclipse'}{assign var="cp_emoji" value="🌓"}
-                        {elseif $clima_planeta.clave == 'campo_mag'}{assign var="cp_emoji" value="🌀"}
-                        {elseif $clima_planeta.clave == 'aurora'}{assign var="cp_emoji" value="🌈"}
-                        {elseif $clima_planeta.clave == 'agujero'}{assign var="cp_emoji" value="🕳️"}
-                        {elseif $clima_planeta.clave == 'singularidad'}{assign var="cp_emoji" value="⚫"}
-                        {/if}
-                        <div class="xnova-clima-emoji">{$cp_emoji}</div>
-                        <div class="xnova-clima-info">
-                            <div class="xnova-clima-name">{$clima_planeta.nombre}</div>
-                            <div class="xnova-clima-desc">"{$clima_planeta.descripcion}"</div>
-                            <div class="xnova-clima-factors">
-                                <span class="xnova-clima-factor {if $clima_planeta.factor_ataque > 1}positive{elseif $clima_planeta.factor_ataque < 1}negative{else}neutral{/if}">
-                                    ⚔️ {if $clima_planeta.factor_ataque > 1}+{/if}{math equation="round((x-1)*100)" x=$clima_planeta.factor_ataque format="%d"}%
-                                </span>
-                                <span class="xnova-clima-factor {if $clima_planeta.factor_defensa > 1}positive{elseif $clima_planeta.factor_defensa < 1}negative{else}neutral{/if}">
-                                    🛡️ {if $clima_planeta.factor_defensa > 1}+{/if}{math equation="round((x-1)*100)" x=$clima_planeta.factor_defensa format="%d"}%
-                                </span>
-                                <span class="xnova-clima-factor {if $clima_planeta.factor_bajas > 1}negative{elseif $clima_planeta.factor_bajas < 1}positive{else}neutral{/if}">
-                                    💀 {if $clima_planeta.factor_bajas > 1}+{/if}{math equation="round((x-1)*100)" x=$clima_planeta.factor_bajas format="%d"}%
-                                </span>
-                                <span class="xnova-clima-factor {if $clima_planeta.factor_botin > 1}positive{elseif $clima_planeta.factor_botin < 1}negative{else}neutral{/if}">
-                                    💰 {if $clima_planeta.factor_botin > 1}+{/if}{math equation="round((x-1)*100)" x=$clima_planeta.factor_botin format="%d"}%
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+						{if $fleet.mission == 1 || $fleet.mission == 2 || ($fleet.mission >= 20 && $fleet.mission <= 23)}
+							{assign var="fleetClass" value="is-attack"}
+							{assign var="shipIcon"   value="&#9876;&#65039;"}
+						{elseif $fleet.mission == 15}
+							{assign var="fleetClass" value="is-expedition"}
+							{assign var="shipIcon"   value="&#128640;"}
+							{assign var="destIcon"   value="&#127756;"}
+						{elseif $fleet.mission == 8}
+							{assign var="fleetClass" value="is-transport"}
+							{assign var="destIcon"   value="&#9851;&#65039;"}
+						{elseif $fleet.mission == 6}
+							{assign var="fleetClass" value="is-espionage"}
+							{assign var="shipIcon"   value="&#128379;&#65039;"}
+						{elseif $fleet.mission == 4}
+							{assign var="fleetClass" value="is-deploy"}
+							{assign var="shipIcon"   value="&#128737;&#65039;"}
+						{/if}
 
-                    {* ─── Predicción para mañana ─── *}
-                    {if isset($clima_planeta_previsto) && $clima_planeta_previsto}
-                    <div class="xnova-clima-predict">
-                        {assign var="cpp_emoji" value="❓"}
-                        {if $clima_planeta_previsto.clave == 'despejado'}{assign var="cpp_emoji" value="☀️"}
-                        {elseif $clima_planeta_previsto.clave == 'brisa_solar'}{assign var="cpp_emoji" value="🌤️"}
-                        {elseif $clima_planeta_previsto.clave == 'viento_estelar'}{assign var="cpp_emoji" value="🍃"}
-                        {elseif $clima_planeta_previsto.clave == 'cristalino'}{assign var="cpp_emoji" value="✨"}
-                        {elseif $clima_planeta_previsto.clave == 'niebla'}{assign var="cpp_emoji" value="🌫️"}
-                        {elseif $clima_planeta_previsto.clave == 'tormenta_solar'}{assign var="cpp_emoji" value="⚡"}
-                        {elseif $clima_planeta_previsto.clave == 'meteoros'}{assign var="cpp_emoji" value="☄️"}
-                        {elseif $clima_planeta_previsto.clave == 'nebulosa'}{assign var="cpp_emoji" value="💰"}
-                        {elseif $clima_planeta_previsto.clave == 'plasma'}{assign var="cpp_emoji" value="🌌"}
-                        {elseif $clima_planeta_previsto.clave == 'eclipse'}{assign var="cpp_emoji" value="🌓"}
-                        {elseif $clima_planeta_previsto.clave == 'campo_mag'}{assign var="cpp_emoji" value="🌀"}
-                        {elseif $clima_planeta_previsto.clave == 'aurora'}{assign var="cpp_emoji" value="🌈"}
-                        {elseif $clima_planeta_previsto.clave == 'agujero'}{assign var="cpp_emoji" value="🕳️"}
-                        {elseif $clima_planeta_previsto.clave == 'singularidad'}{assign var="cpp_emoji" value="⚫"}
-                        {/if}
-                        <span class="pred-emoji">{$cpp_emoji}</span>
-                        <span><b>🔮 Mañana:</b> {$clima_planeta_previsto.nombre}</span>
-                    </div>
-                    {/if}
+						{if $fleet.state == 1}
+							{assign var="fase"     value="VUELTA"}
+							{assign var="shipIcon" value="&#128640;"}
+						{/if}
 
-                    {* ─── Aviso si el clima es malo para defender ─── *}
-                    {if $clima_planeta.factor_defensa < 1}
-                    <div class="xnova-clima-alert danger">
-                        ⚠️ Tu defensa está debilitada hoy. Refuerza o haz fleetsave.
-                    </div>
-                    {elseif $clima_planeta.factor_defensa > 1}
-                    <div class="xnova-clima-alert success">
-                        ✅ Tu defensa está reforzada hoy. Buen día para resistir ataques.
-                    </div>
-                    {/if}
+						{assign var="startIcon" value="&#129691;"}
+						{if isset($fleet.start_type) && $fleet.start_type == 3}{assign var="startIcon" value="&#127761;"}{/if}
+						{if isset($fleet.end_type) && $fleet.end_type == 3}
+							{assign var="destIcon" value="&#127761;"}
+						{elseif isset($fleet.end_type) && $fleet.end_type == 2}
+							{assign var="destIcon" value="&#9732;&#65039;"}
+						{/if}
 
-                    {* ─── Clima de la Luna (si existe) ─── *}
-                    {if isset($clima_luna) && $clima_luna}
-                    <div class="xnova-clima-section" style="border-top: 1px dashed rgba(0,224,255,0.2); padding-top: 10px; margin-top: 4px;">
-                        {assign var="cl_emoji" value="❓"}
-                        {if $clima_luna.clave == 'despejado'}{assign var="cl_emoji" value="☀️"}
-                        {elseif $clima_luna.clave == 'brisa_solar'}{assign var="cl_emoji" value="🌤️"}
-                        {elseif $clima_luna.clave == 'viento_estelar'}{assign var="cl_emoji" value="🍃"}
-                        {elseif $clima_luna.clave == 'cristalino'}{assign var="cl_emoji" value="✨"}
-                        {elseif $clima_luna.clave == 'niebla'}{assign var="cl_emoji" value="🌫️"}
-                        {elseif $clima_luna.clave == 'tormenta_solar'}{assign var="cl_emoji" value="⚡"}
-                        {elseif $clima_luna.clave == 'meteoros'}{assign var="cl_emoji" value="☄️"}
-                        {elseif $clima_luna.clave == 'nebulosa'}{assign var="cl_emoji" value="💰"}
-                        {elseif $clima_luna.clave == 'plasma'}{assign var="cl_emoji" value="🌌"}
-                        {elseif $clima_luna.clave == 'eclipse'}{assign var="cl_emoji" value="🌓"}
-                        {elseif $clima_luna.clave == 'campo_mag'}{assign var="cl_emoji" value="🌀"}
-                        {elseif $clima_luna.clave == 'aurora'}{assign var="cl_emoji" value="🌈"}
-                        {elseif $clima_luna.clave == 'agujero'}{assign var="cl_emoji" value="🕳️"}
-                        {elseif $clima_luna.clave == 'singularidad'}{assign var="cl_emoji" value="⚫"}
-                        {/if}
-                        <div class="xnova-clima-emoji" style="font-size: 28px;">{$cl_emoji}</div>
-                        <div class="xnova-clima-info">
-                            <div class="xnova-clima-name">🌑 Luna: {$clima_luna.nombre}</div>
-                            <div class="xnova-clima-desc">"{$clima_luna.descripcion}"</div>
-                            {if isset($clima_luna_previsto) && $clima_luna_previsto}
-                                {assign var="clp_emoji" value="❓"}
-                                {if $clima_luna_previsto.clave == 'despejado'}{assign var="clp_emoji" value="☀️"}
-                                {elseif $clima_luna_previsto.clave == 'brisa_solar'}{assign var="clp_emoji" value="🌤️"}
-                                {elseif $clima_luna_previsto.clave == 'viento_estelar'}{assign var="clp_emoji" value="🍃"}
-                                {elseif $clima_luna_previsto.clave == 'cristalino'}{assign var="clp_emoji" value="✨"}
-                                {elseif $clima_luna_previsto.clave == 'niebla'}{assign var="clp_emoji" value="🌫️"}
-                                {elseif $clima_luna_previsto.clave == 'tormenta_solar'}{assign var="clp_emoji" value="⚡"}
-                                {elseif $clima_luna_previsto.clave == 'meteoros'}{assign var="clp_emoji" value="☄️"}
-                                {elseif $clima_luna_previsto.clave == 'nebulosa'}{assign var="clp_emoji" value="💰"}
-                                {elseif $clima_luna_previsto.clave == 'plasma'}{assign var="clp_emoji" value="🌌"}
-                                {elseif $clima_luna_previsto.clave == 'eclipse'}{assign var="clp_emoji" value="🌓"}
-                                {elseif $clima_luna_previsto.clave == 'campo_mag'}{assign var="clp_emoji" value="🌀"}
-                                {elseif $clima_luna_previsto.clave == 'aurora'}{assign var="clp_emoji" value="🌈"}
-                                {elseif $clima_luna_previsto.clave == 'agujero'}{assign var="clp_emoji" value="🕳️"}
-                                {elseif $clima_luna_previsto.clave == 'singularidad'}{assign var="clp_emoji" value="⚫"}
-                                {/if}
-                                <div class="xnova-clima-predict" style="padding-top: 4px;">
-                                    <span class="pred-emoji">{$clp_emoji}</span>
-                                    <span><b>🔮 Mañana:</b> {$clima_luna_previsto.nombre}</span>
-                                </div>
-                            {/if}
-                        </div>
-                    </div>
-                    {/if}
+						<div class="fleet-card {$fleetClass}">
+							<div class="fleet-header">
+								<div class="fleet-mission">{$shipIcon} {$fleet.mission_label} ({$fase})</div>
+							</div>
+							<div class="fleet-radar">
+								<div class="radar-line"></div>
+								<div class="planet-node start-node">
+									<span class="planet-icon">{$startIcon}</span>
+									<span class="planet-name">Origen</span>
+									<span class="planet-coords">[{$fleet.startGalaxy}:{$fleet.startSystem}:{$fleet.startPlanet}]</span>
+								</div>
+								<div class="planet-node center-node">
+									<span class="planet-icon">{$destIcon}</span>
+									<span class="planet-name">Destino</span>
+									<span class="planet-coords">[{$fleet.endGalaxy}:{$fleet.endSystem}:{$fleet.endPlanet}]</span>
+								</div>
+								<div class="planet-node end-node">
+									<span class="planet-icon">{$startIcon}</span>
+									<span class="planet-name">Retorno</span>
+									<span class="planet-coords">[{$fleet.startGalaxy}:{$fleet.startSystem}:{$fleet.startPlanet}]</span>
+								</div>
+								<div class="traveler-container" id="traveler_{$index}"
+								     data-fleet-id="{$fleet.id}"
+								     data-fleet-total-time="{$fleet.resttime}"
+								     data-fleet-state="{$fleet.state|default:0}">
+									<div class="traveler-ship">{$shipIcon}</div>
+									<div class="traveler-timer" id="timer_{$index}">
+										{pretty_fly_time({$fleet.resttime})}
+									</div>
+									<div class="hud-tooltip">
+										<div class="tooltip-title">Informaci&oacute;n de Flota</div>
+										{if isset($fleet.ships_array) && $fleet.ships_array|@count > 0}
+											{foreach $fleet.ships_array as $shipId => $count}
+												{if $count > 0}
+													<div class="tooltip-row"><span>{$LNG.tech[$shipId]}:</span><span>{$count|number}</span></div>
+												{/if}
+											{/foreach}
+										{else}
+											<div class="tooltip-row"><span>Total Naves:</span><span>{$fleet.amount|number}</span></div>
+										{/if}
+										{if isset($fleet.fleet_resource_metal) && ($fleet.fleet_resource_metal > 0 || $fleet.fleet_resource_crystal > 0 || $fleet.fleet_resource_deuterium > 0)}
+											<div class="tooltip-section-title">Recursos</div>
+											{if $fleet.fleet_resource_metal > 0}<div class="tooltip-row"><span>Metal:</span><span style="color:var(--cm-cyan)">{$fleet.fleet_resource_metal|number}</span></div>{/if}
+											{if $fleet.fleet_resource_crystal > 0}<div class="tooltip-row"><span>Cristal:</span><span style="color:var(--cm-cyan)">{$fleet.fleet_resource_crystal|number}</span></div>{/if}
+											{if $fleet.fleet_resource_deuterium > 0}<div class="tooltip-row"><span>Deuterio:</span><span style="color:var(--cm-cyan)">{$fleet.fleet_resource_deuterium|number}</span></div>{/if}
+										{/if}
+									</div>
+								</div>
+							</div>
+							{if isset($fleet.ships_array) && $fleet.ships_array|@count > 0}
+							<div class="fleet_ships">
+								{foreach $fleet.ships_array as $shipId => $count}
+									{if $count > 0}<span class="ship-chip">{$LNG.tech[$shipId]} x{$count|number}</span>{/if}
+								{/foreach}
+							</div>
+							{/if}
+						</div>
+					{/foreach}
+				</div>
+				{else}
+					<div class="cm_fleet_empty">[ SIN FLOTAS ACTIVAS ]</div>
+				{/if}
+			</div>
 
-                    {* 🆕 ASTROIO v6.6 - BUFF CLIMÁTICO ACTIVO *}
-                    {if isset($buff_activo) && $buff_activo}
-                    <div class="xnova-clima-buff-box" style="margin-top: 10px; padding: 10px; background: rgba(74, 255, 136, 0.1); border: 1px solid rgba(74, 255, 136, 0.4); border-radius: 8px; box-shadow: inset 0 0 10px rgba(74, 255, 136, 0.05); display: flex; align-items: center; justify-content: space-between;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 24px; filter: drop-shadow(0 0 8px rgba(74, 255, 136, 0.8));">
-                                {if $buff_activo.buff_type == 'estabilizador_menor'}🌤️
-                                {elseif $buff_activo.buff_type == 'estabilizador_mayor'}🌈
-                                {elseif $buff_activo.buff_type == 'dominio'}⚡
-                                {else}✨{/if}
-                            </span>
-                            <div>
-                                <div style="font-size: 13px; font-weight: 800; color: #4aff88; text-shadow: 0 0 8px rgba(74, 255, 136, 0.5); text-transform: uppercase;">⚡ Buff Climático Activo</div>
-                                <div style="font-size: 11px; color: #fff;">{$buff_nombre_legible}</div>
-                            </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Tiempo restante</div>
-                            <div id="ov_buff_timer" style="font-size: 16px; font-weight: 900; font-family: 'Courier New', monospace; color: #4aff88;" data-expires="{$buff_activo.expires_at}">
-                                {$buff_horas_restantes}h {$buff_minutos_restantes}m
-                            </div>
-                        </div>
-                    </div>
-                    {/if}
+			<div class="cm_card cm_clima">
+				{if isset($clima_planeta) && $clima_planeta}
+				<div class="cm_sec_title"><h2>&#127777;&#65039; Clima del planeta</h2></div>
 
-                </div>
-                {/if}
-            </div>
+				{* ─── Clima actual del planeta (lógica v6.6 intacta) ─── *}
+				{assign var="cp_emoji" value="&#10067;"}
+				{if $clima_planeta.clave == 'despejado'}{assign var="cp_emoji" value="&#9728;&#65039;"}
+				{elseif $clima_planeta.clave == 'brisa_solar'}{assign var="cp_emoji" value="&#127780;&#65039;"}
+				{elseif $clima_planeta.clave == 'viento_estelar'}{assign var="cp_emoji" value="&#127787;&#65039;"}
+				{elseif $clima_planeta.clave == 'cristalino'}{assign var="cp_emoji" value="&#10024;"}
+				{elseif $clima_planeta.clave == 'niebla'}{assign var="cp_emoji" value="&#127787;&#65039;"}
+				{elseif $clima_planeta.clave == 'tormenta_solar'}{assign var="cp_emoji" value="&#9889;"}
+				{elseif $clima_planeta.clave == 'meteoros'}{assign var="cp_emoji" value="&#9788;&#65039;"}
+				{elseif $clima_planeta.clave == 'nebulosa'}{assign var="cp_emoji" value="&#128176;"}
+				{elseif $clima_planeta.clave == 'plasma'}{assign var="cp_emoji" value="&#127756;"}
+				{elseif $clima_planeta.clave == 'eclipse'}{assign var="cp_emoji" value="&#127765;"}
+				{elseif $clima_planeta.clave == 'campo_mag'}{assign var="cp_emoji" value="&#127744;"}
+				{elseif $clima_planeta.clave == 'aurora'}{assign var="cp_emoji" value="&#127752;"}
+				{elseif $clima_planeta.clave == 'agujero'}{assign var="cp_emoji" value="&#128371;&#65039;"}
+				{elseif $clima_planeta.clave == 'singularidad'}{assign var="cp_emoji" value="&#9878;&#65039;"}
+				{/if}
+				<div class="cl_head">
+					<div class="cl_emoji">{$cp_emoji}</div>
+					<div>
+						<div class="cl_name">{$clima_planeta.nombre}</div>
+						<div class="cl_desc">&quot;{$clima_planeta.descripcion}&quot;</div>
+					</div>
+				</div>
+				<div class="cl_factors">
+					<span class="cl_factor {if $clima_planeta.factor_ataque > 1}positive{elseif $clima_planeta.factor_ataque < 1}negative{else}neutral{/if}">
+						&#9876;&#65039; {if $clima_planeta.factor_ataque > 1}+{/if}{math equation="round((x-1)*100)" x=$clima_planeta.factor_ataque format="%d"}% ataque
+					</span>
+					<span class="cl_factor {if $clima_planeta.factor_defensa > 1}positive{elseif $clima_planeta.factor_defensa < 1}negative{else}neutral{/if}">
+						&#128737;&#65039; {if $clima_planeta.factor_defensa > 1}+{/if}{math equation="round((x-1)*100)" x=$clima_planeta.factor_defensa format="%d"}% defensa
+					</span>
+					<span class="cl_factor {if $clima_planeta.factor_bajas > 1}negative{elseif $clima_planeta.factor_bajas < 1}positive{else}neutral{/if}">
+						&#128128; {if $clima_planeta.factor_bajas > 1}+{/if}{math equation="round((x-1)*100)" x=$clima_planeta.factor_bajas format="%d"}% bajas
+					</span>
+					<span class="cl_factor {if $clima_planeta.factor_botin > 1}positive{elseif $clima_planeta.factor_botin < 1}negative{else}neutral{/if}">
+						&#128176; {if $clima_planeta.factor_botin > 1}+{/if}{math equation="round((x-1)*100)" x=$clima_planeta.factor_botin format="%d"}% bot&iacute;n
+					</span>
+				</div>
 
-            <!-- GRID DE 4 ACCIONES -->
-            <div class="xnova-action-grid">
-                <div class="xnova-action-card">
-                    <div class="xnova-action-image" style="background-image: url('./styles/theme/gow/img/overview_buildings.jpg');"></div>
-                    <div class="xnova-action-content">
-                        <div class="xnova-action-title">{$LNG.ov_list_title_build}</div>
-                        <div class="xnova-action-status">
-                            {if $buildInfo.buildings}
-                                {$LNG.tech[$buildInfo.buildings['id']]} <b>({$buildInfo.buildings['level']})</b><br>
-                                <span class="timer" data-time="{$buildInfo.buildings['timeleft']}">{$buildInfo.buildings['starttime']}</span>
-                            {else}
-                                {$LNG.ov_free}
-                            {/if}
-                        </div>
-                        <a href="game.php?page=buildings" class="xnova-action-btn">Descubrir →</a>
-                    </div>
-                </div>
+				{* ─── Predicción para mañana ─── *}
+				{if isset($clima_planeta_previsto) && $clima_planeta_previsto}
+				{assign var="cpp_emoji" value="&#10067;"}
+				{if $clima_planeta_previsto.clave == 'despejado'}{assign var="cpp_emoji" value="&#9728;&#65039;"}
+				{elseif $clima_planeta_previsto.clave == 'brisa_solar'}{assign var="cpp_emoji" value="&#127780;&#65039;"}
+				{elseif $clima_planeta_previsto.clave == 'viento_estelar'}{assign var="cpp_emoji" value="&#127787;&#65039;"}
+				{elseif $clima_planeta_previsto.clave == 'cristalino'}{assign var="cpp_emoji" value="&#10024;"}
+				{elseif $clima_planeta_previsto.clave == 'niebla'}{assign var="cpp_emoji" value="&#127787;&#65039;"}
+				{elseif $clima_planeta_previsto.clave == 'tormenta_solar'}{assign var="cpp_emoji" value="&#9889;"}
+				{elseif $clima_planeta_previsto.clave == 'meteoros'}{assign var="cpp_emoji" value="&#9788;&#65039;"}
+				{elseif $clima_planeta_previsto.clave == 'nebulosa'}{assign var="cpp_emoji" value="&#128176;"}
+				{elseif $clima_planeta_previsto.clave == 'plasma'}{assign var="cpp_emoji" value="&#127756;"}
+				{elseif $clima_planeta_previsto.clave == 'eclipse'}{assign var="cpp_emoji" value="&#127765;"}
+				{elseif $clima_planeta_previsto.clave == 'campo_mag'}{assign var="cpp_emoji" value="&#127744;"}
+				{elseif $clima_planeta_previsto.clave == 'aurora'}{assign var="cpp_emoji" value="&#127752;"}
+				{elseif $clima_planeta_previsto.clave == 'agujero'}{assign var="cpp_emoji" value="&#128371;&#65039;"}
+				{elseif $clima_planeta_previsto.clave == 'singularidad'}{assign var="cpp_emoji" value="&#9878;&#65039;"}
+				{/if}
+				<div class="cl_predict"><span>{$cpp_emoji}</span><span><b>&#128302; Ma&ntilde;ana:</b> {$clima_planeta_previsto.nombre}</span></div>
+				{/if}
 
-                <div class="xnova-action-card">
-                    <div class="xnova-action-image" style="background-image: url('./styles/theme/gow/img/overview_research.jpg');"></div>
-                    <div class="xnova-action-content">
-                        <div class="xnova-action-title">Investigaciones</div>
-                        <div class="xnova-action-status">
-                            {if $buildInfo.tech}
-                                {$LNG.tech[$buildInfo.tech['id']]} <b>({$buildInfo.tech['level']})</b><br>
-                                <span class="timer" data-time="{$buildInfo.tech['timeleft']}">{$buildInfo.tech['starttime']}</span>
-                            {else}
-                                {$LNG.ov_free}
-                            {/if}
-                        </div>
-                        <a href="game.php?page=research" class="xnova-action-btn">Investigar →</a>
-                    </div>
-                </div>
+				{* ─── Aviso según el clima ─── *}
+				{if $clima_planeta.factor_defensa < 1}
+				<div class="cl_alert danger">&#9888;&#65039; Tu defensa est&aacute; debilitada hoy. Refuerza o haz fleetsave.</div>
+				{elseif $clima_planeta.factor_defensa > 1}
+				<div class="cl_alert success">&#9989; Tu defensa est&aacute; reforzada hoy. Buen d&iacute;a para resistir ataques.</div>
+				{/if}
 
-                <div class="xnova-action-card">
-                    <div class="xnova-action-image" style="background-image: url('./styles/theme/gow/img/overview_hangar.jpg');"></div>
-                    <div class="xnova-action-content">
-                        <div class="xnova-action-title">Flota</div>
-                        <div class="xnova-action-status">
-                            {if $buildInfo.fleet}
-                                {$LNG.tech[$buildInfo.fleet['id']]} <b>({$buildInfo.fleet['level']})</b><br>
-                                <span class="timer" data-time="{$buildInfo.fleet['timeleft']}">{$buildInfo.fleet['starttime']}</span>
-                            {else}
-                                {$LNG.ov_free}
-                            {/if}
-                        </div>
-                        <a href="game.php?page=shipyard" class="xnova-action-btn">Descubrir →</a>
-                    </div>
-                </div>
+				{* ─── Clima de la Luna (si existe) ─── *}
+				{if isset($clima_luna) && $clima_luna}
+				<div class="cl_luna">
+					{assign var="cl_emoji" value="&#10067;"}
+					{if $clima_luna.clave == 'despejado'}{assign var="cl_emoji" value="&#9728;&#65039;"}
+					{elseif $clima_luna.clave == 'brisa_solar'}{assign var="cl_emoji" value="&#127780;&#65039;"}
+					{elseif $clima_luna.clave == 'viento_estelar'}{assign var="cl_emoji" value="&#127787;&#65039;"}
+					{elseif $clima_luna.clave == 'cristalino'}{assign var="cl_emoji" value="&#10024;"}
+					{elseif $clima_luna.clave == 'niebla'}{assign var="cl_emoji" value="&#127787;&#65039;"}
+					{elseif $clima_luna.clave == 'tormenta_solar'}{assign var="cl_emoji" value="&#9889;"}
+					{elseif $clima_luna.clave == 'meteoros'}{assign var="cl_emoji" value="&#9788;&#65039;"}
+					{elseif $clima_luna.clave == 'nebulosa'}{assign var="cl_emoji" value="&#128176;"}
+					{elseif $clima_luna.clave == 'plasma'}{assign var="cl_emoji" value="&#127756;"}
+					{elseif $clima_luna.clave == 'eclipse'}{assign var="cl_emoji" value="&#127765;"}
+					{elseif $clima_luna.clave == 'campo_mag'}{assign var="cl_emoji" value="&#127744;"}
+					{elseif $clima_luna.clave == 'aurora'}{assign var="cl_emoji" value="&#127752;"}
+					{elseif $clima_luna.clave == 'agujero'}{assign var="cl_emoji" value="&#128371;&#65039;"}
+					{elseif $clima_luna.clave == 'singularidad'}{assign var="cl_emoji" value="&#9878;&#65039;"}
+					{/if}
+					<div class="cl_emoji" style="font-size:22px">{$cl_emoji}</div>
+					<div>
+						<div class="cl_name">&#127765; Luna: {$clima_luna.nombre}</div>
+						<div class="cl_desc">&quot;{$clima_luna.descripcion}&quot;</div>
+						{if isset($clima_luna_previsto) && $clima_luna_previsto}
+							{assign var="clp_emoji" value="&#10067;"}
+							{if $clima_luna_previsto.clave == 'despejado'}{assign var="clp_emoji" value="&#9728;&#65039;"}
+							{elseif $clima_luna_previsto.clave == 'brisa_solar'}{assign var="clp_emoji" value="&#127780;&#65039;"}
+							{elseif $clima_luna_previsto.clave == 'viento_estelar'}{assign var="clp_emoji" value="&#127787;&#65039;"}
+							{elseif $clima_luna_previsto.clave == 'cristalino'}{assign var="clp_emoji" value="&#10024;"}
+							{elseif $clima_luna_previsto.clave == 'niebla'}{assign var="clp_emoji" value="&#127787;&#65039;"}
+							{elseif $clima_luna_previsto.clave == 'tormenta_solar'}{assign var="clp_emoji" value="&#9889;"}
+							{elseif $clima_luna_previsto.clave == 'meteoros'}{assign var="clp_emoji" value="&#9788;&#65039;"}
+							{elseif $clima_luna_previsto.clave == 'nebulosa'}{assign var="clp_emoji" value="&#128176;"}
+							{elseif $clima_luna_previsto.clave == 'plasma'}{assign var="clp_emoji" value="&#127756;"}
+							{elseif $clima_luna_previsto.clave == 'eclipse'}{assign var="clp_emoji" value="&#127765;"}
+							{elseif $clima_luna_previsto.clave == 'campo_mag'}{assign var="clp_emoji" value="&#127744;"}
+							{elseif $clima_luna_previsto.clave == 'aurora'}{assign var="clp_emoji" value="&#127752;"}
+							{elseif $clima_luna_previsto.clave == 'agujero'}{assign var="clp_emoji" value="&#128371;&#65039;"}
+							{elseif $clima_luna_previsto.clave == 'singularidad'}{assign var="clp_emoji" value="&#9878;&#65039;"}
+							{/if}
+							<div class="cl_predict" style="margin-top:6px"><span>{$clp_emoji}</span><span><b>&#128302; Ma&ntilde;ana:</b> {$clima_luna_previsto.nombre}</span></div>
+						{/if}
+					</div>
+				</div>
+				{/if}
 
-                <div class="xnova-action-card">
-                    <div class="xnova-action-image" style="background-image: url('./styles/theme/gow/img/overview_defense.jpg');"></div>
-                    <div class="xnova-action-content">
-                        <div class="xnova-action-title">Defensa</div>
-                        <div class="xnova-action-status">
-                            {if $buildInfo.defense}
-                                {$LNG.tech[$buildInfo.defense['id']]} <b>({$buildInfo.defense['level']})</b><br>
-                                <span class="timer" data-time="{$buildInfo.defense['timeleft']}">{$buildInfo.defense['starttime']}</span>
-                            {else}
-                                {$LNG.ov_free}
-                            {/if}
-                        </div>
-                        <a href="game.php?page=shipyard&amp;mode=defense" class="xnova-action-btn">Descubrir →</a>
-                    </div>
-                </div>
-            </div>
+				{* ─── Buff climático activo (v6.6 intacto) ─── *}
+				{if isset($buff_activo) && $buff_activo}
+				<div class="cm_buff">
+					<div>
+						<div class="bf_name">&#9889; Buff clim&aacute;tico activo</div>
+						<div class="bf_desc">{$buff_nombre_legible}</div>
+					</div>
+					<div class="bf_time">
+						<div class="bf_lbl">Tiempo restante</div>
+						<div id="ov_buff_timer" class="bf_val" data-expires="{$buff_activo.expires_at}">
+							{$buff_horas_restantes}h {$buff_minutos_restantes}m
+						</div>
+					</div>
+				</div>
+				{/if}
+				{else}
+				<div class="cm_fleet_empty">Sin datos de clima para este planeta</div>
+				{/if}
+			</div>
+		</div>
 
-            {* ============ FLOTAS ACTIVAS (RADAR TÁCTICO) ============ *}
-            <div class="xnova-fleet-card" style="padding: 0; background: transparent; border: none; box-shadow: none;">
-                <div class="astroftbl_section_title" style="font-size: 12px; margin-bottom: 8px; color: #fff;">🚀 Flotas Activas</div>
-                {if $fleets}
-                    {foreach $fleets as $index => $fleet}
+		{* ═══════════ PRÓXIMOS PASOS (COLAS DE CONSTRUCCIÓN) ═══════════ *}
+		<div class="cm_sec_title" style="margin:6px 2px 0"><h2>&#127919; Pr&oacute;ximos pasos</h2></div>
+		<div class="cm_steps">
+			<div class="cm_step {if $buildInfo.buildings}busy{/if}">
+				<div class="st_top"><div class="st_ic">&#127960;&#65039;</div><div class="st_name">{$LNG.ov_list_title_build}</div></div>
+				<div class="st_status">
+					{if $buildInfo.buildings}
+						{$LNG.tech[$buildInfo.buildings['id']]} <b>({$buildInfo.buildings['level']})</b><br>
+						<span class="timer" data-time="{$buildInfo.buildings['timeleft']}">{$buildInfo.buildings['starttime']}</span>
+					{else}
+						Tu cola de construcci&oacute;n est&aacute; vac&iacute;a. Cada minuto parado es producci&oacute;n perdida.
+					{/if}
+				</div>
+				<a href="game.php?page=buildings" class="st_btn">{if $buildInfo.buildings}Ver construcci&oacute;n &rsaquo;{else}Construir &rsaquo;{/if}</a>
+			</div>
+			<div class="cm_step {if $buildInfo.tech}busy{/if}">
+				<div class="st_top"><div class="st_ic">&#128300;</div><div class="st_name">Investigaciones</div></div>
+				<div class="st_status">
+					{if $buildInfo.tech}
+						{$LNG.tech[$buildInfo.tech['id']]} <b>({$buildInfo.tech['level']})</b><br>
+						<span class="timer" data-time="{$buildInfo.tech['timeleft']}">{$buildInfo.tech['starttime']}</span>
+					{else}
+						Sin investigaci&oacute;n activa. La tecnolog&iacute;a desbloquea naves, defensas y m&aacute;s producci&oacute;n.
+					{/if}
+				</div>
+				<a href="game.php?page=research" class="st_btn">{if $buildInfo.tech}Ver laboratorio &rsaquo;{else}Investigar &rsaquo;{/if}</a>
+			</div>
+			<div class="cm_step {if $buildInfo.fleet}busy{/if}">
+				<div class="st_top"><div class="st_ic">&#128640;</div><div class="st_name">Hangar</div></div>
+				<div class="st_status">
+					{if $buildInfo.fleet}
+						{$LNG.tech[$buildInfo.fleet['id']]} <b>({$buildInfo.fleet['level']})</b><br>
+						<span class="timer" data-time="{$buildInfo.fleet['timeleft']}">{$buildInfo.fleet['starttime']}</span>
+					{else}
+						Tu hangar no est&aacute; produciendo naves. Ampl&iacute;a tu flota para no quedarte atr&aacute;s.
+					{/if}
+				</div>
+				<a href="game.php?page=shipyard" class="st_btn">{if $buildInfo.fleet}Ver hangar &rsaquo;{else}Construir naves &rsaquo;{/if}</a>
+			</div>
+			<div class="cm_step {if $buildInfo.defense}busy{/if}">
+				<div class="st_top"><div class="st_ic">&#128737;&#65039;</div><div class="st_name">Defensa</div></div>
+				<div class="st_status">
+					{if $buildInfo.defense}
+						{$LNG.tech[$buildInfo.defense['id']]} <b>({$buildInfo.defense['level']})</b><br>
+						<span class="timer" data-time="{$buildInfo.defense['timeleft']}">{$buildInfo.defense['starttime']}</span>
+					{else}
+						Sin defensas en producci&oacute;n. Un planeta sin torretas es un bot&iacute;n f&aacute;cil.
+					{/if}
+				</div>
+				<a href="game.php?page=shipyard&amp;mode=defense" class="st_btn">{if $buildInfo.defense}Ver defensas &rsaquo;{else}Construir defensas &rsaquo;{/if}</a>
+			</div>
+		</div>
 
-                        {* Lógica de Misión, Iconos, Colores y Fase *}
-                        {assign var="fleetClass" value="is-transport"}
-                        {assign var="shipIcon"   value="🚀"}
-                        {assign var="destIcon"   value="🪐"}
-                        {assign var="fase"       value="IDA"}
+		{* ═══════════ EVENTOS EN CURSO (mockup8_3) ═══════════ *}
+		{if $ovEvents && ($ovEvents.daily || $ovEvents.weekly || $ovEvents.elite)}
+		<div class="cm_sec_title" style="margin:6px 2px 0">
+			<h2>&#127881; Eventos en curso</h2><div class="t_grow"></div>
+			<a href="game.php?page=events" class="t_link">Ver todos &rsaquo;</a>
+		</div>
+		<div class="ov_events_grid">
+			{foreach $ovEvents as $ev}
+				{if $ev}
+				<a href="game.php?page=events" class="ov_ev_card ov_ev_{$ev.event_class}">
+					<div class="ov_ev_header">
+						<span class="ov_ev_icon" style="background: {$ev.event_color}22; color: {$ev.event_color}; border-color: {$ev.event_color};">{$ev.icon_emoji}</span>
+						<span class="ov_ev_name">{$ev.event_name}</span>
+					</div>
+					<div class="ov_ev_progress_bar">
+						<div class="ov_ev_progress_fill{if $ev.is_complete} complete{/if}" style="width:{$ev.progress_pct}%;"></div>
+					</div>
+					<div class="ov_ev_footer">
+						<span class="ov_ev_progress">{$ev.progress_fmt} / {$ev.target_fmt}</span>
+						<span class="ov_ev_reward">{$ev.reward_text}</span>
+					</div>
+				</a>
+				{/if}
+			{/foreach}
+		</div>
+		{/if}
 
-                        {if $fleet.is_incoming}
-                            {assign var="fleetClass" value="is-incoming"}
-                        {/if}
+		{* ═══════════ WIDGET PvE (v6.6 intacto) ═══════════ *}
+		{if isset($pve_widget) && $pve_widget.enabled && $pve_widget.show_widget}
+		<div class="cm_sec_title" style="margin:6px 2px 0">
+			<h2>&#9876;&#65039; Eventos PvE</h2><div class="t_grow"></div>
+			<a href="game.php?page=pve" class="t_link">Ver todos &rsaquo;</a>
+		</div>
+		<div class="ov_pve_grid">
+			{if $pve_widget.crisis_active || $pve_widget.crisis_time > 0}
+			<a href="game.php?page=pve" class="ov_pve_card ov_pve_crisis" id="ov_pve_crisis_card" data-active="{$pve_widget.crisis_active|default:0}" data-time="{$pve_widget.crisis_time|default:0}" data-end="{$pve_widget.crisis_end|default:0}">
+				<div class="ov_pve_header"><span class="ov_pve_icon">&#127756;</span><span class="ov_pve_name">Crisis de Fin de Mes</span></div>
+				<div class="ov_pve_status" data-role="status">Cargando&hellip;</div>
+				<div class="ov_pve_footer"><span class="ov_pve_time off" data-role="time">--</span></div>
+			</a>
+			{/if}
+			{if $pve_widget.boss_active || $pve_widget.boss_time > 0}
+			<a href="game.php?page=pve&mode=boss" class="ov_pve_card ov_pve_boss {if $pve_widget.boss_active}state-active{/if}" id="ov_pve_boss_card" data-active="{$pve_widget.boss_active|default:0}" data-status="{$pve_widget.boss_status|default:''}" data-time="{$pve_widget.boss_time|default:0}" data-end="{$pve_widget.boss_end|default:0}" data-ghosts="{$pve_widget.boss_ghosts|default:0}">
+				<div class="ov_pve_header"><span class="ov_pve_icon">&#127760;&#65039;</span><span class="ov_pve_name">Torneo del Devorador</span></div>
+				<div class="ov_pve_status" data-role="status">Cargando&hellip;</div>
+				<div class="ov_pve_footer"><span class="ov_pve_time off" data-role="time">--</span></div>
+			</a>
+			{/if}
+			{if $pve_widget.empire_active || $pve_widget.empire_time > 0}
+			<a href="game.php?page=pve&mode=empire" class="ov_pve_card ov_pve_empire" id="ov_pve_empire_card" data-active="{$pve_widget.empire_active|default:0}" data-time="{$pve_widget.empire_time|default:0}" data-end="{$pve_widget.empire_end|default:0}" data-count="{$pve_widget.empire_count|default:0}">
+				<div class="ov_pve_header"><span class="ov_pve_icon">&#127963;&#65039;</span><span class="ov_pve_name">Imperio Ca&iacute;do</span></div>
+				<div class="ov_pve_status" data-role="status">Cargando&hellip;</div>
+				<div class="ov_pve_footer"><span class="ov_pve_time off" data-role="time">--</span></div>
+			</a>
+			{/if}
+			{if $pve_widget.pending_rewards > 0}
+			<a href="game.php?page=pve" class="ov_pve_card ov_pve_rewards">
+				<div class="ov_pve_header"><span class="ov_pve_icon">&#127873;</span><span class="ov_pve_name">Recompensas PvE</span></div>
+				<div class="ov_pve_status highlight">{$pve_widget.pending_rewards} pendiente(s)</div>
+				<div class="ov_pve_footer"><span class="ov_pve_time">Reclamar &rarr;</span></div>
+			</a>
+			{/if}
+		</div>
+		{/if}
 
-                        {if $fleet.mission == 1 || $fleet.mission == 2 || ($fleet.mission >= 20 && $fleet.mission <= 23)}
-                            {assign var="fleetClass" value="is-attack"}
-                            {assign var="shipIcon"   value="⚔️"}
-                        {elseif $fleet.mission == 15}
-                            {assign var="fleetClass" value="is-expedition"}
-                            {assign var="shipIcon"   value="🚀"}
-                            {assign var="destIcon"   value="🌌"}
-                        {elseif $fleet.mission == 8}
-                            {assign var="fleetClass" value="is-transport"}
-                            {assign var="destIcon"   value="♻️"}
-                        {elseif $fleet.mission == 6}
-                            {assign var="fleetClass" value="is-espionage"}
-                            {assign var="shipIcon"   value="🕵️"}
-                        {elseif $fleet.mission == 4}
-                            {assign var="fleetClass" value="is-deploy"}
-                            {assign var="shipIcon"   value="🛡️"}
-                        {/if}
+		{* ═══════════ WIDGET PvP (v6.6 intacto) ═══════════ *}
+		{if isset($pvp_widget) && $pvp_widget.enabled && $pvp_widget.show_widget}
+		<div class="cm_sec_title" style="margin:6px 2px 0">
+			<h2>&#9876;&#65039; Sistema PvP</h2><div class="t_grow"></div>
+			<a href="game.php?page=pvp" class="t_link">Ver todo &rsaquo;</a>
+		</div>
+		<div class="ov_pvp_grid">
+			{if $pvp_widget.arenas_waiting > 0}
+			<a href="game.php?page=pvp&mode=arenas" class="ov_pvp_card ov_pvp_arenas">
+				<div class="ov_pvp_header"><span class="ov_pvp_icon">&#127970;&#65039;</span><span class="ov_pvp_name">Arenas abiertas</span></div>
+				<div class="ov_pvp_status highlight">{$pvp_widget.arenas_waiting} esperando</div>
+				<div class="ov_pvp_footer"><span class="ov_pvp_time">Unirse &rarr;</span></div>
+			</a>
+			{/if}
+			{if $pvp_widget.arenas_active > 0}
+			<a href="game.php?page=pvp&mode=arenas" class="ov_pvp_card ov_pvp_arenas state-active">
+				<div class="ov_pvp_header"><span class="ov_pvp_icon">&#9876;&#65039;</span><span class="ov_pvp_name">Arenas activas</span></div>
+				<div class="ov_pvp_status highlight">{$pvp_widget.arenas_active} en curso</div>
+				<div class="ov_pvp_footer"><span class="ov_pvp_time danger">Ver &rarr;</span></div>
+			</a>
+			{/if}
+			{if $pvp_widget.my_arena}
+			<a href="game.php?page=pvp&mode=viewArena&arena_id={$pvp_widget.my_arena.id}" class="ov_pvp_card ov_pvp_myarena" id="ov_pvp_myarena_card" data-end="{$pvp_widget.my_arena.time_left}" data-status="{$pvp_widget.my_arena.status}">
+				<div class="ov_pvp_header"><span class="ov_pvp_icon">&#127919;</span><span class="ov_pvp_name">Mi arena</span></div>
+				<div class="ov_pvp_status">{$pvp_widget.my_arena.mode_label} &middot; {$pvp_widget.my_arena.players}/{$pvp_widget.my_arena.max}</div>
+				<div class="ov_pvp_footer"><span class="ov_pvp_time" data-role="time">{$pvp_widget.my_arena.time_fmt}</span></div>
+			</a>
+			{/if}
+			{if $pvp_widget.tournament_active === 1}
+			<a href="game.php?page=pvp&mode=tournaments" class="ov_pvp_card ov_pvp_tournament {if $pvp_widget.tournament_status == 'running'}state-active{/if}" id="ov_pvp_tournament_card" data-status="{$pvp_widget.tournament_status}" data-time="{$pvp_widget.tournament_time}">
+				<div class="ov_pvp_header"><span class="ov_pvp_icon">&#127942;</span><span class="ov_pvp_name">Torneo</span></div>
+				<div class="ov_pvp_status">
+					{if $pvp_widget.tournament_status == 'registration'}Inscripci&oacute;n abierta &middot; {$pvp_widget.tournament_players}/{$pvp_widget.tournament_max}
+					{elseif $pvp_widget.tournament_status == 'running'}En curso &middot; {$pvp_widget.tournament_players} jugadores
+					{else}{$pvp_widget.tournament_status}{/if}
+				</div>
+				<div class="ov_pvp_footer"><span class="ov_pvp_time" data-role="time">--</span></div>
+			</a>
+			{/if}
+			{if $pvp_widget.my_pvp_points > 0 || $pvp_widget.my_pvp_wins > 0}
+			<a href="game.php?page=pvp&mode=profile" class="ov_pvp_card ov_pvp_stats">
+				<div class="ov_pvp_header"><span class="ov_pvp_icon">&#128202;</span><span class="ov_pvp_name">Mis stats PvP</span></div>
+				<div class="ov_pvp_status">{$pvp_widget.my_pvp_points} pts &middot; {$pvp_widget.my_pvp_wins}V/{$pvp_widget.my_pvp_losses}D</div>
+				<div class="ov_pvp_footer"><span class="ov_pvp_time">Logros {$pvp_widget.ach_unlocked}/{$pvp_widget.ach_total} &rarr;</span></div>
+			</a>
+			{/if}
+		</div>
+		{/if}
 
-                        {* Si es vuelta, forzamos cohete de retorno *}
-                        {if $fleet.state == 1}
-                            {assign var="fase"     value="VUELTA"}
-                            {assign var="shipIcon" value="🚀"}
-                        {/if}
+		{* ═══════════ NOVEDADES ═══════════ *}
+		{if $is_news}
+		<div class="cm_card cm_news">
+			<div class="cm_sec_title" style="margin-bottom:8px"><h2>&#128240; {$LNG.ov_news}</h2></div>
+			<div class="cm_news_body" style="color:var(--cm-text); font-size:12px; line-height:1.6;">{$news}</div>
+		</div>
+		{/if}
 
-                        {* Icono origen/destino por tipo *}
-                        {assign var="startIcon" value="🪐"}
-                        {if isset($fleet.start_type) && $fleet.start_type == 3}{assign var="startIcon" value="🌑"}{/if}
-                        {if isset($fleet.end_type) && $fleet.end_type == 3}
-                            {assign var="destIcon" value="🌑"}
-                        {elseif isset($fleet.end_type) && $fleet.end_type == 2}
-                            {assign var="destIcon" value="☄️"}
-                        {/if}
+	</div>{* /cm_main *}
 
-                        <div class="fleet-card {$fleetClass}">
-                            <div class="fleet-header">
-                                <div class="fleet-mission">{$fleet.mission_label} ({$fase})</div>
-                            </div>
-                            <div class="fleet-radar">
-                                <div class="planet-node start-node">
-                                    <span class="planet-icon">{$startIcon}</span>
-                                    <span class="planet-name">Origen</span>
-                                    <span class="planet-coords">[{$fleet.startGalaxy}:{$fleet.startSystem}:{$fleet.startPlanet}]</span>
-                                </div>
-                                <div class="radar-track-container">
-                                    <div class="radar-line"></div>
-                                    <div class="planet-node center-node">
-                                        <span class="planet-icon">{$destIcon}</span>
-                                        <span class="planet-name">Destino</span>
-                                        <span class="planet-coords">[{$fleet.endGalaxy}:{$fleet.endSystem}:{$fleet.endPlanet}]</span>
-                                    </div>
-                                    <div class="planet-node end-node">
-                                        <span class="planet-icon">{$startIcon}</span>
-                                        <span class="planet-name">Retorno</span>
-                                        <span class="planet-coords">[{$fleet.startGalaxy}:{$fleet.startSystem}:{$fleet.startPlanet}]</span>
-                                    </div>
+	{* ═══════════ SIDEBAR DERECHA (mockup8_3) ═══════════ *}
+	<aside class="cm_side">
 
-                                    <div class="traveler-container" id="traveler_{$index}"
-                                         data-fleet-id="{$fleet.id}"
-                                         data-fleet-total-time="{$fleet.resttime}"
-                                         data-fleet-state="{$fleet.state|default:0}">
-                                        <div class="traveler-ship">{$shipIcon}</div>
-                                        <div class="traveler-timer" id="timer_{$index}">
-                                            {pretty_fly_time({$fleet.resttime})}
-                                        </div>
+		{* ─── POTENCIADORES (lógica v6.6 intacta) ─── *}
+		{if $allBoosters}
+		<div class="cm_card">
+			<div class="sec_title">&#9889; Potenciadores {if $activeBoosters > 0}<span style="color:#4aff88">&middot; {$activeBoosters} activos</span>{/if}</div>
+			{foreach $allBoosters as $booster}
+				{if $booster.booster_name != 'Bonus VIP Semanal' && $booster.booster_name != 'Bonus VIP Quincenal' && $booster.booster_name != 'Bonus VIP Mensual'}
+				<div class="booster_card {if $booster.active}active{else}inactive{/if}">
+					<div class="booster_icon">{$booster.icon_emoji}</div>
+					<div>
+						<div class="booster_name">{$booster.booster_name}</div>
+						<div class="booster_bonus">+{$booster.booster_value}%</div>
+					</div>
+					<div class="booster_state">
+						{if $booster.active}
+							<span class="state_active">&#9201; {$booster.remaining_str}</span>
+						{else}
+							<span class="state_inactive">Inactivo</span>
+						{/if}
+					</div>
+				</div>
+				{/if}
+			{/foreach}
+		</div>
+		{/if}
 
-                                        <!-- TOOLTIP PERSONALIZADO -->
-                                        <div class="hud-tooltip">
-                                            <div class="tooltip-title">Información de Flota</div>
-                                            
-                                            {if isset($fleet.ships_array) && $fleet.ships_array|@count > 0}
-                                                {foreach $fleet.ships_array as $shipId => $count}
-                                                    {if $count > 0}
-                                                        <div class="tooltip-row">
-                                                            <span>{$LNG.tech[$shipId]}:</span>
-                                                            <span>{$count|number}</span>
-                                                        </div>
-                                                    {/if}
-                                                {/foreach}
-                                            {else}
-                                                <div class="tooltip-row">
-                                                    <span>Total Naves:</span>
-                                                    <span>{$fleet.amount|number}</span>
-                                                </div>
-                                            {/if}
+		{* ─── TU COMANDANTE (datos de la Carta de Usuario) ─── *}
+		<div class="cm_card">
+			{assign var="rankInfo_clean" value=$rankInfo|strip_tags|trim}
+			{assign var="points_part" value=$rankInfo_clean|regex_replace:'/^([0-9\.,]+).*/':'$1'}
+			{assign var="rank_part" value=$rankInfo_clean|regex_replace:'/^[0-9\.,]+\s*/':''}
+			<div class="sec_title">&#128081; Tu comandante</div>
+			<div class="cmd_card">
+				<div class="cmd_avatar">&#128081;</div>
+				<div>
+					<div class="cmd_name">Comandante</div>
+					<div class="cmd_rank">Rango: {$rank_part}</div>
+				</div>
+			</div>
+			<div class="cmd_stats">
+				<div class="cs"><b>{$points_part}</b><span>Puntos</span></div>
+				<div class="cs"><b>{if isset($fleet_count)}{$fleet_count|number}{else}0{/if}</b><span>Naves</span></div>
+				<div class="cs"><b>{if isset($defense_count)}{$defense_count|number}{else}0{/if}</b><span>Defensa</span></div>
+			</div>
+		</div>
 
-                                            {if isset($fleet.fleet_resource_metal) && ($fleet.fleet_resource_metal > 0 || $fleet.fleet_resource_crystal > 0 || $fleet.fleet_resource_deuterium > 0)}
-                                                <div class="tooltip-section-title">Recursos</div>
-                                                {if $fleet.fleet_resource_metal > 0}
-                                                <div class="tooltip-row"><span>Metal:</span><span style="color:var(--accent-cyan);">{$fleet.fleet_resource_metal|number}</span></div>
-                                                {/if}
-                                                {if $fleet.fleet_resource_crystal > 0}
-                                                <div class="tooltip-row"><span>Cristal:</span><span style="color:var(--accent-cyan);">{$fleet.fleet_resource_crystal|number}</span></div>
-                                                {/if}
-                                                {if $fleet.fleet_resource_deuterium > 0}
-                                                <div class="tooltip-row"><span>Deuterio:</span><span style="color:var(--accent-cyan);">{$fleet.fleet_resource_deuterium|number}</span></div>
-                                                {/if}
-                                            {/if}
-                                        </div>
+		{* ─── LOTERÍA (lógica v6.6 intacta) ─── *}
+		{if $lottery_hay && $lottery_widget}
+		<div class="cm_card">
+			<div class="sec_title">&#127903; Loter&iacute;a <span style="color:#94a3b8">&middot; Sorteo #{$lottery_widget.numero_sorteo}</span></div>
+			<a href="game.php?page=lottery" class="ov_lot_card" style="padding:0; border:none; background:transparent">
+				<div class="ov_lot_jackpot">&#127942; {$lottery_widget.jackpot_fmt} NTX-20</div>
+				{assign var=lot_pct value=0}
+				{if $lottery_widget.max_tickets > 0}
+					{assign var=lot_pct value=($lottery_widget.tickets_vendidos / $lottery_widget.max_tickets * 100)|round}
+				{/if}
+				<div class="ov_lot_progress_bar" style="margin-top:8px">
+					<div class="ov_lot_progress_fill" style="width:{$lot_pct}%;"></div>
+				</div>
+				<div class="ov_lot_footer">
+					<span class="ov_lot_time" data-fin="{$lottery_widget.fecha_sorteo}">{$lottery_widget.tiempo_restante}</span>
+					<span class="ov_lot_price">&#127903; {$lottery_widget.precio_ticket} NTX-20</span>
+				</div>
+			</a>
+		</div>
+		{/if}
 
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    {/foreach}
-                {else}
-                    <div style="text-align: center; color: var(--text-muted); padding: 20px; border: 1px dashed var(--border-color); border-radius: 8px;">
-                        [ SIN FLOTAS ACTIVAS ]
-                    </div>
-                {/if}
-            </div>
+		{* ─── RIFAS (lógica v6.6 intacta) ─── *}
+		{if $raffles_hay}
+		<div class="cm_card">
+			<div class="sec_title">&#127920; Rifas activas {if $raffles_count > 0}<span style="color:#94a3b8">&middot; {$raffles_count}</span>{/if}</div>
+			{foreach $raffles_widget as $r}
+			<a href="game.php?page=raffles&mode=view&id={$r.id}" class="ov_raf_card" style="padding:10px 0 6px; border:none; border-bottom:1px solid var(--cm-border); border-radius:0; background:transparent">
+				<div class="ov_raf_name">&#127920; {$r.titulo}</div>
+				<div class="ov_raf_prize">&#127942; {$r.premio_texto}</div>
+				<div class="ov_raf_footer" style="margin-top:5px">
+					<span class="ov_raf_time" data-fin="{$r.fecha_fin}">{$r.tiempo_restante}</span>
+					<span class="ov_raf_price">&#127903; {$r.precio_boleto} {$r.moneda_nombre}</span>
+				</div>
+			</a>
+			{/foreach}
+		</div>
+		{/if}
 
-            {* ═══════════════════════════════════════════════════════════
-             * WIDGET PvE
-             * ═══════════════════════════════════════════════════════════ *}
-            {if isset($pve_widget) && $pve_widget.enabled && $pve_widget.show_widget}
-            <div class="ov_pve_section" id="ov_pve_section">
-                <div class="ov_pve_title">
-                    <span>⚔️ Eventos PvE</span>
-                    <a href="game.php?page=pve" class="ov_pve_all">Ver todos →</a>
-                </div>
-                <div class="ov_pve_grid">
-                    {if $pve_widget.crisis_active || $pve_widget.crisis_time > 0}
-                    <a href="game.php?page=pve" class="ov_pve_card ov_pve_crisis" id="ov_pve_crisis_card" data-active="{$pve_widget.crisis_active|default:0}" data-time="{$pve_widget.crisis_time|default:0}" data-end="{$pve_widget.crisis_end|default:0}">
-                        <div class="ov_pve_header"><span class="ov_pve_icon">🌌</span><span class="ov_pve_name">Crisis de Fin de Mes</span></div>
-                        <div class="ov_pve_status" data-role="status">Cargando…</div>
-                        <div class="ov_pve_footer"><span class="ov_pve_time off" data-role="time">--</span></div>
-                    </a>
-                    {/if}
-                    {if $pve_widget.boss_active || $pve_widget.boss_time > 0}
-                    <a href="game.php?page=pve&mode=boss" class="ov_pve_card ov_pve_boss {if $pve_widget.boss_active}state-active{/if}" id="ov_pve_boss_card" data-active="{$pve_widget.boss_active|default:0}" data-status="{$pve_widget.boss_status|default:''}" data-time="{$pve_widget.boss_time|default:0}" data-end="{$pve_widget.boss_end|default:0}" data-ghosts="{$pve_widget.boss_ghosts|default:0}">
-                        <div class="ov_pve_header"><span class="ov_pve_icon">🌌</span><span class="ov_pve_name">Torneo del Devorador</span></div>
-                        <div class="ov_pve_status" data-role="status">Cargando…</div>
-                        <div class="ov_pve_footer"><span class="ov_pve_time off" data-role="time">--</span></div>
-                    </a>
-                    {/if}
-                    {if $pve_widget.empire_active || $pve_widget.empire_time > 0}
-                    <a href="game.php?page=pve&mode=empire" class="ov_pve_card ov_pve_empire" id="ov_pve_empire_card" data-active="{$pve_widget.empire_active|default:0}" data-time="{$pve_widget.empire_time|default:0}" data-end="{$pve_widget.empire_end|default:0}" data-count="{$pve_widget.empire_count|default:0}">
-                        <div class="ov_pve_header"><span class="ov_pve_icon">🏛️</span><span class="ov_pve_name">Imperio Caído</span></div>
-                        <div class="ov_pve_status" data-role="status">Cargando…</div>
-                        <div class="ov_pve_footer"><span class="ov_pve_time off" data-role="time">--</span></div>
-                    </a>
-                    {/if}
-                    {if $pve_widget.pending_rewards > 0}
-                    <a href="game.php?page=pve" class="ov_pve_card ov_pve_rewards">
-                        <div class="ov_pve_header"><span class="ov_pve_icon">🎁</span><span class="ov_pve_name">Recompensas PvE</span></div>
-                        <div class="ov_pve_status highlight">{$pve_widget.pending_rewards} pendiente(s)</div>
-                        <div class="ov_pve_footer"><span class="ov_pve_time">Reclamar →</span></div>
-                    </a>
-                    {/if}
-                </div>
-            </div>
-            {/if}
+	</aside>{* /cm_side *}
 
-            {* ═══════════════════════════════════════════════════════════
-             * WIDGET PvP
-             * ═══════════════════════════════════════════════════════════ *}
-            {if isset($pvp_widget) && $pvp_widget.enabled && $pvp_widget.show_widget}
-            <div class="ov_pvp_section" id="ov_pvp_section">
-                <div class="ov_pvp_title">
-                    <span>⚔️ Sistema PvP</span>
-                    <a href="game.php?page=pvp" class="ov_pvp_all">Ver todo →</a>
-                </div>
-                <div class="ov_pvp_grid">
-                    {if $pvp_widget.arenas_waiting > 0}
-                    <a href="game.php?page=pvp&mode=arenas" class="ov_pvp_card ov_pvp_arenas">
-                        <div class="ov_pvp_header"><span class="ov_pvp_icon">🏟️</span><span class="ov_pvp_name">Arenas abiertas</span></div>
-                        <div class="ov_pvp_status highlight">{$pvp_widget.arenas_waiting} esperando</div>
-                        <div class="ov_pvp_footer"><span class="ov_pvp_time">Unirse →</span></div>
-                    </a>
-                    {/if}
-                    {if $pvp_widget.arenas_active > 0}
-                    <a href="game.php?page=pvp&mode=arenas" class="ov_pvp_card ov_pvp_arenas state-active">
-                        <div class="ov_pvp_header"><span class="ov_pvp_icon">⚔️</span><span class="ov_pvp_name">Arenas activas</span></div>
-                        <div class="ov_pvp_status highlight">{$pvp_widget.arenas_active} en curso</div>
-                        <div class="ov_pvp_footer"><span class="ov_pvp_time danger">Ver →</span></div>
-                    </a>
-                    {/if}
-                    {if $pvp_widget.my_arena}
-                    <a href="game.php?page=pvp&mode=viewArena&arena_id={$pvp_widget.my_arena.id}" class="ov_pvp_card ov_pvp_myarena" id="ov_pvp_myarena_card" data-end="{$pvp_widget.my_arena.time_left}" data-status="{$pvp_widget.my_arena.status}">
-                        <div class="ov_pvp_header"><span class="ov_pvp_icon">🎯</span><span class="ov_pvp_name">Mi arena</span></div>
-                        <div class="ov_pvp_status">{$pvp_widget.my_arena.mode_label} · {$pvp_widget.my_arena.players}/{$pvp_widget.my_arena.max}</div>
-                        <div class="ov_pvp_footer"><span class="ov_pvp_time" data-role="time">{$pvp_widget.my_arena.time_fmt}</span></div>
-                    </a>
-                    {/if}
-                    {if $pvp_widget.tournament_active === 1}
-                    <a href="game.php?page=pvp&mode=tournaments" class="ov_pvp_card ov_pvp_tournament {if $pvp_widget.tournament_status == 'running'}state-active{/if}" id="ov_pvp_tournament_card" data-status="{$pvp_widget.tournament_status}" data-time="{$pvp_widget.tournament_time}">
-                        <div class="ov_pvp_header"><span class="ov_pvp_icon">🏆</span><span class="ov_pvp_name">Torneo</span></div>
-                        <div class="ov_pvp_status">
-                            {if $pvp_widget.tournament_status == 'registration'}Inscripción abierta · {$pvp_widget.tournament_players}/{$pvp_widget.tournament_max}
-                            {elseif $pvp_widget.tournament_status == 'running'}En curso · {$pvp_widget.tournament_players} jugadores
-                            {else}{$pvp_widget.tournament_status}{/if}
-                        </div>
-                        <div class="ov_pvp_footer"><span class="ov_pvp_time" data-role="time">--</span></div>
-                    </a>
-                    {/if}
-                    {if $pvp_widget.my_pvp_points > 0 || $pvp_widget.my_pvp_wins > 0}
-                    <a href="game.php?page=pvp&mode=profile" class="ov_pvp_card ov_pvp_stats">
-                        <div class="ov_pvp_header"><span class="ov_pvp_icon">📊</span><span class="ov_pvp_name">Mis stats PvP</span></div>
-                        <div class="ov_pvp_status">{$pvp_widget.my_pvp_points} pts · {$pvp_widget.my_pvp_wins}V/{$pvp_widget.my_pvp_losses}D</div>
-                        <div class="ov_pvp_footer"><span class="ov_pvp_time">Logros {$pvp_widget.ach_unlocked}/{$pvp_widget.ach_total} →</span></div>
-                    </a>
-                    {/if}
-                </div>
-            </div>
-            {/if}
-
-            {* ============ WIDGET EVENTOS ============ *}
-            {if $ovEvents && ($ovEvents.daily || $ovEvents.weekly || $ovEvents.elite)}
-            <div class="ov_events_section">
-                <div class="ov_events_title">
-                    <span>🎉 Eventos en Curso</span>
-                    <a href="game.php?page=events" class="ov_events_all">Ver todos →</a>
-                </div>
-                <div class="ov_events_grid">
-                    {foreach $ovEvents as $ev}
-                        {if $ev}
-                        <a href="game.php?page=events" class="ov_ev_card ov_ev_{$ev.event_class}">
-                            <div class="ov_ev_header">
-                                <span class="ov_ev_icon" style="background: {$ev.event_color}22; color: {$ev.event_color}; border-color: {$ev.event_color};">{$ev.icon_emoji}</span>
-                                <span class="ov_ev_name">{$ev.event_name}</span>
-                            </div>
-                            <div class="ov_ev_progress_bar">
-                                <div class="ov_ev_progress_fill{if $ev.is_complete} complete{/if}" style="width:{$ev.progress_pct}%;"></div>
-                            </div>
-                            <div class="ov_ev_footer">
-                                <span class="ov_ev_progress">{$ev.progress_fmt} / {$ev.target_fmt}</span>
-                                <span class="ov_ev_reward">{$ev.reward_text}</span>
-                            </div>
-                        </a>
-                        {/if}
-                    {/foreach}
-                </div>
-            </div>
-            {/if}
-
-            {* ============ WIDGET RIFAS ============ *}
-            {if $raffles_hay}
-            <div class="ov_raffles_section">
-                <div class="ov_raffles_title">
-                    <span>🎰 Rifas Activas {if $raffles_count > 0}<span class="ov_raffles_count">· {$raffles_count}</span>{/if}</span>
-                    <a href="game.php?page=raffles" class="ov_raffles_all">Ver todas →</a>
-                </div>
-                <div class="ov_raffles_grid">
-                    {foreach $raffles_widget as $r}
-                    <a href="game.php?page=raffles&mode=view&id={$r.id}" class="ov_raf_card">
-                        <div class="ov_raf_header"><span class="ov_raf_icon">🎰</span><span class="ov_raf_name">{$r.titulo}</span></div>
-                        <div class="ov_raf_prize">🏆 {$r.premio_texto}</div>
-                        <div class="ov_raf_progress_bar"><div class="ov_raf_progress_fill" style="width:{$r.pct}%;"></div></div>
-                        <div class="ov_raf_footer">
-                            <span class="ov_raf_time" data-fin="{$r.fecha_fin}">{$r.tiempo_restante}</span>
-                            <span class="ov_raf_price">🎟️ {$r.precio_boleto} {$r.moneda_nombre}</span>
-                        </div>
-                    </a>
-                    {/foreach}
-                </div>
-            </div>
-            {/if}
-
-            {* ============ WIDGET LOTERIA ============ *}
-            {if $lottery_hay && $lottery_widget}
-            <div class="ov_lottery_section">
-                <div class="ov_lottery_title">
-                    <span>🎫 Loteria <span class="ov_lottery_num">· Sorteo #{$lottery_widget.numero_sorteo}</span></span>
-                    <a href="game.php?page=lottery" class="ov_lottery_all">Ver loteria →</a>
-                </div>
-                <div class="ov_lottery_grid">
-                    <a href="game.php?page=lottery" class="ov_lot_card">
-                        <div class="ov_lot_header"><span class="ov_lot_icon">🎫</span><span class="ov_lot_name">Sorteo #{$lottery_widget.numero_sorteo}</span></div>
-                        <div class="ov_lot_jackpot">🏆 {$lottery_widget.jackpot_fmt} NTX-20</div>
-                        <div class="ov_lot_progress_bar">
-                            {assign var=lot_pct value=0}
-                            {if $lottery_widget.max_tickets > 0}
-                                {assign var=lot_pct value=($lottery_widget.tickets_vendidos / $lottery_widget.max_tickets * 100)|round}
-                            {/if}
-                            <div class="ov_lot_progress_fill" style="width:{$lot_pct}%;"></div>
-                        </div>
-                        <div class="ov_lot_footer">
-                            <span class="ov_lot_time" data-fin="{$lottery_widget.fecha_sorteo}">{$lottery_widget.tiempo_restante}</span>
-                            <span class="ov_lot_price">🎟️ {$lottery_widget.precio_ticket} NTX-20</span>
-                        </div>
-                    </a>
-                </div>
-            </div>
-            {/if}
-
-            {* ============ NOVEDADES ============ *}
-            {if $is_news}
-            <div class="xnova-card" style="margin-top: 0;">
-                <div class="xnova-card-header">
-                    <span><span class="icon">📰</span> {$LNG.ov_news}</span>
-                </div>
-                <div class="xnova-card-body" style="text-align: left; color: var(--text-main); font-size: 12px; line-height: 1.6;">
-                    {$news}
-                </div>
-            </div>
-            {/if}
-
-        </div>
-
-        <!-- ================= COLUMNA DERECHA (SIDEBAR) ================= -->
-        <div class="xnova-sidebar">
-
-            {* ============ CARTA DE USUARIO ============ *}
-            {assign var="rankInfo_clean" value=$rankInfo|strip_tags|trim}
-            {assign var="points_part" value=$rankInfo_clean|regex_replace:'/^([0-9\.,]+).*/':'$1'}
-            {assign var="rank_part" value=$rankInfo_clean|regex_replace:'/^[0-9\.,]+\s*/':''}
-
-            <div class="xnova-user-card">
-                <div class="uc-header">Carta de Usuario</div>
-                
-                <div class="uc-stats">
-                    <div class="uc-stat-row">
-                        <span class="lbl">Rango</span>
-                        <span class="val">{$rank_part}</span>
-                    </div>
-                    <div class="uc-stat-row">
-                        <span class="lbl">Puntos</span>
-                        <span class="val cyan">{$points_part}</span>
-                    </div>
-                    <div class="uc-stat-row">
-                        <span class="lbl">Flota</span>
-                        <span class="val">{if isset($fleet_count)}{$fleet_count|number}{else}0{/if}</span>
-                    </div>
-                    <div class="uc-stat-row">
-                        <span class="lbl">Defensa</span>
-                        <span class="val">{if isset($defense_count)}{$defense_count|number}{else}0{/if}</span>
-                    </div>
-                </div>
-            </div>
-
-            {* ============ POTENCIADORES ============ *}
-            {if $allBoosters}
-            <div class="boosters_section">
-                <div class="boosters_title">
-                    ⚡ POTENCIADORES {if $activeBoosters > 0}· <span class="active-count">{$activeBoosters} activos</span>{/if}
-                </div>
-                <div class="boosters_grid">
-                    {foreach $allBoosters as $booster}
-                        {if $booster.booster_name != 'Bonus VIP Semanal' && $booster.booster_name != 'Bonus VIP Quincenal' && $booster.booster_name != 'Bonus VIP Mensual'}
-                        <div class="booster_card {if $booster.active}active{else}inactive{/if}">
-                            <div class="booster_icon">{$booster.icon_emoji}</div>
-                            <div class="booster_info">
-                                <div class="booster_name">{$booster.booster_name}</div>
-                                <div class="booster_bonus">+{$booster.booster_value}%</div>
-                            </div>
-                            <div class="booster_state">
-                                {if $booster.active}
-                                    <span class="state_active">⏰ {$booster.remaining_str}</span>
-                                {else}
-                                    <span class="state_inactive">Inactivo</span>
-                                {/if}
-                            </div>
-                        </div>
-                        {/if}
-                    {/foreach}
-                </div>
-            </div>
-            {/if}
-
-        </div>
-
-    </div>
-
-</div>
+</div>{* /cm_shell *}
 
 <script>
 /* ============================================================
@@ -2194,8 +1170,7 @@ function xbDismiss() {
     setInterval(updateBuffTimer, 1000);
 })();
 </script>
-
 {/block}
 {block name="script" append}
-    <script src="scripts/game/overview.js"></script>
+<script src="scripts/game/overview.js"></script>
 {/block}
