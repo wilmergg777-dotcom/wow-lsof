@@ -83,6 +83,8 @@
     420 => 'C. Gravit.',
     421 => 'T. Defensor',
     422 => 'Basti&oacute;n',
+    932 => 'Norium',
+    933 => 'Germanium',
 );
 
  $LNG['bonus'] = array(
@@ -237,6 +239,8 @@
     903 => 'Deutério',
     911 => 'Energía',
     921 => 'Materia Oscura',
+	932 => 'Norium',
+    933 => 'Germanium',
 
     7 => 'Mina de Norio',
     17 => 'Mina de Germanio',
@@ -403,6 +407,8 @@
     420 => 'Superarma de planeta alimentada con Norium.',
     421 => 'Torreta premium del oficial Defensor.',
     422 => 'Fortaleza defensiva del oficial B&uacute;nker.',
+	932 => 'Metal raro l&iacute;quido extra&iacute;do en las profundidades del planeta.',
+    933 => 'Metaloide blanco-azulado base de circuitos y aleaciones militares.',
 );
 
  $LNG['longDescription'] = array(
@@ -545,4 +551,6 @@
     420 => 'El Ca&ntilde;&oacute;n Gravit&oacute;nico Mejorado colapsa el espacio frente a su objetivo usando un n&uacute;cleo de Norium: es la superarma defensiva del endgame y exige la investigaci&oacute;n avanzada del servidor.',
     421 => 'La Torre del Defensor es la torreta premium del oficial Defensor: sistemas de punter&iacute;a asistida y recarga acelerada en un chasis reforzado.',
     422 => 'El Basti&oacute;n del B&uacute;nker es una fortaleza completa: solo el oficial B&uacute;nker puede levantarla, y convierte cualquier planeta en un hueso duro de roer.',
+	932 => 'El Norium es un metal raro extra&iacute;do en estado l&iacute;quido de las profundidades del planeta y que se solidifica al llegar a la superficie. La Mina de Norio lo bombea y refine para uso militar: es el recurso de las naves capitales y las superarmas.',
+    933 => 'El Germanio es un metaloide blanco-azulado de la familia del cristal, materia prima de circuitos electr&oacute;nicos y aleaciones militares. M&aacute;s escaso que el cristal com&uacute;n, alimenta las defensas avanzadas, los escudos y las investigaciones de soporte.',
 );
