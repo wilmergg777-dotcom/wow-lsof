@@ -226,6 +226,10 @@ class ShowIndexPage extends AbstractLoginPage
             'users24h'			=> $users24hCurrent,
             'universeName'		=> $universeNameCurrent,
             'universeAge'		=> $universeAgeCurrent,
+
+            // ✅ FIX v5.6 — PHP 8.2: definir 'page' para evitar
+            // "Undefined array key 'page'" en el template index.default.tpl
+            'page'				=> 'index',
             
             // Login / template base
             'universeSelect'	=> $universeSelect,

@@ -22,6 +22,10 @@
  *    - ELIMINADO assign 'referralEnable' => $config->ref_active
  *    - El sistema nativo de referidos ya no existe.
  *    - La vinculación ocurre SOLO en el registro por código (ReferralHelper v5.0).
+ *
+ * ✅ AstroIO v5.6 (FIX PHP 8.2 — Undefined array key "page"):
+ *    - Añadido assign 'page' en getPageData() para evitar el warning
+ *      "Undefined array key 'page'" que en PHP 8.2 rompe la home.
  */
 
 abstract class AbstractLoginPage
@@ -98,7 +102,15 @@ abstract class AbstractLoginPage
 
 		$config	= Config::get();
 
+		// ✅ FIX v5.6 — PHP 8.2: definir 'page' siempre, con fallback a 'index'
+		$page = HTTP::_GP('page', '');
+		if ($page === '') {
+			$page = 'index';
+		}
+
         $this->tplObj->assign_vars(array(
+			// ✅ FIX v5.6 — variable que faltaba y rompía el template en PHP 8.2
+			'page'					=> $page,
 			'recaptchaEnable'		=> $config->capaktiv,
 			'recaptchaPublicKey'	=> $config->cappublic,
 			'gameName' 				=> $config->game_name,
