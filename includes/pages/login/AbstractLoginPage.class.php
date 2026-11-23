@@ -14,18 +14,8 @@
  * @version 1.8.0
  * @link https://github.com/jkroepke/2Moons
  *
- * ✅ AstroIO v2.9 — printMessage() blindado
- *    - Detecta si $redirectButtons es booleano (llamada con orden equivocado)
- *    - Fuerza $redirectButtons a null si no es array
- *
- * ✅ AstroIO v5.5 (REFERIDOS UNIFICADOS — SOLO CÓDIGO):
- *    - ELIMINADO assign 'referralEnable' => $config->ref_active
- *    - El sistema nativo de referidos ya no existe.
- *    - La vinculación ocurre SOLO en el registro por código (ReferralHelper v5.0).
- *
- * ✅ AstroIO v5.6 (FIX PHP 8.2 — Undefined array key "page"):
- *    - Añadido assign 'page' en getPageData() para evitar el warning
- *      "Undefined array key 'page'" que en PHP 8.2 rompe la home.
+ * ✅ AstroIO v5.7 (LECTURA DINÁMICA DE VERSIÓN):
+ *    - Lee la versión desde CHANGES.md y la envía al footer.
  */
 
 abstract class AbstractLoginPage
@@ -108,9 +98,23 @@ abstract class AbstractLoginPage
 			$page = 'index';
 		}
 
+		// ✅ NUEVO v5.7 — Leer la versión desde CHANGES.md
+		$gameVersion = '2.0.git'; // Fallback por si el archivo no existe o falla
+		$changesFile = ROOT_PATH . 'CHANGES.md'; 
+		
+		if (file_exists($changesFile)) {
+			$fileContent = file_get_contents($changesFile);
+			// Busca la primera línea que diga "### AstroIO... v2.4.0"
+			if (preg_match('/###\s*AstroIO.*?v([0-9\.]+)/i', $fileContent, $matches)) {
+				$gameVersion = $matches[1];
+			}
+		}
+
         $this->tplObj->assign_vars(array(
 			// ✅ FIX v5.6 — variable que faltaba y rompía el template en PHP 8.2
 			'page'					=> $page,
+			// ✅ NUEVO v5.7 — Versión dinámica para el footer
+			'gameVersion'           => $gameVersion,
 			'recaptchaEnable'		=> $config->capaktiv,
 			'recaptchaPublicKey'	=> $config->cappublic,
 			'gameName' 				=> $config->game_name,
@@ -134,14 +138,11 @@ abstract class AbstractLoginPage
 	protected function printMessage($message, $redirectButtons = null, $redirect = null, $fullSide = true)
 	{
 		// ✅ FIX v2.9 — Blindaje contra argumentos en orden equivocado
-		// Si el segundo argumento es un booleano, significa que se llamó
-		// con el orden viejo: printMessage($msg, $fullSide, $redirect)
 		if (is_bool($redirectButtons)) {
 			$fullSide        = $redirectButtons;
 			$redirectButtons = null;
 		}
 
-		// Si no es un array válido, forzamos null para que el template no falle
 		if (!is_array($redirectButtons)) {
 			$redirectButtons = null;
 		}
