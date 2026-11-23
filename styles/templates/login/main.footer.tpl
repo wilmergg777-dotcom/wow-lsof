@@ -1,13 +1,11 @@
 {* ============================================================
-   ASTROIO v8.1 — FOOTER LOGIN (clon del main.footer.tpl de
-   ultimateXnova): barra fija abajo-izquierda con versión y
-   contacto. Cierra uk-container y #page, y conserva LoginConfig
-   y el analytics del juego.
-   ✅ AstroIO v8.1 — Versión dinámica leída desde CHANGES.md
+   ASTROIO v8.2 — FOOTER LOGIN (Versión clickeable)
+   - ✅ FIX: La versión ahora es un enlace que abre el CHANGES.md.
    ============================================================ *}
 </div>
 <footer class="dark-blur-bg footer-container box-shadow-large">
-<a class="fs-6 m-0 rounded px-2 mb-1 text-white" href="index.php?page=index" title="AstroIO">AstroIO</a> v{$gameVersion} | Conquista el universo, construye tu imperio
+<a class="fs-6 m-0 rounded px-2 mb-1 text-white" href="index.php?page=index" title="AstroIO">AstroIO</a> 
+<a href="CHANGES.md" target="_blank" title="Ver Changelog" style="color: #00e0ff; text-decoration: none; font-weight: bold; transition: 0.2s;" onmouseover="this.style.textShadow='0 0 10px rgba(0,224,255,.7)'" onmouseout="this.style.textShadow='none'">v{$gameVersion}</a> | Conquista el universo, construye tu imperio
 | <a href="index.php?page=disclamer">{$LNG.menu_disclamer|default:'Contactar'}</a>
 
 </footer>
