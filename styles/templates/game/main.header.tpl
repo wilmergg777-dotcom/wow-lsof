@@ -381,8 +381,6 @@
 		});
 	});
 	</script>
-	{* ═══ ASTROIO v7.1 — selector de diseño Fotos/Clásico (global) ═══ *}
-	<script src="scripts/game/aio-design.js?v=71"></script>
 </head>
 
 <body id="{$smarty.get.page|default:'overview'|escape}" class="{$bodyclass}">
