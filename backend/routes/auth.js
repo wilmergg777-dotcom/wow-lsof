@@ -105,13 +105,23 @@ router.post('/login', authLimiter, validateLogin, async (req, res) => {
         if (requiresVerification) {
             const code = Math.floor(100000 + Math.random() * 900000).toString();
             const expiresAt = new Date();
-            expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+            // ✅ CAMBIO: expiración aumentada de 15 a 30 minutos
+            expiresAt.setMinutes(expiresAt.getMinutes() + 30);
 
             await pool.query('DELETE FROM user_verification_codes WHERE user_id = ?', [user.id]);
             await pool.query(
                 'INSERT INTO user_verification_codes (user_id, code, ip_address, expires_at) VALUES (?, ?, ?, ?)',
                 [user.id, code, clientIp, expiresAt]
             );
+
+            // ✅ CAMBIO: log de depuración para confirmar generación del código
+            console.log('🔐 LOGIN - Código de verificación generado:', {
+                userId: user.id,
+                email: user.email,
+                code: code,
+                clientIp: clientIp,
+                expiresAt: expiresAt.toISOString()
+            });
 
             if (user.email) {
                 const enviado = await enviarCorreoVerificacion(user.email, code);
@@ -214,13 +224,31 @@ router.post('/verify-login-code', authLimiter, validateLoginCode, async (req, re
     if (!identifier || !code) return res.status(400).json({ error: 'Faltan datos' });
 
     try {
+        // ✅ CAMBIO: logs de depuración - qué llega del frontend
+        console.log('🔍 VERIFY - Datos recibidos:', {
+            identifier: JSON.stringify(identifier),
+            code: JSON.stringify(code),
+            codeType: typeof code
+        });
+
         const [users] = await pool.query(
             'SELECT * FROM users WHERE username = ? OR email = ? OR phone = ?',
             [identifier, identifier, identifier]
         );
-        if (users.length === 0) return res.status(401).json({ error: 'Usuario no encontrado' });
+        if (users.length === 0) {
+            console.log('❌ VERIFY - Usuario NO encontrado para identifier:', identifier);
+            return res.status(401).json({ error: 'Usuario no encontrado' });
+        }
 
         const user = users[0];
+
+        // ✅ CAMBIO: log del usuario encontrado
+        console.log('✅ VERIFY - Usuario encontrado:', {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            emailRaw: JSON.stringify(user.email)
+        });
 
         // ?? NUEVA VALIDACI¨®N: Cuenta bloqueada
         if (user.is_blocked === 1) {
@@ -229,12 +257,39 @@ router.post('/verify-login-code', authLimiter, validateLoginCode, async (req, re
 
         const clientIp = getClientIp(req);
 
+        // ✅ CAMBIO: primero consultamos TODOS los códigos del usuario para debug
+        // (sin filtro de expiración, para ver si existe pero está expirado)
+        // ✅ CAMBIO: NOW() → UTC_TIMESTAMP() para alinear con Node (que usa UTC)
+        const [allCodes] = await pool.query(
+            'SELECT id, code, ip_address, expires_at, UTC_TIMESTAMP() AS now_db FROM user_verification_codes WHERE user_id = ?',
+            [user.id]
+        );
+
+        console.log('🔍 VERIFY - Códigos en BD para este usuario:', allCodes);
+
+        // ✅ CAMBIO: NOW() → UTC_TIMESTAMP() para alinear con Node (que usa UTC)
         const [codes] = await pool.query(
-            'SELECT * FROM user_verification_codes WHERE user_id = ? AND code = ? AND expires_at > NOW()',
+            'SELECT * FROM user_verification_codes WHERE user_id = ? AND code = ? AND expires_at > UTC_TIMESTAMP()',
             [user.id, code]
         );
 
-        if (codes.length === 0) return res.status(400).json({ error: 'C¨®digo incorrecto o expirado.' });
+        // ✅ CAMBIO: log del resultado de la consulta filtrada
+        console.log('🔍 VERIFY - Códigos que coinciden con el recibido:', codes.length);
+
+        if (codes.length === 0) {
+            // Diagnóstico adicional: ¿existe el código pero está expirado?
+            // ✅ CAMBIO: NOW() → UTC_TIMESTAMP() para alinear con Node (que usa UTC)
+            const [sameCode] = await pool.query(
+                'SELECT id, expires_at, UTC_TIMESTAMP() AS now_db FROM user_verification_codes WHERE user_id = ? AND code = ?',
+                [user.id, code]
+            );
+            if (sameCode.length > 0) {
+                console.log('⚠️ VERIFY - Código EXISTE pero ESTÁ EXPIRADO. Detalles:', sameCode[0]);
+            } else {
+                console.log('❌ VERIFY - El código recibido NO existe en la BD para este usuario');
+            }
+            return res.status(400).json({ error: 'C¨®digo incorrecto o expirado.' });
+        }
 
         await pool.query('DELETE FROM user_verification_codes WHERE user_id = ?', [user.id]);
 
@@ -250,6 +305,9 @@ router.post('/verify-login-code', authLimiter, validateLoginCode, async (req, re
 
         const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
         await registerSession(user.id, token);
+
+        // ✅ CAMBIO: log de éxito
+        console.log('✅ VERIFY - Código verificado correctamente para user:', user.id);
 
         res.json({
             token,
@@ -305,7 +363,8 @@ router.post('/auth/forgot-password', authLimiter, async (req, res) => {
         const user = users[0];
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date();
-        expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+        // ✅ CAMBIO: expiración aumentada de 15 a 30 minutos
+        expiresAt.setMinutes(expiresAt.getMinutes() + 30);
 
         await pool.query('DELETE FROM password_reset_codes WHERE user_id = ?', [user.id]);
         await pool.query(
@@ -349,8 +408,9 @@ router.post('/auth/reset-password', authLimiter, async (req, res) => {
 
         const user = users[0];
 
+        // ✅ CAMBIO: NOW() → UTC_TIMESTAMP() para alinear con Node (que usa UTC)
         const [codes] = await pool.query(
-            'SELECT * FROM password_reset_codes WHERE user_id = ? AND code = ? AND used = 0 AND expires_at > NOW()',
+            'SELECT * FROM password_reset_codes WHERE user_id = ? AND code = ? AND used = 0 AND expires_at > UTC_TIMESTAMP()',
             [user.id, code]
         );
         if (codes.length === 0) {
