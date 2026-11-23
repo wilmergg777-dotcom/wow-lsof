@@ -29,7 +29,7 @@ const validateRegister = [
   body('email')
     .optional({ values: 'falsy' })
     .isEmail().withMessage('Email inválido')
-    .normalizeEmail()
+    // ✅ CAMBIO: se eliminó .normalizeEmail() para no alterar el email
     .isLength({ max: 254 }),
   body('phone')
     .optional({ values: 'falsy' })
@@ -55,14 +55,20 @@ const validateLogin = [
 ];
 
 const validateSetEmail = [
-  body('email').isEmail().withMessage('Email inválido').normalizeEmail().isLength({ max: 254 }),
+  body('email')
+    .isEmail().withMessage('Email inválido')
+    // ✅ CAMBIO: se eliminó .normalizeEmail() para no alterar el email
+    .isLength({ max: 254 }),
   body('temp_token').isString().isLength({ min: 10 }),
   handleValidation,
 ];
 
 const validateLoginCode = [
   body('identifier').isString().trim().isLength({ min: 3, max: 254 }),
-  body('code').isString().isLength({ min: 6, max: 6 }).isNumeric().withMessage('Código de 6 dígitos'),
+  body('code')
+    .isString()
+    .trim() // ✅ CAMBIO: añadido .trim() para eliminar espacios al copiar/pegar
+    .isLength({ min: 6, max: 6 }).isNumeric().withMessage('Código de 6 dígitos'),
   handleValidation,
 ];
 
@@ -77,7 +83,9 @@ const validateProfileUpdate = [
     .matches(/^[a-zA-Z0-9_]+$/),
   body('email')
     .optional({ values: 'falsy' })
-    .isEmail().normalizeEmail().isLength({ max: 254 }),
+    .isEmail()
+    // ✅ CAMBIO: se eliminó .normalizeEmail() para no alterar el email
+    .isLength({ max: 254 }),
   body('phone')
     .optional({ values: 'falsy' })
     .isString().trim().isLength({ min: 5, max: 30 }),
@@ -139,7 +147,10 @@ const validateWithdraw = [
 ];
 
 const validateWithdrawVerify = [
-  body('code').isString().isLength({ min: 6, max: 6 }).isNumeric(),
+  body('code')
+    .isString()
+    .trim() // ✅ CAMBIO: añadido .trim() para eliminar espacios al copiar/pegar
+    .isLength({ min: 6, max: 6 }).isNumeric(),
   handleValidation,
 ];
 
@@ -159,7 +170,10 @@ const validateTransferRequest = [
 const validateTransferVerify = [
   body('receiverUniqueId').isString().trim().isLength({ min: 1, max: 32 }),
   body('amount').isFloat({ min: 0.01, max: 1000000 }),
-  body('code').isString().isLength({ min: 6, max: 6 }).isNumeric(),
+  body('code')
+    .isString()
+    .trim() // ✅ CAMBIO: añadido .trim() para eliminar espacios al copiar/pegar
+    .isLength({ min: 6, max: 6 }).isNumeric(),
   handleValidation,
 ];
 
@@ -199,14 +213,20 @@ const validateSmtpConfig = [
   body('smtp_port').isInt({ min: 1, max: 65535 }),
   body('smtp_user').isString().trim().isLength({ min: 1, max: 255 }),
   body('smtp_pass').isString().isLength({ min: 1, max: 255 }),
-  body('smtp_from_email').isEmail().normalizeEmail(),
+  body('smtp_from_email')
+    .isEmail()
+    // ✅ CAMBIO: se eliminó .normalizeEmail() para no alterar el email
+    .isLength({ max: 254 }),
   body('smtp_from_name').isString().trim().isLength({ min: 1, max: 100 }),
   body('smtp_secure').optional().isBoolean().toBoolean(),
   handleValidation,
 ];
 
 const validateSmtpTest = [
-  body('test_email').isEmail().normalizeEmail(),
+  body('test_email')
+    .isEmail()
+    // ✅ CAMBIO: se eliminó .normalizeEmail() para no alterar el email
+    .isLength({ max: 254 }),
   handleValidation,
 ];
 
