@@ -1132,6 +1132,7 @@
 	</div>
 	{/if}
 
+</div>
 
 <script>
 function astroio_switchTab(tab) {
