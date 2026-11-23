@@ -29,6 +29,10 @@
  *   - Si el potenciador no existe o está inactivo, no afecta nada
  *   - Se ejecuta SIEMPRE (con o sin droides), ya que el potenciador
  *     es temporal e independiente del Planetario
+ *
+ * 🆕 AstroIO v1.2 (Orden de Minas):
+ *   - Fuerza a que las minas principales (Metal, Cristal, Deuterio, 
+ *     Planta Solar y Reactor de Fusión) salgan siempre al principio.
  */
 
 class ShowBuildingsPage extends AbstractGamePage
@@ -373,6 +377,28 @@ class ShowBuildingsPage extends AbstractGamePage
         $BuildInfoList      = array();
 
 		$Elements			= $reslist['allow'][$PLANET['planet_type']];
+		
+		// ═══════════════════════════════════════════════════════════
+		// 🆕 AstroIO v1.2 - Forzar orden de Minas al principio
+		// IDs: 1=Mina Metal, 2=Mina Cristal, 3=Sintetizador Deuterio,
+		//      4=Planta Solar, 12=Reactor Fusión
+		// ═══════════════════════════════════════════════════════════
+		$priorityElements = array(1, 2, 3, 4, 12);
+		$firstElements    = array();
+		$otherElements    = array();
+		
+		foreach($Elements as $Element) {
+			if (in_array($Element, $priorityElements)) {
+				$firstElements[] = $Element;
+			} else {
+				$otherElements[] = $Element;
+			}
+		}
+		
+		// Reordenamos el array final para que las minas salgan primero
+		sort($firstElements);
+		$Elements = array_merge($firstElements, $otherElements);
+		// ═══════════════════════════════════════════════════════════
 		
 		foreach($Elements as $Element)
 		{
