@@ -1,11 +1,11 @@
 {* ═══════════════════════════════════════════════════════════════════
-   ASTROIO v7.2 — SIDEBAR "ASTROIO ECOSYSTEM" (mockup8_3 aplicado)
-   v7.2: chips CSS de la TOPBAR (estilo foto: valor arriba + CAPACIDAD
-   abajo + subrayado cyan), iconos Ajustes/Tienda/Mensajes reales,
-   contador "Ahora: N · Últimas 24h: X/Y" (formato 20/50).
-   Todos los links del nav viejo portados con sus checks de módulo,
-   badges PvE/PvP (ids intactos), admin por authlevel, alianza y alerts.
-   Chat del sidebar retirado: el chat flotante v4.0 del footer es oficial.
+   ASTROIO v7.1 — SIDEBAR "ASTROIO ECOSYSTEM" (mockup8_3 aplicado)
+   Grupos COLONIA/MILITAR/SOCIEDAD/CUENTA + submenús + buscador +
+   JACKPOT + Personalización + Ayuda. Todos los links del nav viejo
+   portados con sus checks de módulo, badges PvE/PvP (ids intactos:
+   pve_mop_link/pve_mop_badge, pvp_mop_link/pvp_mop_badge), admin por
+   authlevel, alianza y alerts. Chat del sidebar retirado: el chat
+   flotante v4.0 del footer es el oficial (aiofc).
    ═══════════════════════════════════════════════════════════════════ *}
 
 <style>
@@ -35,11 +35,6 @@
 .aio_alerts .aio_al.active { opacity:1; background:rgba(239,68,68,.12); border-color:rgba(239,68,68,.5); box-shadow:0 0 8px rgba(239,68,68,.25); animation:aio_blink 1.6s infinite }
 .aio_alerts .aio_al.off { opacity:.35 }
 @keyframes aio_blink { 50% { box-shadow:0 0 14px rgba(239,68,68,.5) } }
-
-/* ═══ Iconos rápidos (Ajustes / Tienda / Mensajes) ═══ */
-.aio_topicons { display:flex; gap:6px; margin:0 12px 12px }
-.aio_topicons a { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; background:rgba(2,6,12,.55); border:1px solid #22314f; border-radius:9px; padding:7px 0; font-size:12px; color:#94a3b8; text-decoration:none; transition:.2s ease }
-.aio_topicons a:hover { border-color:rgba(56,189,248,.55); color:#38bdf8; background:rgba(56,189,248,.08) }
 
 .aio_group { margin:0 12px 2px }
 .aio_glabel { color:#64748b; font-size:8.5px; font-weight:900; letter-spacing:1.6px; text-transform:uppercase; padding:10px 6px 5px; display:block }
@@ -80,32 +75,6 @@
 
 .aio_foot { margin:12px 12px 14px; color:#475569; font-size:9px; line-height:1.7; border-top:1px dashed #1e293b; padding-top:8px }
 .aio_foot b { color:#64748b }
-
-/* ═══════════════════════════════════════════════════════════
-   TOPBAR — chips de recursos estilo mockup8_3 (solo CSS)
-   Valor arriba (blanco, 900) + "CAPACIDAD X · Recurso" abajo
-   + subrayado cyan. Sin tocar main.topnav.tpl.
-   ═══════════════════════════════════════════════════════════ */
-#header { background:#0a0f1c !important; border-bottom:1px solid #1e293b !important; box-shadow:none !important; padding:10px 16px !important; gap:10px !important }
-#header .res-box { flex-direction:row; align-items:center; gap:9px; background:#111a2e; border:1px solid #22314f; border-radius:10px; padding:7px 14px 10px; min-width:150px; position:relative; overflow:hidden; backdrop-filter:none !important }
-#header .res-box::after { content:''; position:absolute; left:12px; right:12px; bottom:0; height:2px; background:linear-gradient(90deg,#00e0ff,#2563eb); border-radius:2px; opacity:.85 }
-#header .res-box .res-icon { font-size:15px }
-#header .res-box .res-values { display:flex; flex-direction:column; align-items:flex-start; gap:2px; min-width:0 }
-#header .res-box .res-current { color:#fff !important; font-weight:900 !important; font-size:13.5px !important; line-height:1.1 }
-#header .res-box .res-max { color:#7b8ca6 !important; font-size:0 !important; line-height:1.1; letter-spacing:.5px; text-transform:uppercase; font-weight:800 }
-#header .res-box .res-max::before { content:'CAPACIDAD '; font-size:8.5px }
-#header .res-box .res-max > span { font-size:8.5px }
-#header .res-box.metal .res-max::after { content:' · Metal'; font-size:8.5px }
-#header .res-box.crystal .res-max::after { content:' · Cristal'; font-size:8.5px }
-#header .res-box.deuterium .res-max::after { content:' · Deutério'; font-size:8.5px }
-/* Chip premium (Materia Oscura) — estilo "MONEDA PREMIUM" */
-#header .heder_res_921 { display:flex; flex-direction:column; align-items:flex-start; gap:2px; background:#111a2e; border:1px solid rgba(245,158,11,.45); border-radius:10px; padding:7px 14px 10px; position:relative; overflow:hidden }
-#header .heder_res_921::after { content:'MONEDA PREMIUM'; font-size:8.5px; font-weight:800; letter-spacing:.5px; color:#f59e0b; text-transform:uppercase }
-#header .heder_res_921::before { content:''; position:absolute; left:12px; right:12px; bottom:0; height:2px; background:linear-gradient(90deg,#f59e0b,#fbbf24); border-radius:2px }
-#header .heder_res_921 .dark-icon { font-size:15px; position:absolute; top:8px; right:12px }
-#header .heder_res_921 .res_current { color:#fbbf24 !important; font-weight:900 !important; font-size:13.5px !important }
-/* Menú de usuario a la derecha como la foto */
-#header #astromenu_wrap { margin-left:auto !important }
 </style>
 
 <div id="leftmenu" class="aio_nav">
@@ -130,13 +99,6 @@
 		<div class="aio_al {if !empty($globalAlerts.attack)}active{else}off{/if}" title="Ataque{if !empty($globalAlerts.attack)} ({count($globalAlerts.attack)}){/if}">&#9876;&#65039;</div>
 		<div class="aio_al {if !empty($globalAlerts.spy)}active{else}off{/if}" title="Espionaje{if !empty($globalAlerts.spy)} ({count($globalAlerts.spy)}){/if}">&#128379;&#65039;</div>
 		<div class="aio_al {if !empty($globalAlerts.transport)}active{else}off{/if}" title="Transporte{if !empty($globalAlerts.transport)} ({count($globalAlerts.transport)}){/if}">&#128229;</div>
-	</div>
-
-	{* ─── Iconos rápidos: Ajustes / Tienda / Mensajes ─── *}
-	<div class="aio_topicons">
-		<a href="game.php?page=settings" title="Ajustes">&#9881;&#65039; Ajustes</a>
-		{if isModuleAvailable($smarty.const.MODULE_SHOP)}<a href="game.php?page=shop" title="Tienda NTX-20">&#127873; Tienda</a>{/if}
-		{if isModuleAvailable($smarty.const.MODULE_MESSAGES)}<a href="game.php?page=messages" title="Mensajes">&#128276; Mensajes</a>{/if}
 	</div>
 
 	{* ─── COLONIA ─── *}
@@ -358,9 +320,9 @@
 		</div>
 	</div>
 
-	{* ─── Footer: contadores reales (Ahora + 24h en formato X/Y) ─── *}
+	{* ─── Footer ─── *}
 	<div class="aio_foot">
-		&#128994; Ahora: <b>{$onlineNow|default:0}</b> &middot; &#128101; &Uacute;ltimas 24h: <b>{$onlineCount|default:0}/{$totalCount|default:0}</b> &middot; &#128340; <b>{$servertime}</b><br>
+		&#128994; &Uacute;ltimas 24h: <b>{$onlineCount}/{$totalCount}</b> &middot; &#128340; <b>{$servertime}</b><br>
 		&copy; Copyright AstroIO 2026
 	</div>
 
@@ -392,7 +354,7 @@
 				else g.classList.remove('open');
 				g.style.display = (q && !hits && topTxt.indexOf(q) === -1) ? 'none' : 'block';
 			});
-			document.querySelectorAll('#leftmenu > .aio_item, #leftmenu > .aio_glabel, #leftmenu > .aio_jackpot, #leftmenu > .aio_planet, #leftmenu > .aio_design, #leftmenu > .aio_admin, #leftmenu > .aio_ally, #leftmenu > .aio_topicons').forEach(function(el) {
+			document.querySelectorAll('#leftmenu > .aio_item, #leftmenu > .aio_glabel, #leftmenu > .aio_jackpot, #leftmenu > .aio_planet, #leftmenu > .aio_design, #leftmenu > .aio_admin, #leftmenu > .aio_ally').forEach(function(el) {
 				el.style.display = (!q || el.textContent.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
 			});
 		});
@@ -496,6 +458,7 @@
 	updatePVEBadge();
 })();
 
+
 /* ═══════════════════════════════════════════════════════════
  * ASTROIO — Cuenta regresiva del Sistema PvP en el MOP
  * ═══════════════════════════════════════════════════════════ */
@@ -546,6 +509,7 @@
 	updatePVPBadge();
 })();
 
+
 /* ═══════════════════════════════════════════════════════════
  * ASTROIO — RADAR GLOBAL LA CUEVA PIRATA
  * Redirige al jugador al tablero si tiene una partida activa
@@ -563,3 +527,4 @@
         }, 5000); // Consulta cada 5 segundos
     }
 })();</script>
+
