@@ -2,189 +2,96 @@
 {block name="content"}
 {literal}
 <style>
-/* Estilos de la página de descargas (adaptados al tema oscuro) */
+/* ═══ ASTROIO v8.1 — Descargas nextgen (tokens del índice v8.0) ═══ */
+:root {
+    --nx-muted:  #9a9a9a;
+    --nx-cyan:   #59d6ff;
+    --nx-green:  #35ff8f;
+    --nx-gold:   #fbbf24;
+    --nx-border: rgba(255, 255, 255, 0.1);
+}
 .astro-dl-container {
-    max-width: 1000px;
-    margin: 20px auto;
-    padding: 10px;
+    max-width: 860px; margin: 20px auto 40px; padding: 0 12px;
+    box-sizing: border-box; font-family: 'Rajdhani', 'Segoe UI', sans-serif; color: #e2e8f0;
 }
-
-h1, h2, h3 {
-    text-align: center;
-    color: #ffffff;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+.astro-dl-container h1 {
+    color: #ffffff; font-size: 24px; font-weight: 700;
+    letter-spacing: .5px; margin: 0 0 6px; text-shadow: none;
 }
-
-h1 { font-size: 2.2rem; margin-bottom: 10px; }
-
 .astro-dl-subtitle {
-    text-align: center;
-    color: #94a3b8;
-    margin-bottom: 30px;
-    font-size: 1.1rem;
+    color: var(--nx-muted); font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    margin: 0 0 18px;
 }
-
 .astro-dl-web {
-    text-align: center;
-    margin-bottom: 40px;
+    background: rgba(0,0,0,.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--nx-border); border-radius: 15px;
+    box-shadow: 0 0 40px rgba(0,0,0,.75);
+    padding: 18px 20px; margin-bottom: 16px; text-align: center;
 }
-
-.astro-dl-btn-web {
-    display: inline-block;
-    padding: 15px 40px;
-    background: #10b981; 
-    color: #ffffff;
-    text-decoration: none;
-    font-weight: bold;
-    font-size: 1.2rem;
-    border-radius: 5px;
-    transition: all 0.3s ease;
-    text-transform: uppercase;
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+.astro-dl-web p { color: var(--nx-muted) !important; }
+.astro-dl-btn-web, .astro-dl-btn, .astro-dl-qvapay-btn {
+    display: inline-block; padding: 12px 28px;
+    background: linear-gradient(180deg, #0066cc 0%, #0099ff 100%);
+    color: #ffffff !important;
+    border: 1px solid rgba(89, 214, 255, 0.55); border-radius: 8px;
+    font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 14px;
+    letter-spacing: 1.5px; text-transform: uppercase; text-decoration: none;
+    transition: .2s ease; text-shadow: none;
 }
-
-.astro-dl-btn-web:hover {
-    background: #059669;
-    box-shadow: 0 0 25px rgba(16, 185, 129, 0.8);
-    transform: translateY(-2px);
+.astro-dl-btn-web:hover, .astro-dl-btn:hover, .astro-dl-qvapay-btn:hover {
+    background: linear-gradient(180deg, #0077e6 0%, #00aaff 100%);
+    transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0, 136, 255, 0.6);
+    color: #ffffff !important;
 }
-
 .astro-dl-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 40px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px; margin-bottom: 16px;
 }
-
 .astro-dl-card {
-    background: rgba(10, 15, 25, 0.9);
-    border: 1px solid #ff5e00; /* Borde naranja */
-    padding: 20px;
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    transition: border 0.3s;
+    background: rgba(0,0,0,.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--nx-border); border-radius: 15px;
+    box-shadow: 0 0 40px rgba(0,0,0,.75); padding: 20px;
 }
-
-.astro-dl-card:hover {
-    box-shadow: 0 0 20px rgba(255, 94, 0, 0.3);
-}
-
-.astro-dl-card h3 {
-    margin-top: 0;
-    font-size: 1.3rem;
-    color: #00e0ff;
-    margin-bottom: 15px;
-}
-
+.astro-dl-card h3 { color: #ffffff; font-size: 18px; font-weight: 700; margin: 0 0 12px; text-shadow: none; }
 .astro-dl-changelog {
-    font-size: 0.85rem;
-    color: #cbd5e1;
-    line-height: 1.5;
-    margin-bottom: 20px;
+    background: rgba(255,255,255,.04); border: 1px solid var(--nx-border);
+    border-radius: 10px; padding: 14px; font-size: 13px; line-height: 1.65; margin-bottom: 14px;
 }
-
-.astro-dl-changelog p { margin: 5px 0; }
-.astro-dl-changelog ul { margin: 5px 0 10px 20px; padding: 0; }
-
+.astro-dl-changelog p { margin: 0 0 6px; }
+.astro-dl-changelog ul { margin: 6px 0 6px 18px; padding: 0; }
+.astro-dl-changelog li { margin-bottom: 2px; }
+.astro-dl-changelog li::marker { color: var(--nx-cyan); }
+.astro-dl-changelog strong { color: #ffffff; }
 .astro-dl-warning {
-    color: #fbbf24;
-    font-weight: bold;
-    font-size: 0.8rem;
-    margin-top: 10px;
-    border-top: 1px dashed #475569;
-    padding-top: 10px;
+    background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.3);
+    color: #fde68a; border-radius: 8px; padding: 8px 12px;
+    font-size: 12px; margin: 10px 0 0;
 }
-
-.astro-dl-btn {
-    display: block;
-    text-align: center;
-    padding: 12px;
-    background: #222c3c;
-    border: 1px solid #444;
-    color: #00e0ff;
-    text-decoration: none;
-    font-weight: bold;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-    margin-top: auto;
-}
-
-.astro-dl-btn:hover {
-    background: #2e3a4e;
-    border-color: #ff5e00;
-    color: #fff;
-    box-shadow: 0 0 15px rgba(255, 94, 0, 0.4);
-}
-
+.astro-dl-btn { display: block; text-align: center; }
 .astro-dl-qvapay {
-    background: rgba(0, 224, 255, 0.05);
-    border: 1px solid #00e0ff;
-    padding: 25px;
-    border-radius: 8px;
-    margin-bottom: 40px;
-    text-align: center;
+    background: rgba(0,0,0,.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--nx-border); border-radius: 15px;
+    box-shadow: 0 0 40px rgba(0,0,0,.75);
+    padding: 18px 20px; margin-bottom: 16px;
 }
-
-.astro-dl-qvapay h3 { color: #00e0ff; }
-
-.astro-dl-qvapay-btn {
-    display: inline-block;
-    padding: 12px 30px;
-    background: #00e0ff;
-    color: #0b1120;
-    text-decoration: none;
-    font-weight: bold;
-    border-radius: 4px;
-    margin: 15px 0;
-    transition: background 0.3s;
-}
-
-.astro-dl-qvapay-btn:hover { background: #7dd3fc; }
-
-.astro-dl-ref {
-    color: #fbbf24; 
-    font-weight: bold;
-    word-break: break-all;
-}
-
+.astro-dl-qvapay h3 { color: #ffffff; font-size: 17px; margin: 0 0 10px; }
+.astro-dl-ref { color: var(--nx-cyan); }
+.astro-dl-ref:hover { color: #ffffff; }
 .astro-dl-req-title {
-    text-align: left;
-    border-bottom: 1px solid #ff5e00;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-    font-size: 1.5rem;
-    color: #00e0ff;
+    color: #ffffff; font-family: 'Space Mono', monospace; font-size: 13px;
+    font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 12px;
 }
-
 .astro-dl-req-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 40px;
-    font-size: 0.9rem;
-    color: #94a3b8;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;
 }
-
-.astro-dl-req-grid strong {
-    color: #f8fafc;
-    display: block;
-    margin-top: 15px;
-    margin-bottom: 5px;
-    font-size: 1.1rem;
+.astro-dl-req-grid > div {
+    background: rgba(255,255,255,.04); border: 1px solid var(--nx-border);
+    border-radius: 12px; padding: 14px 16px; font-size: 13px; line-height: 1.6;
 }
-
-.astro-dl-req-grid ul {
-    margin: 0;
-    padding-left: 20px;
-    line-height: 1.6;
-}
-
 @media (max-width: 768px) {
-    .astro-dl-grid, .astro-dl-req-grid {
-        grid-template-columns: 1fr;
-    }
+    .astro-dl-container { margin-top: 70px; }
+    .astro-dl-btn { width: 100%; }
 }
 </style>
 {/literal}
