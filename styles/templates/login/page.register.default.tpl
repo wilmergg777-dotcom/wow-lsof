@@ -1,6 +1,6 @@
 {block name="title" prepend}{$LNG.siteTitleRegister}{/block}
 {block name="content"}
-{* === ASTROIO v3.0 - estilo nuevo aplicado archivo por archivo: styles/templates/login/page.register.default.tpl === *}
+{* === ASTROIO v3.2 - Página de Registro (Fondo oscuro forzado, texto visible) === *}
 {literal}
 <style>
 /* === ASTROIO v3.0 === */
@@ -20,142 +20,122 @@ button:active, input[type=submit]:active, input[type=button]:active { transform:
 input[type=reset] { background:linear-gradient(180deg,#444,#666); border-color:#888 }
 select option { background:#0f172a; color:#cbd5e1 }
 .globalWarning { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.45); color:#fecaca; border-radius:10px; padding:8px 14px; text-align:center }
-@media (max-width:760px) { { padding:6px; overflow-x:auto } table { font-size:11px } table th, table td { padding:5px 7px } }
+@media (max-width:760px) { body { padding:6px; overflow-x:auto; } table { font-size:11px; } table th, table td { padding:5px 7px; } }
 </style>
 {/literal}
 
 
 <style>
 /* ═══════════════════════════════════════════════
-   AstroIO v3.0 — Página de Registro
-   Prefijo: .astroreg_
-   Acento: 🔷 Cyan (#00e0ff) + 🔴 Rojo (botón submit)
-   FIX v3.0:
-     - Glassmorphism real (backdrop-filter + rgba)
-     - border-radius 12px
-     - Variables --bg-card / --accent-cyan unificadas
-     - Todos los IDs/names/Smarty intactos
-     - register.js sigue funcionando (mismos selectores .error, .form-control)
+   AstroIO v3.2 — Página de Registro
+   ✅ FIX: Fondo oscuro sólido (!important) para que no sea transparente.
+   ✅ FIX: Textos y etiquetas forzados a color claro para que se lean.
+   ✅ FIX: Inputs con fondo blanco y letra oscura.
    ═══════════════════════════════════════════════ */
 
 :root {
     --bg-dark:       rgba(11, 16, 30, 0.55);
-    --bg-card:       rgba(15, 23, 42, 0.75);
-    --bg-card-solid: rgba(15, 23, 42, 0.85);
+    --bg-card:       rgba(10, 15, 25, 0.95); /* Fondo casi 100% opaco */
     --bg-inner:      rgba(0, 0, 0, 0.35);
-    --border-color:  #1e293b;
+    --border-color:  #ff5e00; /* Borde naranja */
     --text-main:     #cbd5e1;
     --text-muted:    #94a3b8;
-    --text-title:    #ffffff;
-    --accent-blue:   #3b82f6;
     --accent-cyan:   #00e0ff;
-    --accent-purple: #8b5cf6;
-    --accent-gold:   #fbbf24;
-    --accent-green:  #4aff88;
     --accent-red:    #ef4444;
 }
 
 .astroreg_wrap {
     max-width: 700px;
-    margin: 80px auto 20px;
+    margin: 40px auto 20px;
     padding: 0 10px;
     box-sizing: border-box;
     font-family: 'Segoe UI', Roboto, sans-serif;
 }
 
+/* Fondo oscuro forzado y borde naranja */
 .astroreg_panel {
-    background: var(--bg-card);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    background: var(--bg-card) !important; /* Fuerza el fondo oscuro */
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9) !important;
     overflow: hidden;
 }
 
+/* Ocultar la barra azul de "REGISTRO" */
 .astroreg_heading {
-    background: linear-gradient(135deg, rgba(0, 68, 136, 0.85), rgba(0, 119, 204, 0.85));
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border-bottom: 1px solid var(--accent-cyan);
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 10px 16px;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    display: none !important; 
 }
 
 .astroreg_body {
-    padding: 20px 24px;
-    color: var(--text-main);
+    padding: 30px 40px;
+    color: #e2e8f0 !important; /* Fuerza color claro de texto */
 }
 
 /* ═══ Form group ═══ */
 .astroreg_group {
-    margin-bottom: 14px;
+    margin-bottom: 16px;
 }
 
 .astroreg_group label {
     display: block;
-    color: var(--text-muted);
-    font-size: 11.5px;
-    margin-bottom: 5px;
+    color: #94a3b8 !important; /* Gris claro para que se lea sobre el fondo oscuro */
+    font-size: 12px;
+    margin-bottom: 6px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 600;
 }
 
+/* Inputs blancos con letra negra para que resalten */
 .astroreg_group input[type="text"],
 .astroreg_group input[type="password"],
 .astroreg_group input[type="email"],
 .astroreg_group select {
     width: 100%;
     box-sizing: border-box;
-    background: rgba(0, 0, 0, 0.5);
-    color: #ffffff;
-    border: 1px solid rgba(0, 204, 255, 0.35);
-    border-radius: 8px;
-    padding: 8px 10px;
-    font-size: 12.5px;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 14px;
     transition: 0.25s ease;
 }
 
 .astroreg_group input:focus,
 .astroreg_group select:focus {
     outline: none;
-    border-color: var(--accent-cyan);
-    box-shadow: 0 0 12px rgba(0, 224, 255, 0.5);
-    background: rgba(0, 0, 0, 0.65);
-    transform: translateY(-1px);
+    border-color: var(--accent-cyan) !important;
+    box-shadow: 0 0 12px rgba(0, 224, 255, 0.5) !important;
 }
 
 .astroreg_group select option {
-    background: #0f1624;
-    color: #ffffff;
+    background: #0f1624 !important;
+    color: #ffffff !important;
 }
 
 /* ═══ Descripciones (inputDesc) ═══ */
 .astroreg_inputdesc {
     display: block;
-    color: var(--text-muted);
-    font-size: 10.5px;
-    margin-top: 4px;
+    color: #64748b !important;
+    font-size: 11px;
+    margin-top: 5px;
     line-height: 1.4;
     font-style: italic;
 }
 .astroreg_inputdesc small {
-    font-size: 10.5px;
-    color: var(--text-muted);
+    font-size: 11px;
+    color: #64748b !important;
 }
 
 /* ═══ Errores (los llena el JS) ═══ */
 .astroreg_error {
     display: block;
     color: #ff4488;
-    font-size: 11px;
-    margin-top: 4px;
+    font-size: 12px;
+    margin-top: 5px;
     font-weight: 600;
     min-height: 0;
 }
@@ -167,7 +147,6 @@ select option { background:#0f172a; color:#cbd5e1 }
     color: #ff4488;
 }
 
-/* Estado de input inválido cuando hay error */
 .astroreg_group input.astroreg_invalid,
 .astroreg_group select.astroreg_invalid {
     border-color: #ff4488 !important;
@@ -179,14 +158,14 @@ select option { background:#0f172a; color:#cbd5e1 }
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    padding: 10px 12px;
-    background: rgba(0, 224, 255, 0.03);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    margin-bottom: 16px;
-    font-size: 12px;
+    padding: 12px;
+    background: rgba(0, 224, 255, 0.05) !important; /* Fondo ligeramente azul */
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 13px;
     line-height: 1.5;
-    color: var(--text-main);
+    color: #e2e8f0 !important; /* Texto claro */
 }
 .astroreg_checkbox input[type="checkbox"] {
     appearance: none;
@@ -195,55 +174,51 @@ select option { background:#0f172a; color:#cbd5e1 }
     height: 18px;
     flex-shrink: 0;
     margin-top: 1px;
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.5) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
     border-radius: 4px;
     cursor: pointer;
     position: relative;
     transition: 0.2s ease;
 }
 .astroreg_checkbox input[type="checkbox"]:hover {
-    border-color: var(--accent-cyan);
-    box-shadow: 0 0 8px rgba(0, 224, 255, 0.4);
+    border-color: var(--accent-cyan) !important;
 }
 .astroreg_checkbox input[type="checkbox"]:checked {
-    background: linear-gradient(180deg, #0066cc, #0099ff);
-    border-color: var(--accent-cyan);
-    box-shadow: 0 0 10px rgba(0, 224, 255, 0.6);
+    background: var(--accent-cyan) !important;
+    border-color: var(--accent-cyan) !important;
 }
 .astroreg_checkbox input[type="checkbox"]:checked::after {
     content: '✓';
     position: absolute;
     top: -1px; left: 3px;
-    color: #ffffff;
+    color: #000000 !important;
     font-size: 13px;
     font-weight: bold;
 }
 .astroreg_checkbox a {
-    color: var(--accent-cyan);
+    color: var(--accent-cyan) !important;
     text-decoration: none;
-    transition: 0.2s ease;
 }
 .astroreg_checkbox a:hover {
-    color: #ffffff;
+    color: #ffffff !important;
     text-shadow: 0 0 10px rgba(0, 224, 255, 0.7);
 }
 
 /* ═══ Captcha ═══ */
 .astroreg_captcha_row {
-    margin-bottom: 14px;
+    margin-bottom: 16px;
     padding: 12px;
-    background: rgba(0, 224, 255, 0.03);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    background: rgba(0, 224, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 6px;
 }
 .astroreg_captcha_row label {
     display: block;
-    color: var(--text-muted);
-    font-size: 11.5px;
+    color: #94a3b8 !important;
+    font-size: 12px;
     margin-bottom: 8px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
     font-weight: 600;
 }
 .astroreg_captcha_row .g-recaptcha {
@@ -253,30 +228,30 @@ select option { background:#0f172a; color:#cbd5e1 }
 /* ═══ Botón submit ═══ */
 .astroreg_actions {
     text-align: right;
-    padding-top: 8px;
-    border-top: 1px solid var(--border-color);
-    margin-top: 8px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    margin-top: 10px;
 }
 
 .astroreg_btn_register {
     display: inline-block;
-    padding: 10px 28px;
-    background: linear-gradient(180deg, #cc2244 0%, #ff4488 100%);
-    color: #ffffff;
-    border: 1px solid #ff4488;
-    border-radius: 8px;
-    font-size: 12px;
+    padding: 12px 30px;
+    background: #222c3c !important;
+    color: #ffffff !important;
+    border: 1px solid #444 !important;
+    border-radius: 6px;
+    font-size: 15px;
     font-weight: 700;
     cursor: pointer;
     transition: 0.25s ease;
     text-transform: uppercase;
     letter-spacing: 1px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 .astroreg_btn_register:hover {
-    box-shadow: 0 0 18px rgba(255, 68, 136, 0.6);
+    background: #2e3a4e !important;
+    border-color: var(--border-color) !important;
+    box-shadow: 0 0 18px rgba(255, 94, 0, 0.4) !important;
     transform: translateY(-2px);
-    background: linear-gradient(180deg, #ff4488 0%, #ff6699 100%);
 }
 .astroreg_btn_register:active {
     transform: translateY(0);
@@ -284,11 +259,11 @@ select option { background:#0f172a; color:#cbd5e1 }
 
 @media (max-width: 768px) {
     .astroreg_wrap {
-        margin-top: 70px;
+        margin-top: 20px;
         padding: 0 6px;
     }
     .astroreg_body {
-        padding: 16px 14px;
+        padding: 20px 15px;
     }
     .astroreg_actions {
         text-align: center;
@@ -361,8 +336,6 @@ select option { background:#0f172a; color:#cbd5e1 }
                             </div>
                         {/if}
                         {* 🆕 CAMPO CÓDIGO DE REFERIDO (OPCIONAL) — v5.0 *}
-                        {* NOTA: sin pattern HTML5 (daba problemas en algunos navegadores).
-                           La validación real la hace el servidor con preg_match. *}
                         <div class="form-group astroreg_group">
                             <label for="referral_code">{$LNG.registerReferralCode|default:"Código de Referido (opcional)"}</label>
                             <input type="text" class="form-control" name="referral_code" id="referral_code"

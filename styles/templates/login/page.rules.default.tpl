@@ -2,25 +2,19 @@
 {block name="content"}
 
 {* ============================================================
-   ASTROIO RULES v3.0 — Estilo Xnova moderno (glassmorphism)
+   ASTROIO RULES v3.1 — Estilo Xnova moderno (glassmorphism)
    Prefijo CSS: .astrorl_   (aislado, no rompe otros módulos)
-   Acento del módulo: 🔷 Cyan (#00e0ff)
-   FIX v3.0:
-     - Patrón fleetDealer aplicado (panel glassmorphism, radius 12px)
-     - Centrado con text-align + inline-block (Regla #14)
-     - Contenido dinámico {$rules} con estilos extendidos
-     - Wrapper padding 15px
-     - block name="content", {$LNG}, {$rules} intactos
+   Acento del módulo: 🟠 Naranja (#ff5e00) + 🔷 Cyan (#00e0ff)
    ============================================================ *}
 
 <style>
 /* ====== Variables globales ====== */
 :root {
     --bg-dark:       rgba(11, 16, 30, 0.55);
-    --bg-card:       rgba(15, 23, 42, 0.75);
+    --bg-card:       rgba(10, 15, 25, 0.9); /* Fondo oscuro igual al index */
     --bg-card-solid: rgba(15, 23, 42, 0.85);
     --bg-inner:      rgba(0, 0, 0, 0.35);
-    --border-color:  #1e293b;
+    --border-color:  #ff5e00; /* Borde naranja igual al index */
     --text-main:     #cbd5e1;
     --text-muted:    #94a3b8;
     --text-title:    #ffffff;
@@ -45,12 +39,12 @@
     display: inline-block;
     text-align: left;
     background: var(--bg-card);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color); /* Borde naranja */
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    padding: 18px 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    padding: 25px 35px;
     color: var(--text-main);
     width: 900px;
     max-width: 100%;
@@ -62,12 +56,12 @@
 .astrorl_section_title {
     color: #00e0ff;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 15px;
     letter-spacing: 0.8px;
     text-transform: uppercase;
-    border-bottom: 1px solid rgba(0, 204, 255, 0.25);
-    padding-bottom: 8px;
-    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 94, 0, 0.4); /* Línea naranja */
+    padding-bottom: 10px;
+    margin-bottom: 20px;
     display: block;
     text-shadow: 0 0 10px rgba(0, 224, 255, 0.4);
 }
@@ -75,8 +69,8 @@
 /* ====== Contenido dinámico {$rules} ====== */
 .astrorl_content {
     color: var(--text-main);
-    font-size: 12.5px;
-    line-height: 1.6;
+    font-size: 13.5px;
+    line-height: 1.7;
     word-wrap: break-word;
 }
 
@@ -90,21 +84,21 @@
     color: #00e0ff;
     font-weight: 700;
     letter-spacing: 0.4px;
-    margin: 16px 0 8px 0;
-    padding-bottom: 4px;
+    margin: 20px 0 10px 0;
+    padding-bottom: 6px;
     border-bottom: 1px solid rgba(0, 204, 255, 0.15);
     text-shadow: 0 0 8px rgba(0, 224, 255, 0.25);
 }
-.astrorl_content h1 { font-size: 18px; }
-.astrorl_content h2 { font-size: 16px; }
-.astrorl_content h3 { font-size: 14px; }
-.astrorl_content h4 { font-size: 13px; }
+.astrorl_content h1 { font-size: 20px; }
+.astrorl_content h2 { font-size: 18px; }
+.astrorl_content h3 { font-size: 16px; }
+.astrorl_content h4 { font-size: 14px; }
 .astrorl_content h5,
-.astrorl_content h6 { font-size: 12px; }
+.astrorl_content h6 { font-size: 13px; }
 
 /* Párrafos */
 .astrorl_content p {
-    margin: 0 0 10px 0;
+    margin: 0 0 12px 0;
 }
 
 /* Enlaces */
@@ -123,11 +117,11 @@
 /* Listas */
 .astrorl_content ul,
 .astrorl_content ol {
-    margin: 8px 0 12px 0;
+    margin: 10px 0 15px 0;
     padding-left: 24px;
 }
 .astrorl_content li {
-    margin-bottom: 4px;
+    margin-bottom: 6px;
     color: var(--text-main);
 }
 .astrorl_content ul li::marker {
@@ -159,7 +153,7 @@
     border-radius: 4px;
     padding: 2px 8px;
     font-family: 'Courier New', monospace;
-    font-size: 11.5px;
+    font-size: 12px;
     color: #66ff99;
 }
 
@@ -167,26 +161,26 @@
 .astrorl_content table {
     width: 100%;
     border-collapse: collapse;
-    margin: 10px 0;
-    font-size: 11.5px;
+    margin: 15px 0;
+    font-size: 12.5px;
     border-radius: 10px;
     overflow: hidden;
 }
 .astrorl_content table th {
-    padding: 6px 10px;
+    padding: 8px 12px;
     background: linear-gradient(135deg, rgba(0, 68, 136, 0.85), rgba(0, 119, 204, 0.85));
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     color: #ffffff;
     font-weight: 700;
-    font-size: 11px;
+    font-size: 12px;
     text-align: left;
     border-bottom: 1px solid var(--accent-cyan);
     letter-spacing: 0.3px;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 .astrorl_content table td {
-    padding: 5px 10px;
+    padding: 8px 12px;
     border-bottom: 1px solid rgba(30, 41, 59, 0.6);
     color: var(--text-main);
 }
@@ -200,8 +194,8 @@
     background: rgba(0, 204, 255, 0.05);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    margin: 10px 0;
-    padding: 10px 16px;
+    margin: 15px 0;
+    padding: 12px 20px;
     border-radius: 0 10px 10px 0;
     color: var(--text-main);
     font-style: italic;
@@ -210,8 +204,8 @@
 /* Separadores */
 .astrorl_content hr {
     border: none;
-    border-top: 1px solid rgba(0, 204, 255, 0.2);
-    margin: 16px 0;
+    border-top: 1px solid rgba(255, 94, 0, 0.3);
+    margin: 20px 0;
 }
 
 /* Imágenes */
@@ -225,11 +219,11 @@
 /* ====== Responsive ====== */
 @media (max-width: 720px) {
     .astrorl_wrap { padding: 10px; }
-    .astrorl_panel { padding: 14px 16px; }
-    .astrorl_content { font-size: 11.5px; }
-    .astrorl_content h1 { font-size: 16px; }
-    .astrorl_content h2 { font-size: 14px; }
-    .astrorl_content h3 { font-size: 13px; }
+    .astrorl_panel { padding: 20px 15px; }
+    .astrorl_content { font-size: 12px; }
+    .astrorl_content h1 { font-size: 18px; }
+    .astrorl_content h2 { font-size: 16px; }
+    .astrorl_content h3 { font-size: 14px; }
 }
 </style>
 

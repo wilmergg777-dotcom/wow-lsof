@@ -2,36 +2,25 @@
 
 <style>
 /* ═══════════════════════════════════════════════
-   AstroIO v3.0 — Layout Popup (ventanas emergentes)
-   Prefijo: .astrolaypp_
-   Acento: 🔷 Cyan (#00e0ff)
-   FIX v3.0:
-     - Glassmorphism real (backdrop-filter + rgba)
-     - border-radius 12px (section) / 8px (inputs, botones)
-     - Variables --bg-card / --accent-cyan unificadas
-     - include y block name="content" intactos
+   AstroIO v3.1 — Layout Popup (ventanas emergentes)
+   ✅ FIX: Borde naranja, fondo oscuro igual al index.
+   ✅ FIX: Código limpiado y unificado.
    ═══════════════════════════════════════════════ */
 
 :root {
     --bg-dark:       rgba(11, 16, 30, 0.55);
-    --bg-card:       rgba(15, 23, 42, 0.75);
-    --bg-card-solid: rgba(15, 23, 42, 0.85);
+    --bg-card:       rgba(10, 15, 25, 0.9); /* Fondo oscuro igual al index */
     --bg-inner:      rgba(0, 0, 0, 0.35);
-    --border-color:  #1e293b;
+    --border-color:  #ff5e00; /* Borde naranja */
     --text-main:     #cbd5e1;
     --text-muted:    #94a3b8;
     --text-title:    #ffffff;
-    --accent-blue:   #3b82f6;
     --accent-cyan:   #00e0ff;
-    --accent-purple: #8b5cf6;
-    --accent-gold:   #fbbf24;
-    --accent-green:  #4aff88;
-    --accent-red:    #ef4444;
 }
 
 /* Wrapper del popup — compacto, sin márgenes de página */
 .astrolaypp_wrap {
-    padding: 0;
+    padding: 10px;
     margin: 0;
     box-sizing: border-box;
     font-family: 'Segoe UI', Roboto, sans-serif;
@@ -40,16 +29,16 @@
 }
 
 .astrolaypp_section {
-    background: var(--bg-card);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border: 1px solid var(--border-color);
+    background: var(--bg-card) !important;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--border-color) !important;
     border-radius: 12px;
-    padding: 14px 18px;
+    padding: 25px 30px;
     color: var(--text-main);
-    font-size: 12.5px;
+    font-size: 13.5px;
     line-height: 1.6;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9) !important;
     box-sizing: border-box;
 }
 
@@ -57,36 +46,36 @@
 .astrolaypp_section h1,
 .astrolaypp_section h2,
 .astrolaypp_section h3 {
-    color: var(--accent-cyan);
-    margin: 0 0 10px;
+    color: var(--accent-cyan) !important;
+    margin: 0 0 12px;
     letter-spacing: 0.5px;
 }
 
 .astrolaypp_section h1 {
-    font-size: 15px;
+    font-size: 16px;
     text-transform: uppercase;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 94, 0, 0.4) !important;
+    padding-bottom: 8px;
     letter-spacing: 1px;
 }
 
-.astrolaypp_section h2 { font-size: 13.5px; }
-.astrolaypp_section h3 { font-size: 12.5px; }
+.astrolaypp_section h2 { font-size: 14.5px; }
+.astrolaypp_section h3 { font-size: 13px; }
 
 .astrolaypp_section p {
-    color: var(--text-main);
+    color: #e2e8f0 !important;
     line-height: 1.6;
-    margin: 0 0 10px;
+    margin: 0 0 12px;
 }
 
 .astrolaypp_section a {
-    color: var(--accent-cyan);
+    color: var(--accent-cyan) !important;
     text-decoration: none;
     transition: 0.2s ease;
 }
 
 .astrolaypp_section a:hover {
-    color: #ffffff;
+    color: #ffffff !important;
     text-shadow: 0 0 10px rgba(0, 224, 255, 0.7);
 }
 
@@ -94,32 +83,29 @@
 .astrolaypp_section table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 11.5px;
+    font-size: 12px;
     color: var(--text-main);
 }
 
 .astrolaypp_section table th {
-    background: linear-gradient(135deg, rgba(0, 68, 136, 0.85), rgba(0, 119, 204, 0.85));
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border-bottom: 1px solid var(--accent-cyan);
-    color: #ffffff;
-    padding: 5px 8px;
+    background: rgba(0, 0, 0, 0.6) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    color: #00e0ff !important;
+    padding: 8px 10px;
     text-align: left;
-    font-weight: normal;
+    font-weight: 700;
     text-transform: uppercase;
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.5px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .astrolaypp_section table td {
-    padding: 5px 8px;
-    border-bottom: 1px solid var(--border-color);
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
 .astrolaypp_section table tr:hover {
-    background: rgba(0, 224, 255, 0.04);
+    background: rgba(255, 94, 0, 0.05) !important;
 }
 
 /* ═══ Inputs / Forms dentro del popup ═══ */
@@ -129,12 +115,12 @@
 .astrolaypp_section input[type="number"],
 .astrolaypp_section select,
 .astrolaypp_section textarea {
-    background: rgba(0, 0, 0, 0.5);
-    color: #ffffff;
-    border: 1px solid rgba(0, 204, 255, 0.35);
-    border-radius: 8px;
-    padding: 5px 8px;
-    font-size: 11.5px;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 13px;
     transition: 0.25s ease;
     box-sizing: border-box;
     max-width: 100%;
@@ -144,10 +130,8 @@
 .astrolaypp_section select:focus,
 .astrolaypp_section textarea:focus {
     outline: none;
-    border-color: var(--accent-cyan);
-    box-shadow: 0 0 12px rgba(0, 224, 255, 0.5);
-    background: rgba(0, 0, 0, 0.65);
-    transform: translateY(-1px);
+    border-color: var(--accent-cyan) !important;
+    box-shadow: 0 0 12px rgba(0, 224, 255, 0.5) !important;
 }
 
 .astrolaypp_section textarea {
@@ -159,91 +143,74 @@
 /* ═══ Botones dentro del popup ═══ */
 .astrolaypp_section button,
 .astrolaypp_section input[type="submit"],
-.astrolaypp_section input[type="button"],
-.astrolaypp_section input[type="reset"] {
-    background: linear-gradient(180deg, #0066cc 0%, #0099ff 100%);
-    color: #ffffff;
-    border: 1px solid var(--accent-cyan);
-    border-radius: 8px;
-    padding: 5px 16px;
-    font-size: 11.5px;
-    font-weight: 600;
+.astrolaypp_section input[type="button"] {
+    background: #222c3c !important;
+    color: #ffffff !important;
+    border: 1px solid #444 !important;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 700;
     cursor: pointer;
     transition: 0.25s ease;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin: 0 3px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    margin: 0 5px 0 0;
 }
-
 .astrolaypp_section button:hover,
 .astrolaypp_section input[type="submit"]:hover,
-.astrolaypp_section input[type="button"]:hover,
-.astrolaypp_section input[type="reset"]:hover {
-    box-shadow: 0 0 18px rgba(0, 224, 255, 0.5);
+.astrolaypp_section input[type="button"]:hover {
+    background: #2e3a4e !important;
+    border-color: var(--border-color) !important;
+    box-shadow: 0 0 18px rgba(255, 94, 0, 0.4) !important;
     transform: translateY(-2px);
 }
 
 .astrolaypp_section button:active,
 .astrolaypp_section input[type="submit"]:active,
-.astrolaypp_section input[type="button"]:active,
-.astrolaypp_section input[type="reset"]:active {
+.astrolaypp_section input[type="button"]:active {
     transform: translateY(0);
 }
 
-/* Reset button (gris) */
+/* Botón de reset */
 .astrolaypp_section input[type="reset"] {
-    background: linear-gradient(180deg, #444 0%, #666 100%);
-    border-color: #888;
+    background: #111 !important;
+    color: #ccc !important;
+    border: 1px solid #333 !important;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.25s ease;
 }
 .astrolaypp_section input[type="reset"]:hover {
-    box-shadow: 0 0 12px rgba(150, 150, 150, 0.35);
+    background: #222 !important;
+    border-color: #555 !important;
 }
 
 /* ═══ Separadores ═══ */
 .astrolaypp_section hr {
     border: none;
-    border-top: 1px solid var(--border-color);
-    margin: 12px 0;
+    border-top: 1px solid rgba(255, 94, 0, 0.3) !important;
+    margin: 15px 0;
 }
 
 /* ═══ Responsive (popups pequeños) ═══ */
 @media (max-width: 600px) {
+    .astrolaypp_wrap { padding: 5px; }
     .astrolaypp_section {
-        padding: 10px 12px;
-        font-size: 12px;
+        padding: 20px 15px;
+        font-size: 13px;
     }
-    .astrolaypp_section h1 { font-size: 14px; }
+    .astrolaypp_section h1 { font-size: 15px; }
 }
 </style>
 
 <div class="astrolaypp_wrap">
     <section class="astrolaypp_section">
         {block name="content"}
-{* === ASTROIO v3.0 - estilo nuevo aplicado archivo por archivo: styles/templates/login/layout.popup.tpl === *}
-{literal}
-<style>
-/* === ASTROIO v3.0 === */
-h1, h2, h3, h4 { color:#fff; letter-spacing:.5px; text-shadow:0 1px 3px rgba(0,0,0,.5) }
-a { color:#00e0ff; text-decoration:none; transition:.2s ease }
-a:hover { color:#fff; text-shadow:0 0 10px rgba(0,224,255,.7) }
-table { background:rgba(15,23,42,.55); border:1px solid #1e293b; border-radius:10px; border-collapse:collapse; overflow:hidden }
-table th { background:linear-gradient(135deg,rgba(0,68,136,.85),rgba(0,119,204,.85)); border-bottom:1px solid rgba(0,224,255,.5); color:#fff; padding:6px 9px; text-align:left; text-transform:uppercase; font-size:10px; letter-spacing:.5px; text-shadow:0 1px 2px rgba(0,0,0,.4) }
-table td { padding:6px 9px; border-bottom:1px solid rgba(30,41,59,.7); color:#cbd5e1 }
-table tr:hover td { background:rgba(0,224,255,.04) }
-input[type=text], input[type=password], input[type=email], input[type=number], input[type=date], select, textarea { background:rgba(0,0,0,.5); color:#fff; border:1px solid rgba(0,204,255,.35); border-radius:8px; padding:5px 9px; font-size:12px; font-family:inherit; box-sizing:border-box; max-width:100%; transition:.25s ease }
-input[type=text]:focus, input[type=password]:focus, input[type=email]:focus, input[type=number]:focus, select:focus, textarea:focus { outline:none; border-color:#00e0ff; box-shadow:0 0 12px rgba(0,224,255,.5); background:rgba(0,0,0,.65) }
-textarea { width:100%; resize:vertical; font-family:inherit }
-button, input[type=submit], input[type=button] { background:linear-gradient(180deg,#0066cc,#0099ff); color:#fff; border:1px solid #00e0ff; border-radius:8px; padding:5px 16px; font-size:11.5px; font-weight:600; font-family:inherit; cursor:pointer; transition:.25s ease; text-transform:uppercase; letter-spacing:.5px; text-shadow:0 1px 2px rgba(0,0,0,.4) }
-button:hover, input[type=submit]:hover, input[type=button]:hover { box-shadow:0 0 18px rgba(0,224,255,.5); transform:translateY(-2px) }
-button:active, input[type=submit]:active, input[type=button]:active { transform:translateY(0) }
-input[type=reset] { background:linear-gradient(180deg,#444,#666); border-color:#888 }
-select option { background:#0f172a; color:#cbd5e1 }
-.globalWarning { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.45); color:#fecaca; border-radius:10px; padding:8px 14px; text-align:center }
-@media (max-width:760px) { { padding:6px; overflow-x:auto } table { font-size:11px } table th, table td { padding:5px 7px } }
-</style>
-{/literal}
-{/block}
+        {* El contenido de la ventana emergente se inyecta aquí *}
+        {/block}
     </section>
 </div>
 

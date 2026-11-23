@@ -1,6 +1,6 @@
 {block name="title" prepend}{$LNG.siteTitleDisclamer}{/block}
 {block name="content"}
-{* === ASTROIO v3.0 - estilo nuevo aplicado archivo por archivo: styles/templates/login/page.disclamer.default.tpl === *}
+{* === ASTROIO v3.1 - Página de Contacto (Estilo oscuro, borde naranja) === *}
 {literal}
 <style>
 /* === ASTROIO v3.0 === */
@@ -20,79 +20,60 @@ button:active, input[type=submit]:active, input[type=button]:active { transform:
 input[type=reset] { background:linear-gradient(180deg,#444,#666); border-color:#888 }
 select option { background:#0f172a; color:#cbd5e1 }
 .globalWarning { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.45); color:#fecaca; border-radius:10px; padding:8px 14px; text-align:center }
-@media (max-width:760px) { { padding:6px; overflow-x:auto } table { font-size:11px } table th, table td { padding:5px 7px } }
+/* ✅ FIX: Corregido el error de sintaxis del doble corchete */
+@media (max-width:760px) { body { padding:6px; overflow-x:auto; } table { font-size:11px; } table th, table td { padding:5px 7px; } }
 </style>
 {/literal}
 
 
 <style>
 /* ═══════════════════════════════════════════════
-   AstroIO v3.0 — Contacto Modernizado
-   Prefijo: .astrodisc_
-   Acento: 🔷 Cyan (#00e0ff) + 🟢 Verde (links)
-   FIX v3.0:
-     - Glassmorphism real (backdrop-filter + rgba)
-     - border-radius 12px (panel) / 10px (cards)
-     - Variables --bg-card / --accent-cyan unificadas
-     - Todos los emails/URLs/estructura intactos
+   AstroIO v3.1 — Contacto Modernizado
+   ✅ FIX: Eliminada la barra azul superior.
+   ✅ FIX: Borde naranja y fondo oscuro igual al index.
    ═══════════════════════════════════════════════ */
 
 :root {
     --bg-dark:       rgba(11, 16, 30, 0.55);
-    --bg-card:       rgba(15, 23, 42, 0.75);
-    --bg-card-solid: rgba(15, 23, 42, 0.85);
+    --bg-card:       rgba(10, 15, 25, 0.9); /* Fondo oscuro igual al index */
     --bg-inner:      rgba(0, 0, 0, 0.35);
-    --border-color:  #1e293b;
+    --border-color:  #ff5e00; /* Borde naranja */
     --text-main:     #cbd5e1;
     --text-muted:    #94a3b8;
-    --text-title:    #ffffff;
-    --accent-blue:   #3b82f6;
     --accent-cyan:   #00e0ff;
-    --accent-purple: #8b5cf6;
-    --accent-gold:   #fbbf24;
     --accent-green:  #4aff88;
-    --accent-red:    #ef4444;
 }
 
 .astrodisc_wrap {
     max-width: 1000px;
-    margin: 80px auto 20px;
+    margin: 40px auto 20px;
     padding: 0 15px;
     box-sizing: border-box;
     font-family: 'Segoe UI', Roboto, sans-serif;
 }
 
 .astrodisc_panel {
-    background: var(--bg-card);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    background: var(--bg-card) !important;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9) !important;
     overflow: hidden;
 }
 
+/* ✅ FIX: Ocultar la barra azul de "CONTACTO" */
 .astrodisc_heading {
-    background: linear-gradient(135deg, rgba(0, 68, 136, 0.85), rgba(0, 119, 204, 0.85));
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border-bottom: 1px solid var(--accent-cyan);
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 700;
-    padding: 12px 20px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    display: none !important;
 }
 
 .astrodisc_body {
     padding: 30px;
-    color: var(--text-main);
+    color: #e2e8f0 !important;
 }
 
 .astrodisc_lead {
-    color: var(--accent-cyan);
+    color: var(--accent-cyan) !important;
     font-size: 16px;
     font-weight: 700;
     margin: 0 0 10px;
@@ -102,7 +83,7 @@ select option { background:#0f172a; color:#cbd5e1 }
 }
 
 .astrodisc_body p {
-    color: var(--text-main);
+    color: #e2e8f0 !important;
     font-size: 14px;
     line-height: 1.6;
     margin: 0 0 15px;
@@ -110,7 +91,7 @@ select option { background:#0f172a; color:#cbd5e1 }
 
 .astrodisc_body hr {
     border: none;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid rgba(255, 94, 0, 0.3) !important; /* Línea naranja tenue */
     margin: 25px 0;
 }
 
@@ -123,10 +104,10 @@ select option { background:#0f172a; color:#cbd5e1 }
 }
 
 .astrodisc_card {
-    background: rgba(0, 0, 0, 0.35);
+    background: rgba(0, 0, 0, 0.5) !important;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    border: 1px solid var(--border-color);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 12px;
     padding: 25px 20px;
     text-align: center;
@@ -150,17 +131,18 @@ select option { background:#0f172a; color:#cbd5e1 }
 
 .astrodisc_card:hover {
     transform: translateY(-5px);
-    border-color: var(--accent-cyan);
-    box-shadow: 0 8px 25px rgba(0, 204, 255, 0.25);
+    border-color: var(--border-color) !important; /* Borde naranja al pasar ratón */
+    box-shadow: 0 8px 25px rgba(255, 94, 0, 0.2) !important;
 }
 
 .astrodisc_card:hover::before {
     opacity: 1;
+    background: linear-gradient(90deg, transparent, var(--border-color), transparent) !important;
 }
 
 .astrodisc_role {
     display: block;
-    color: var(--accent-cyan);
+    color: var(--accent-cyan) !important;
     font-size: 15px;
     font-weight: 700;
     text-transform: uppercase;
@@ -172,7 +154,7 @@ select option { background:#0f172a; color:#cbd5e1 }
 .astrodisc_contact-item {
     margin-bottom: 12px;
     font-size: 14px;
-    color: var(--text-main);
+    color: #e2e8f0 !important;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -185,12 +167,12 @@ select option { background:#0f172a; color:#cbd5e1 }
 
 .astrodisc_card a {
     display: inline-block;
-    color: var(--accent-green);
+    color: var(--accent-green) !important;
     text-decoration: none;
     font-weight: 500;
     padding: 6px 14px;
-    background: rgba(102, 255, 153, 0.05);
-    border: 1px solid rgba(102, 255, 153, 0.2);
+    background: rgba(102, 255, 153, 0.05) !important;
+    border: 1px solid rgba(102, 255, 153, 0.2) !important;
     border-radius: 8px;
     transition: all 0.25s ease;
     word-break: break-all;
@@ -198,16 +180,16 @@ select option { background:#0f172a; color:#cbd5e1 }
 }
 
 .astrodisc_card a:hover {
-    background: rgba(102, 255, 153, 0.15);
-    border-color: var(--accent-green);
-    color: #ffffff;
-    box-shadow: 0 0 12px rgba(102, 255, 153, 0.4);
+    background: rgba(102, 255, 153, 0.15) !important;
+    border-color: var(--accent-green) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(102, 255, 153, 0.4) !important;
     transform: translateY(-2px);
 }
 
 @media (max-width: 768px) {
     .astrodisc_wrap {
-        margin-top: 70px;
+        margin-top: 20px;
         padding: 0 10px;
     }
     .astrodisc_body {

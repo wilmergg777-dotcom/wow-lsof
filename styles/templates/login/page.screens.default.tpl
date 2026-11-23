@@ -1,6 +1,6 @@
 {block name="title" prepend}{$LNG.siteTitleScreens}{/block}
 {block name="content"}
-{* === ASTROIO v3.0 - estilo nuevo aplicado archivo por archivo: styles/templates/login/page.screens.default.tpl === *}
+{* === ASTROIO v3.1 - Galería de Imágenes (Estilo oscuro, borde naranja) === *}
 {literal}
 <style>
 /* === ASTROIO v3.0 === */
@@ -20,75 +20,55 @@ button:active, input[type=submit]:active, input[type=button]:active { transform:
 input[type=reset] { background:linear-gradient(180deg,#444,#666); border-color:#888 }
 select option { background:#0f172a; color:#cbd5e1 }
 .globalWarning { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.45); color:#fecaca; border-radius:10px; padding:8px 14px; text-align:center }
-@media (max-width:760px) { { padding:6px; overflow-x:auto } table { font-size:11px } table th, table td { padding:5px 7px } }
+/* ✅ FIX: Corregido el error de sintaxis del doble corchete */
+@media (max-width:760px) { body { padding:6px; overflow-x:auto; } table { font-size:11px; } table th, table td { padding:5px 7px; } }
 </style>
 {/literal}
 
 
 <style>
 /* ═══════════════════════════════════════════════
-   AstroIO v3.0 — Galería de Imágenes (Screens)
-   Prefijo: .astroscr_
-   Acento: 🔷 Cyan (#00e0ff)
-   FIX v3.0:
-     - Glassmorphism real (backdrop-filter + rgba)
-     - border-radius 12px (panel) / 8px (items)
-     - Variables --bg-card / --accent-cyan unificadas
-     - Todos los IDs/classes/Smarty intactos
-     - .gallery (fancybox) preservado
+   AstroIO v3.1 — Galería de Imágenes (Screens)
+   ✅ FIX: Eliminada la barra azul superior.
+   ✅ FIX: Borde naranja y fondo oscuro igual al index.
    ═══════════════════════════════════════════════ */
 
 :root {
     --bg-dark:       rgba(11, 16, 30, 0.55);
-    --bg-card:       rgba(15, 23, 42, 0.75);
-    --bg-card-solid: rgba(15, 23, 42, 0.85);
+    --bg-card:       rgba(10, 15, 25, 0.9); /* Fondo oscuro igual al index */
     --bg-inner:      rgba(0, 0, 0, 0.35);
-    --border-color:  #1e293b;
+    --border-color:  #ff5e00; /* Borde naranja */
     --text-main:     #cbd5e1;
     --text-muted:    #94a3b8;
-    --text-title:    #ffffff;
-    --accent-blue:   #3b82f6;
     --accent-cyan:   #00e0ff;
-    --accent-purple: #8b5cf6;
-    --accent-gold:   #fbbf24;
-    --accent-green:  #4aff88;
-    --accent-red:    #ef4444;
+    --accent-orange: #ff5e00;
 }
 
 .astroscr_wrap {
     max-width: 1100px;
-    margin: 80px auto 20px;
+    margin: 40px auto 20px;
     padding: 0 10px;
     box-sizing: border-box;
     font-family: 'Segoe UI', Roboto, sans-serif;
 }
 
 .astroscr_panel {
-    background: var(--bg-card);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    background: var(--bg-card) !important;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9) !important;
     overflow: hidden;
 }
 
+/* ✅ FIX: Ocultar la barra azul de "IMÁGENES DEL JUEGO" */
 .astroscr_heading {
-    background: linear-gradient(135deg, rgba(0, 68, 136, 0.85), rgba(0, 119, 204, 0.85));
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border-bottom: 1px solid var(--accent-cyan);
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 10px 16px;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    display: none !important; 
 }
 
 .astroscr_body {
-    padding: 20px 16px;
+    padding: 30px 20px;
 }
 
 /* ═══ Grid de thumbnails ═══ */
@@ -111,15 +91,15 @@ select option { background:#0f172a; color:#cbd5e1 }
     position: relative;
     border-radius: 8px;
     overflow: hidden;
-    border: 1px solid var(--border-color);
-    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(0, 0, 0, 0.5) !important;
     transition: 0.25s ease;
     text-decoration: none;
 }
 
 .astroscr_item a.gallery:hover {
-    border-color: var(--accent-cyan);
-    box-shadow: 0 0 20px rgba(0, 224, 255, 0.5);
+    border-color: var(--accent-orange) !important; /* Borde naranja al pasar el ratón */
+    box-shadow: 0 0 20px rgba(255, 94, 0, 0.4) !important;
     transform: translateY(-3px);
 }
 
@@ -132,7 +112,7 @@ select option { background:#0f172a; color:#cbd5e1 }
     opacity: 0;
     transition: 0.25s ease;
     pointer-events: none;
-    text-shadow: 0 0 10px rgba(0, 224, 255, 0.9);
+    text-shadow: 0 0 10px rgba(255, 94, 0, 0.9);
 }
 
 .astroscr_item a.gallery:hover::after {
@@ -158,11 +138,11 @@ select option { background:#0f172a; color:#cbd5e1 }
 /* Responsive */
 @media (max-width: 768px) {
     .astroscr_wrap {
-        margin-top: 70px;
+        margin-top: 20px;
         padding: 0 6px;
     }
     .astroscr_body {
-        padding: 14px 10px;
+        padding: 20px 10px;
     }
     .astroscr_grid {
         gap: 10px;

@@ -1,4 +1,4 @@
-{* === ASTROIO v3.0 - estilo nuevo aplicado archivo por archivo: styles/templates/login/layout.light.tpl === *}
+{* === ASTROIO v3.1 - estilo nuevo aplicado archivo por archivo: styles/templates/login/layout.light.tpl === *}
 {literal}
 <style>
 /* === ASTROIO v3.0 === */
@@ -18,7 +18,8 @@ button:active, input[type=submit]:active, input[type=button]:active { transform:
 input[type=reset] { background:linear-gradient(180deg,#444,#666); border-color:#888 }
 select option { background:#0f172a; color:#cbd5e1 }
 .globalWarning { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.45); color:#fecaca; border-radius:10px; padding:8px 14px; text-align:center }
-@media (max-width:760px) { { padding:6px; overflow-x:auto } table { font-size:11px } table th, table td { padding:5px 7px } }
+/* ✅ FIX: Corregido el doble corchete que rompía el CSS en móviles */
+@media (max-width:760px) { body { padding:6px; overflow-x:auto; } table { font-size:11px; } table th, table td { padding:5px 7px; } }
 </style>
 {/literal}
 
@@ -56,16 +57,18 @@ select option { background:#0f172a; color:#cbd5e1 }
     width: 100%;
 }
 
+/* =================================================================
+   ✅ FIX v9.1 — DESTRUCCIÓN DEL MARCO AZUL PRINCIPAL (LAYOUT)
+   ================================================================= */
 .astrolay_box_out {
     width: 100%;
     border-collapse: collapse;
-    background: var(--bg-card);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    overflow: hidden;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    overflow: visible !important;
 }
 
 .astrolay_box_out tr.box-out-header,
@@ -85,10 +88,12 @@ select option { background:#0f172a; color:#cbd5e1 }
 .astrolay_box_inner {
     width: 100%;
     border-collapse: collapse;
+    background: transparent !important;
 }
 
+/* Ocultar la barra azul superior con el texto "INDICE" */
 .astrolay_box_inner tr.box-inner-header {
-    display: block;
+    display: none !important;
 }
 
 .astrolay_box_inner td.box-inner-header-left,
@@ -97,23 +102,7 @@ select option { background:#0f172a; color:#cbd5e1 }
 }
 
 .astrolay_box_inner td.box-inner-header-center {
-    display: block;
-    background: linear-gradient(135deg, rgba(0, 68, 136, 0.85), rgba(0, 119, 204, 0.85));
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border-bottom: 1px solid var(--accent-cyan);
-    padding: 10px 16px;
-    text-align: left;
-}
-
-.astrolay_box_inner td.box-inner-header-center h1 {
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 700;
-    margin: 0;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    display: none !important;
 }
 
 .astrolay_box_inner tr.box-inner-content {
@@ -125,9 +114,11 @@ select option { background:#0f172a; color:#cbd5e1 }
     display: none;
 }
 
+/* Quitar el padding para que las cajas floten libremente */
 .astrolay_box_inner td.box-inner-content-center {
     display: block;
-    padding: 16px 20px;
+    padding: 0 !important;
+    background: transparent !important;
     color: var(--text-main);
     font-size: 13px;
     line-height: 1.6;
@@ -315,7 +306,7 @@ select option { background:#0f172a; color:#cbd5e1 }
 					</tr>
 					<tr class="box-inner-content">
 						<td class="box-inner-content-left"></td>
-						<td class="box-inner-content-center">{block name=content}{/block}</td>
+						<td class="box-inner-content-center">{block name="content"}{/block}</td>
 						<td class="box-inner-content-right"></td>
 					</tr>
 					<tr class="box-inner-footer">
