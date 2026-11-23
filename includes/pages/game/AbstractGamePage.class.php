@@ -594,6 +594,7 @@ abstract class AbstractGamePage
 				'pvp'				=> $pvpData,
 				// ✅ AstroIO v1.2 — Alertas vacías en early-return
 				'globalAlerts'		=> array('attack' => array(), 'spy' => array(), 'transport' => array()),
+			'onlineNow'			=> 0,
 				// ✅ AstroIO v1.7 — Mini Torneos (contador global)
 				'tourneyEnd'		=> $this->astroio_getTourneyEnd(),
 			));
@@ -725,6 +726,17 @@ abstract class AbstractGamePage
 		$totalCount = $db->selectSingle($sql, [
 			':universe'  => Universe::current()
 		], 'totalCount');
+
+		// ✅ AstroIO v7.2 — Jugadores conectados AHORA (últimos 15 min, sin admins ni fantasmas)
+		$sql = "SELECT COUNT(*) as onlineNow 
+				FROM %%USERS%% 
+				WHERE onlinetime > :timeLimit 
+				AND universe = :universe
+				AND email NOT LIKE '%@noreply.local';";
+		$onlineNow = $db->selectSingle($sql, [
+			':timeLimit' => TIMESTAMP - 15*60,
+			':universe'  => Universe::current()
+		], 'onlineNow');
 		// ===== FIN ASTROIO =====
 
 		// =========================================================
@@ -934,6 +946,7 @@ abstract class AbstractGamePage
 			'allyMembers'		=> $allyMembers,
 			'allyMembersList'	=> $allyMembersList,
 			'onlineCount'		=> $onlineCount,
+			'onlineNow'			=> $onlineNow,
 			'totalCount'		=> $totalCount,
 			'ntx20'				=> isset($USER['ntx20']) ? (int)$USER['ntx20'] : 0,
 			// ✅ AstroIO v1.6 — Total de contenedores (genérico + común + raro + legendario)
