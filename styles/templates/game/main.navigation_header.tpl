@@ -53,7 +53,7 @@
 	transform: translateY(-2px) !important;
 }
 
-/* ===== BOTÓN DE VERSIÓN (V2.1) ===== */
+/* ===== BOTÓN DE VERSIÓN ===== */
 #main_header .main_list_left a[href*="changelog"] {
 	background: linear-gradient(135deg, rgba(0, 136, 68, 0.85), rgba(0, 204, 102, 0.85)) !important;
 	color: #fff !important;
@@ -156,7 +156,7 @@
 	50% { transform: scale(1.1); }
 }
 
-/* ===== 🆕 ICONO PVP EN HEADER (MOVIDO A LA DERECHA) ===== */
+/* ===== 🆕 ICONO PVP EN HEADER ===== */
 #main_header .header_pvp_icon {
 	color: #ff4444 !important;
 	position: relative !important;
@@ -165,8 +165,8 @@
 	gap: 4px !important;
 	padding: 5px 8px !important;
 	border-radius: 6px !important;
-	border: 1px solid rgba(255, 68, 68, 0.3) !important; /* Borde rojo sutil */
-	background: rgba(255, 68, 68, 0.1) !important; /* Fondo rojo sutil */
+	border: 1px solid rgba(255, 68, 68, 0.3) !important;
+	background: rgba(255, 68, 68, 0.1) !important;
 	transition: all 0.25s ease !important;
 	text-decoration: none !important;
 }
@@ -224,9 +224,7 @@
 }
 
 /* ============================================================
-   ASTROIO — Mini Torneos (nuevo icono en header)
-   Mismo estilo visual que el resto de iconos del header,
-   pero con acento dorado para distinguirlo.
+   ASTROIO — Mini Torneos
    ============================================================ */
 #main_header .header_tourney_icon {
 	color: #ffcc66 !important;
@@ -253,7 +251,6 @@
 	font-size: 14px !important;
 	line-height: 1 !important;
 }
-/* ============================================================ */
 
 /* ============================================================
    🆕 ASTROIO — Botón de Descargas en el Header
@@ -275,18 +272,13 @@
 	border-color: rgba(0, 224, 255, 0.5) !important;
 	transform: translateY(-2px) !important;
 }
-/* ============================================================ */
 
 /* ═══════════════════════════════════════════════════════════
-   ASTROIO — Botón MENÚ RÁPIDO + responsive móvil (v2 limpio)
+   ASTROIO — Botón MENÚ RÁPIDO + responsive móvil
    ═══════════════════════════════════════════════════════════ */
-
-/* En escritorio ocultamos el botón píldora */
 #astroio-nav-toggle-wrap { display: none !important; }
 
 @media screen and (max-width: 768px) {
-
-    /* ── Barra superior en flex ── */
     #main_header {
         display: flex !important;
         flex-wrap: wrap !important;
@@ -295,140 +287,35 @@
         gap: 4px !important;
         padding: 6px 8px !important;
     }
+    #main_header > a[href*="cp="]:nth-of-type(1) { order: 1 !important; flex: 0 0 auto !important; min-width: 34px !important; }
+    #main_header #planetSelectorWrapper { order: 2 !important; flex: 1 1 auto !important; max-width: calc(100% - 100px) !important; display: flex !important; justify-content: center !important; margin: 0 !important; }
+    #main_header > a[href*="cp="]:nth-of-type(2) { order: 3 !important; flex: 0 0 auto !important; min-width: 34px !important; }
+    #main_header #planetSelector { width: 100% !important; font-size: 13px !important; padding: 7px 10px !important; text-align: center !important; text-align-last: center !important; -moz-text-align-last: center !important; }
+    #main_header > a[href*="cp="] i { font-size: 24px !important; margin: 0 !important; vertical-align: middle !important; }
 
-    /* ── Flechas + selector en una fila ── */
-    #main_header > a[href*="cp="]:nth-of-type(1) {
-        order: 1 !important;
-        flex: 0 0 auto !important;
-        min-width: 34px !important;
-    }
-    #main_header #planetSelectorWrapper {
-        order: 2 !important;
-        flex: 1 1 auto !important;
-        max-width: calc(100% - 100px) !important;
-        display: flex !important;
-        justify-content: center !important;
-        margin: 0 !important;
-    }
-    #main_header > a[href*="cp="]:nth-of-type(2) {
-        order: 3 !important;
-        flex: 0 0 auto !important;
-        min-width: 34px !important;
-    }
-    #main_header #planetSelector {
-        width: 100% !important;
-        font-size: 13px !important;
-        padding: 7px 10px !important;
-        text-align: center !important;
-        text-align-last: center !important;
-        -moz-text-align-last: center !important;
-    }
-    #main_header > a[href*="cp="] i {
-        font-size: 24px !important;
-        margin: 0 !important;
-        vertical-align: middle !important;
-    }
+    #astroio-nav-toggle-wrap { display: inline-flex !important; order: 4 !important; flex: 0 0 auto !important; position: relative !important; }
+    #astroio-nav-toggle { display: inline-flex !important; align-items: center !important; justify-content: center !important; padding: 6px 12px !important; background: rgba(11, 16, 30, 0.7) !important; color: #00e0ff !important; border: 1px solid rgba(0, 224, 255, 0.4) !important; border-radius: 50px !important; font-size: 11px !important; font-weight: 700 !important; letter-spacing: 0.5px !important; cursor: pointer !important; white-space: nowrap !important; }
+    #astroio-nav-toggle .astroio-nav-icon { display: inline-block !important; font-size: 12px !important; transition: transform 0.25s ease !important; }
+    #astroio-nav-toggle.is-open .astroio-nav-icon { transform: rotate(180deg) !important; }
+    #astroio-nav-toggle-wrap .astroio-nav-badge { position: absolute !important; top: -6px !important; right: -8px !important; background: #dc3545 !important; color: #fff !important; font-size: 10px !important; font-weight: 700 !important; padding: 2px 6px !important; border-radius: 10px !important; min-width: 16px !important; text-align: center !important; z-index: 20 !important; }
 
-    /* ── Botón píldora (toggle iconos) ── */
-    #astroio-nav-toggle-wrap {
-        display: inline-flex !important;
-        order: 4 !important;
-        flex: 0 0 auto !important;
-        position: relative !important;
-    }
-    #astroio-nav-toggle {
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        padding: 6px 12px !important;
-        background: rgba(11, 16, 30, 0.7) !important;
-        color: #00e0ff !important;
-        border: 1px solid rgba(0, 224, 255, 0.4) !important;
-        border-radius: 50px !important;
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        letter-spacing: 0.5px !important;
-        cursor: pointer !important;
-        white-space: nowrap !important;
-    }
-    #astroio-nav-toggle .astroio-nav-icon {
-        display: inline-block !important;
-        font-size: 12px !important;
-        transition: transform 0.25s ease !important;
-    }
-    #astroio-nav-toggle.is-open .astroio-nav-icon {
-        transform: rotate(180deg) !important;
-    }
-    #astroio-nav-toggle-wrap .astroio-nav-badge {
-        position: absolute !important;
-        top: -6px !important;
-        right: -8px !important;
-        background: #dc3545 !important;
-        color: #fff !important;
-        font-size: 10px !important;
-        font-weight: 700 !important;
-        padding: 2px 6px !important;
-        border-radius: 10px !important;
-        min-width: 16px !important;
-        text-align: center !important;
-        z-index: 20 !important;
-    }
-
-    /* ── Listas de iconos (se despliegan a todo el ancho) ── */
-    #main_header .main_list_left  {
-        order: 5 !important;
-        flex: 1 1 100% !important;
-        width: 100% !important;
-        float: none !important;
-        text-align: center !important;
-    }
-    #main_header .main_list_right {
-        order: 6 !important;
-        flex: 1 1 100% !important;
-        width: 100% !important;
-        float: none !important;
-        text-align: center !important;
-    }
+    #main_header .main_list_left  { order: 5 !important; flex: 1 1 100% !important; width: 100% !important; float: none !important; text-align: center !important; }
+    #main_header .main_list_right { order: 6 !important; flex: 1 1 100% !important; width: 100% !important; float: none !important; text-align: center !important; }
     #main_header .main_list_left ul,
-    #main_header .main_list_right ul {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        justify-content: center !important;
-        gap: 2px !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
+    #main_header .main_list_right ul { display: flex !important; flex-wrap: wrap !important; justify-content: center !important; gap: 2px !important; padding: 0 !important; margin: 0 !important; }
     #main_header .main_list_left li,
-    #main_header .main_list_right li {
-        display: inline-block !important;
-        margin: 0 !important;
-    }
+    #main_header .main_list_right li { display: inline-block !important; margin: 0 !important; }
     #main_header .main_list_left a,
-    #main_header .main_list_right a {
-        font-size: 12px !important;
-        padding: 5px 7px !important;
-        min-width: 22px !important;
-        min-height: 22px !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-    #main_header .main_list_left a[href*="changelog"] {
-        font-size: 10px !important;
-        padding: 5px 8px !important;
-    }
+    #main_header .main_list_right a { font-size: 12px !important; padding: 5px 7px !important; min-width: 22px !important; min-height: 22px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; }
+    #main_header .main_list_left a[href*="changelog"] { font-size: 10px !important; padding: 5px 8px !important; }
 
-    /* ── Ocultar listas cuando el header está colapsado ── */
     #main_header.astroio-nav-collapsed .main_list_left,
-    #main_header.astroio-nav-collapsed .main_list_right {
-        display: none !important;
-    }
+    #main_header.astroio-nav-collapsed .main_list_right { display: none !important; }
 }
 
 </style>
 
 <div id="main_header">
-	<!-- ═══ BOTÓN MENÚ RÁPIDO (fuera, arriba) ═══ -->
 	<div id="astroio-nav-toggle-wrap">
 		<button id="astroio-nav-toggle" type="button" aria-label="Mostrar u ocultar menú rápido">
 			<span class="astroio-nav-icon">▼</span>
@@ -437,10 +324,11 @@
 			<span class="astroio-nav-badge">{$new_message}</span>
 		{/if}
 	</div>
-	<!-- ═══════════════════════════════════════ -->
+	
 	<div class="main_list_left">
 		<ul>
-			<li><a href="game.php?page=changelog" style="color: lime; font-weight: bold;">V2.3</a></li>
+			{* ✅ FIX: Aquí ahora lee la versión dinámica *}
+			<li><a href="game.php?page=changelog" style="color: lime; font-weight: bold;">v{$gameVersion}</a></li>
 			<li><a href="game.php?page=overview"><i class="fas fa-home"></i></a></li>
 			{if isModuleAvailable($smarty.const.MODULE_IMPERIUM)}<li><a href="game.php?page=imperium"><i class="fas fa-globe"></i></a></li>{/if}
 			{if isModuleAvailable($smarty.const.MODULE_STATISTICS)}<li><a href="game.php?page=statistics"><i class="fas fa-chart-pie"></i></a></li>{/if}
@@ -450,10 +338,6 @@
 			{if isModuleAvailable($smarty.const.MODULE_SEARCH)}<li><a href="game.php?page=search"><i class="fas fa-search"></i></a></li>{/if}
 			{if isModuleAvailable($smarty.const.MODULE_MESSAGES)}<li><a href="game.php?page=messages"><i class="fas fa-envelope"></i>{nocache}{if $new_message > 0}<span id="newmes"> <span id="newmesnum">{if $new_message > 99}99+{else}{$new_message}{/if}</span></span>{/if}{/nocache}</a></li>{/if}
 
-			{* ============================================================
-			   ASTROIO — Mini Torneos (nuevo icono en header)
-			   Solo se muestra si el módulo está activo en admin
-			   ============================================================ *}
 			{if isModuleAvailable($smarty.const.MODULE_TOURNEY)}
 			<li>
 				<a href="game.php?page=tourney" class="header_tourney_icon" title="Mini Torneos">
@@ -461,7 +345,6 @@
 				</a>
 			</li>
 			{/if}
-			{* ============================================================ *}
 			
 		</ul>
 	</div>
@@ -477,7 +360,6 @@
 
 	<div class="main_list_right">
 		<ul>
-			{* 🆕 ICONO PVP CON COUNTDOWN (MOVIDO AQUÍ) *}
 			{if isModuleAvailable($smarty.const.MODULE_PVP)}
 				{assign var="pvpHArenaActive"      value=0}
 				{assign var="pvpHArenaWaiting"     value=0}
@@ -501,12 +383,11 @@
 					   data-tournament-active="{$pvpHTournamentActive}"
 					   data-tournament-status="{$pvpHTournamentStatus}"
 					   data-tournament-time="{$pvpHTournamentTime}">
-						<span style="font-size:14px;">⚔️</span> {* 🆕 Icono de 2 espadas cruzadas *}
+						<span style="font-size:14px;">⚔️</span>
 						<span class="header_pvp_badge state-off" id="header_pvp_badge"></span>
 					</a>
 				</li>
 			{/if}
-			{* ============================================ *}
 			{if isModuleAvailable($smarty.const.MODULE_TECHTREE)}<li><a href="game.php?page=techtree"><i class="fas fa-flask"></i></a></li>{/if}
 			{if isModuleAvailable($smarty.const.MODULE_BUDDYLIST)}<li><a href="game.php?page=buddyList"><i class="fas fa-user-circle"></i></a></li>{/if}
 			{if isModuleAvailable($smarty.const.MODULE_BANLIST)}<li><a href="game.php?page=banList"><i class="fas fa-user-times"></i></a></li>{/if}
@@ -514,7 +395,7 @@
 			<li><a href="game.php?page=questions"><i class="fas fa-book"></i></a></li>
 			<li><a href="game.php?page=settings"><i class="fas fa-wrench"></i></a></li>
 			
-			<!-- ✅ NUEVO BOTÓN DE DESCARGAS EN EL HEADER -->
+			<!-- ✅ BOTÓN DE DESCARGAS EN EL HEADER -->
 			<li>
 				<a href="descargas.php" class="header_download_icon" title="Descargar Cliente (PC / APK)">
 					📥
