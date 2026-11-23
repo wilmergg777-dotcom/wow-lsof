@@ -2,207 +2,97 @@
 {block name="content"}
 
 {* ============================================================
-   ASTROIO BATTLE HALL (site) v3.1 — Estilo Xnova (glassmorphism)
-   ✅ FIX: Fondo oscuro, borde naranja y tabla adaptada.
+   ASTROIO BATTLE HALL (site) v3.0 — Estilo Xnova (glassmorphism)
+   Prefijo CSS: .astrotkbs_   (aislado, no rompe otros módulos)
+   Acento del módulo: 🟡 Dorado (#ffaa33)
+   FIX v3.0:
+     - Patrón fleetDealer aplicado (panel glassmorphism, radius 12px)
+     - Centrado con text-align + inline-block (Regla #14)
+     - Selector multi-universo con radius 8px + focus translateY
+     - Wrapper padding 15px
+     - ⚠️ CRÍTICO: {if $isMultiUniverse}, {html_options}, {if $hallRow.result} intactos
+     - ⚠️ CRÍTICO: clases winner/loser/vs, {foreach $hallList} intactas
    ============================================================ *}
 
+{literal}
 <style>
-/* ====== Variables globales ====== */
+/* ═══ ASTROIO v8.1 — reskin nextgen (tokens del índice v8.0) ═══ */
 :root {
-    --bg-dark:       rgba(11, 16, 30, 0.55);
-    --bg-card:       rgba(10, 15, 25, 0.9); /* Fondo oscuro igual al index */
-    --bg-inner:      rgba(0, 0, 0, 0.35);
-    --border-color:  #ff5e00; /* Borde naranja */
-    --text-main:     #cbd5e1;
-    --text-muted:    #94a3b8;
-    --text-title:    #ffffff;
-    --accent-blue:   #3b82f6;
-    --accent-cyan:   #00e0ff;
-    --accent-gold:   #fbbf24;
-    --accent-green:  #4aff88;
-    --accent-red:    #ef4444;
+    --nx-muted:  #9a9a9a;
+    --nx-cyan:   #59d6ff;
+    --nx-green:  #35ff8f;
+    --nx-red:    #ff5252;
+    --nx-purple: #d946ef;
+    --nx-gold:   #fbbf24;
+    --nx-border: rgba(255, 255, 255, 0.1);
 }
 
-/* ====== Wrapper (centrado por text-align) ====== */
-.astrotkbs_wrap {
-    width: 100%;
-    padding: 15px;
-    box-sizing: border-box;
-    text-align: center;
+/* ═══ Tarjeta nextgen (idéntica a las del índice) ═══ */
+.astrotkbs_panel, .panel-default.astrotkbs_panel {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--nx-border);
+    border-radius: 15px;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.75);
+    overflow: hidden;
 }
-
-/* ====== Panel principal (glassmorphism) ====== */
-.astrotkbs_panel {
-    display: inline-block;
-    text-align: left;
-    background: var(--bg-card) !important;
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border: 1px solid var(--border-color) !important;
-    border-radius: 12px !important;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9) !important;
-    padding: 25px 35px;
-    color: var(--text-main);
-    width: 900px;
-    max-width: 100%;
-    vertical-align: top;
-    box-sizing: border-box;
-}
-
-/* ====== Título (acento dorado) ====== */
-.astrotkbs_section_title {
-    color: #ffaa33;
-    font-weight: 700;
-    font-size: 15px;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    border-bottom: 1px solid rgba(255, 94, 0, 0.4) !important; /* Línea naranja */
-    padding-bottom: 10px;
-    margin-bottom: 20px;
+.astrotkbs_section_title, .panel-heading.astrotkbs_heading, .astrotkbs_heading {
     display: block;
-    text-shadow: 0 0 10px rgba(255, 170, 51, 0.35);
-}
-
-/* ====== Selector de universo (multi) ====== */
-.astrotkbs_uni_row {
-    margin-bottom: 15px;
-}
-.astrotkbs_uni_row select {
-    padding: 10px 14px;
-    background: #ffffff !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: 6px;
-    color: #333333 !important;
+    background: transparent;
+    color: #ffffff;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
     font-weight: 700;
-    font-size: 13px;
-    font-family: inherit;
-    cursor: pointer;
-    outline: none;
-    transition: 0.25s ease;
-    min-width: 200px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--nx-border);
+    text-shadow: none;
 }
-.astrotkbs_uni_row select:hover,
-.astrotkbs_uni_row select:focus {
-    border-color: var(--accent-cyan) !important;
-    box-shadow: 0 0 12px rgba(0, 224, 255, 0.5) !important;
-}
-.astrotkbs_uni_row select option {
-    background: #0f1624 !important;
-    color: #ffffff !important;
-    padding: 4px;
+.astrotkbs_wrap {
+    font-family: 'Rajdhani', 'Segoe UI', sans-serif;
 }
 
-/* ====== Tabla ====== */
-.astrotkbs_table_wrap {
-    overflow-x: auto;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    background: rgba(0, 0, 0, 0.5) !important;
-    transition: 0.2s ease;
-}
-.astrotkbs_table_wrap:hover {
-    border-color: var(--border-color) !important;
-}
-.astrotkbs_table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-    font-size: 13px;
-}
-
-/* Cabecera */
-.astrotkbs_table thead tr {
-    background: rgba(0, 0, 0, 0.6) !important;
-}
+.astrotkbs_wrap { max-width: 860px; margin: 84px auto 40px; padding: 0 12px; box-sizing: border-box; }
+.astrotkbs_uni_row { padding: 12px 16px; border-bottom: 1px solid var(--nx-border); }
+.astrotkbs_uni_row select { max-width: 260px; }
+.astrotkbs_table_wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.astrotkbs_table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 520px; }
 .astrotkbs_table thead th {
-    padding: 12px 10px;
-    font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 0.5px;
-    text-align: left;
-    color: #00e0ff !important;
-    border-bottom: 1px solid var(--border-color) !important;
-    white-space: nowrap;
-}
-.astrotkbs_table thead th.astrotkbs_th_pos {
-    width: 60px;
-    text-align: center;
-}
-.astrotkbs_table thead th.astrotkbs_th_date {
-    width: 150px;
-}
-.astrotkbs_table thead th.astrotkbs_th_units {
-    width: 110px;
-    text-align: right;
-}
-
-/* Filas */
-.astrotkbs_table tbody tr {
-    background: transparent !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-    transition: 0.15s ease;
-}
-.astrotkbs_table tbody tr:hover {
-    background: rgba(255, 94, 0, 0.05) !important; /* Hover naranja tenue */
+    padding: 9px 10px; background: rgba(255,255,255,.05); color: var(--nx-muted);
+    font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    border-bottom: 1px solid var(--nx-border); text-align: left; white-space: nowrap; text-shadow: none;
 }
 .astrotkbs_table tbody td {
-    padding: 10px;
-    color: var(--text-main) !important;
-    vertical-align: middle;
-    line-height: 1.4;
-    word-break: break-word;
+    padding: 9px 10px; color: #e2e8f0; border-bottom: 1px solid rgba(255,255,255,.06);
+    vertical-align: middle; line-height: 1.4;
 }
-
-/* Columna posición */
-.astrotkbs_table tbody td:first-child {
-    text-align: center;
-    font-family: 'Courier New', monospace;
-    font-weight: 700;
-    color: var(--text-muted) !important;
+.astrotkbs_table tbody tr:hover { background: rgba(255,255,255,.04); }
+.astrotkbs_winner { color: var(--nx-green); font-weight: 700; }
+.astrotkbs_loser { color: var(--nx-red); font-weight: 700; }
+.astrotkbs_vs {
+    color: var(--nx-purple); font-family: 'Space Mono', monospace; font-size: 10px;
+    font-weight: 700; letter-spacing: 1px; padding: 0 6px;
 }
-
-/* Columna unidades */
-.astrotkbs_table tbody td:last-child {
-    text-align: right;
-    font-family: 'Courier New', monospace;
-    font-weight: 700;
-    color: #4aff88 !important;
-}
-
-/* Colores ganador/perdedor */
-.astrotkbs_winner { color: #66ff99 !important; font-weight: 700; }
-.astrotkbs_loser { color: #ff4488 !important; font-weight: 700; }
-.astrotkbs_vs { color: var(--text-muted) !important; font-weight: 700; padding: 0 8px; font-size: 11px; }
-
-/* ====== Leyenda inferior ====== */
 .astrotkbs_legend {
-    text-align: center;
-    padding: 12px;
-    background: rgba(0, 0, 0, 0.5) !important;
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 10px;
-    margin-top: 20px;
-    color: var(--text-muted) !important;
-    font-size: 12px;
-    font-weight: 600;
-    transition: 0.2s ease;
-}
-.astrotkbs_legend span {
-    font-weight: 700;
-    margin: 0 4px;
+    display: flex; justify-content: center; gap: 18px; flex-wrap: wrap;
+    padding: 12px; margin: 0 16px 16px;
+    background: rgba(255,255,255,.03); border: 1px solid var(--nx-border); border-radius: 10px;
+    font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
 }
 
-/* ====== Responsive ====== */
+/* ═══ Móvil ═══ */
 @media (max-width: 768px) {
-    .astrotkbs_wrap { padding: 10px; }
-    .astrotkbs_panel { padding: 20px 15px; }
-    .astrotkbs_table { font-size: 11.5px; table-layout: auto; }
-    .astrotkbs_table thead th { padding: 8px 5px; font-size: 11px; }
-    .astrotkbs_table tbody td { padding: 8px 5px; }
+    .astrotkbs_wrap { margin-top: 70px !important; padding: 0 10px !important; }
+    .astrotkbs_panel { border-radius: 12px; }
+    .astrotkbs_body { padding: 16px 14px !important; }
+    .astrotkbs_actions { text-align: center !important; }
+    .astrotkbs_actions .btn, .astrotkbs_btn_register, .astrotkbs_btn_submit { width: 100%; }
 }
 </style>
+{/literal}
 
 <div class="astrotkbs_wrap">
 
