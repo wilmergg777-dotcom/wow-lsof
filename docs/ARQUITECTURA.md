@@ -327,6 +327,27 @@ profesión nueva es solo añadir otra `DefProfesion` al registro.
   ya registró y solo añade Raíz de tierra (Earthroot, nombrada en la guía
   1-75). Sin especializaciones. Cada nodo guarda su `Zona` recomendada
   (informativo, para el cliente).
+- **Minería** (WoW 3.3.5): la segunda profesión de recolección y la PRIMERA
+  **HÍBRIDA** del juego: combina `Nodos` (picar vetas, verbo `Recolectar`,
+  sin consumo) con `Recetas` de **FUNDICIÓN** (mena → barra, verbo
+  `Craftear`, consume menas). Es la primera profesión con AMBOS `Nodos` y
+  `Recetas` a la vez. La guía sube picando vetas (gathering, la vía
+  principal); la fundición es la vía secundaria que además cierra el
+  **eslabón cross-profesión más importante del juego**: minar mena → fundir
+  barra → la barra la consumen Herrería, Joyería e Ingeniería. 14 nodos
+  cubren 0→450 de forma contigua siguiendo las zonas de la guía:
+  Mulgore/Dun Morogh (1-65 cobre), Laderas de Trabalomas (66-125 estaño y
+  plata), Tierras Altas de Arathi (125-175 hierro y oro), Tierras del
+  Interior/Tanaris (175-250 mitril y veraplata, artesano a 200), Cráter de
+  Un'Goro/Cuna del Invierno (251-300 torio), Península de Fuego
+  Infernal/Marisma de Zangar (300-330 hierro vil, maestro a 275), Nagrand
+  (330-375 adamantita y korio), Tundra Boreal/Fiordo Aquilonal (375-400
+  cobalto, gran_maestro a 350) y Corona de Hielo/Cuenca de Sholazar
+  (400-450 saronita y titanio). 15 recetas de fundición producen las barras
+  que ya consumen las profesiones de crafteo (más las **aleaciones** bronce
+  = cobre+estaño y acero = hierro+carbón, que consumen BARRAS en vez de
+  menas). Registra 14 menas nuevas y 5 barras que faltaban (estaño, hierro,
+  oro, acero, korio) más el carbón. Sin especializaciones. 6 rangos.
 
 El cliente abre el panel de profesiones con la tecla **P**; muestra las
 profesiones conocidas (barra de habilidad + botón para aprender el

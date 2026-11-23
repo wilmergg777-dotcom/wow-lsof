@@ -112,6 +112,38 @@ func itemsPredefinidos() map[string]DefItem {
 		m[id] = def(id, n, TipoGema, CalidadComun)
 	}
 
+	// ─── Menas y barras de Minería (Classic→WotLK) ───
+	// Las menas se obtienen picando vetas (Nodos de Minería) y se funden en
+	// barras (Recetas de fundición). Las barras que ya existían (cobre,
+	// bronce, plata, mitril, veraplata, torio, hierro vil, adamantita,
+	// cobalto, saronita) las consumen Herrería/Ingeniería/Joyería; aquí se
+	// añaden las menas correspondientes, las barras que faltaban (estaño,
+	// hierro, oro, acero, korio) y el carbón para la aleación de acero.
+	for id, n := range map[string]string{
+		"mena_cobre":      "Mena de cobre",
+		"mena_estaño":     "Mena de estaño",
+		"mena_plata":      "Mena de plata",
+		"mena_hierro":     "Mena de hierro",
+		"mena_oro":        "Mena de oro",
+		"mena_mitril":     "Mena de mitril",
+		"mena_veraplata":  "Mena de veraplata",
+		"mena_torio":      "Mena de torio",
+		"barra_estaño":    "Barra de estaño",
+		"barra_hierro":    "Barra de hierro",
+		"barra_oro":       "Barra de oro",
+		"barra_acero":     "Barra de acero",
+		"carbón":          "Carbón",
+		"mena_hierro_vil": "Mena de hierro vil",
+		"mena_adamantita": "Mena de adamantita",
+		"mena_korio":      "Mena de korio",
+		"barra_korio":     "Barra de korio",
+		"mena_cobalto":    "Mena de cobalto",
+		"mena_saronita":   "Mena de saronita",
+		"mena_titanio":    "Mena de titanio",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+
 	// ─── Materiales Burning Crusade ───
 	for id, n := range map[string]string{
 		"granate_sangre":      "Granate de sangre",
