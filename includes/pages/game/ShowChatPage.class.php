@@ -34,6 +34,17 @@ class ShowChatPage extends AbstractGamePage
 			$this->unreadCount();
 		}
 
+		/* ASTROIO: mensajes del canal en JSON para el chat flotante nativo
+		   (mockup8_3/8_4) — evita el iframe del chat viejo */
+		if($action == 'messages') {
+			$this->messagesJSON();
+		}
+
+		/* ASTROIO: enviar un mensaje desde el chat flotante nativo */
+		if($action == 'send') {
+			$this->sendMessage();
+		}
+
 		if($action == 'alliance') {
 			$this->setWindow('popup');
 			$this->initTemplate();
@@ -72,6 +83,101 @@ class ShowChatPage extends AbstractGamePage
 			$out['latestAlly']	= (int) $row['latest'];
 			$out['ally']		= (int) $row['unread'];
 			$out['hasAlly']		= true;
+		}
+
+		echo json_encode($out);
+		exit;
+	}
+
+	/* ASTROIO: canal numérico (General = 0, Alianza = ally_id + 100).
+	   $allyTag se rellena con el tag de la alianza; devuelve -1 si el canal
+	   no está disponible (sin alianza). */
+	private function channelID($channel, &$allyTag)
+	{
+		global $USER;
+
+		$allyTag = '';
+
+		if($channel === 'ally') {
+			$allyId	= (int) $USER['ally_id'];
+			if($allyId <= 0) {
+				return -1;
+			}
+			$allyTag = (string) Database::get()->selectSingle('SELECT ally_tag FROM %%ALLIANCE%% WHERE id = :id', array(':id' => $allyId), 'ally_tag');
+			return $allyId + 100;
+		}
+
+		return 0;
+	}
+
+	/* ASTROIO: JSON {ok, messages:[{id,uid,name,staff,own,time,text}], latest, allyTag}.
+	   GET game.php?page=chat&action=messages&channel=gen|ally&after=<id> */
+	private function messagesJSON()
+	{
+		global $USER;
+
+		$channel	= HTTP::_GP('channel', 'gen');
+		$after		= (int) HTTP::_GP('after', 0);
+		$allyTag	= '';
+		$channelId	= $this->channelID($channel, $allyTag);
+
+		$out = array('ok' => true, 'messages' => array(), 'latest' => $after, 'allyTag' => $allyTag);
+
+		if($channelId >= 0) {
+			$rows = Database::get()->select('SELECT id, userID, userName, userRole, dateTime, text
+					FROM %%CHAT_MES%% WHERE channel = :channel AND id > :after
+					ORDER BY id DESC LIMIT 50', array(':channel' => $channelId, ':after' => $after));
+
+			foreach(array_reverse($rows) as $row) {
+				$out['messages'][] = array(
+					'id'	=> (int) $row['id'],
+					'uid'	=> (int) $row['userID'],
+					'name'	=> (string) $row['userName'],
+					'staff'	=> ((int) $row['userRole'] >= 2),
+					'own'	=> ((int) $row['userID'] == (int) $USER['id']),
+					'time'	=> date('H:i', strtotime($row['dateTime'])),
+					'text'	=> (string) $row['text'],
+				);
+				$out['latest'] = (int) $row['id'];
+			}
+		}
+
+		echo json_encode($out);
+		exit;
+	}
+
+	/* ASTROIO: inserta un mensaje (POST text, channel=gen|ally) y responde JSON {ok} */
+	private function sendMessage()
+	{
+		global $USER;
+
+		$channel	= HTTP::_GP('channel', 'gen');
+		$text		= trim(strip_tags(HTTP::_GP('text', '')));
+		$out		= array('ok' => false);
+
+		if($text !== '' && mb_strlen($text) <= 300) {
+			$allyTag	= '';
+			$channelId	= $this->channelID($channel, $allyTag);
+
+			if($channelId >= 0) {
+				$auth	= (int) $USER['authlevel'];
+				$role	= ($auth >= 3) ? 3 : (($auth >= 1) ? 2 : 1); /* roles AJAXChat: 3 admin, 2 mod, 1 usuario */
+
+				try {
+					Database::get()->insert('INSERT INTO %%CHAT_MES%% (userID, userName, userRole, channel, dateTime, ip, text)
+							VALUES (:uid, :uname, :role, :channel, NOW(), :ip, :text)', array(
+						':uid'		=> (int) $USER['id'],
+						':uname'	=> (string) $USER['username'],
+						':role'		=> $role,
+						':channel'	=> $channelId,
+						':ip'		=> @inet_pton($_SERVER['REMOTE_ADDR']),
+						':text'		=> $text,
+					));
+					$out['ok'] = true;
+				} catch (Exception $e) {
+					$out['ok'] = false;
+				}
+			}
 		}
 
 		echo json_encode($out);
