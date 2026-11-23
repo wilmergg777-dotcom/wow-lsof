@@ -28,8 +28,12 @@ $resource[911] = 'energy';
 $resource[921] = 'darkmatter';
 $resource[931] = 'ntx20';
 
-$reslist['ressources']  = array(901, 902, 903, 911, 921, 931);
-$reslist['resstype'][1] = array(901, 902, 903);
+// 🆕 v2.4.0 — Expansión Norium & Germanium: recursos planetarios nuevos
+$resource[932] = 'norium';
+$resource[933] = 'germanium';
+
+$reslist['ressources']  = array(901, 902, 903, 911, 921, 931, 932, 933);
+$reslist['resstype'][1] = array(901, 902, 903, 932, 933); // 🆕 v2.4.0 — Norium y Germanium con los planetarios
 $reslist['resstype'][2] = array(911);
 $reslist['resstype'][3] = array(921);
 $reslist['resstype'][4] = array(931);

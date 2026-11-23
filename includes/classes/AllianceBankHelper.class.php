@@ -128,7 +128,7 @@ class AllianceBankHelper
     const BONUS_CHANGE_COST = 50;
 
     // Recursos validos (nombre LOGICO — 'ntx20' se traduce segun riel)
-    const RESOURCES = ['metal', 'crystal', 'deuterium', 'darkmatter', 'ntx20'];
+    const RESOURCES = ['metal', 'crystal', 'deuterium', 'darkmatter', 'ntx20', 'norium', 'germanium']; // 🆕 v2.6
 
     // Tipos de bonus validos
     const BONUS_TYPES = ['production', 'attack', 'defense', 'speed'];
@@ -993,6 +993,8 @@ class AllianceBankHelper
             'deuterium'  => 'Deuterio',
             'darkmatter' => 'Materia Oscura',
             'untx20'     => 'UNTX-20',
+            'norium'     => 'Norium',    // 🆕 v2.6
+            'germanium'  => 'Germanio',  // 🆕 v2.6
         ];
         return isset($map[$recurso]) ? $map[$recurso] : $recurso;
     }

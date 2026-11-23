@@ -82,7 +82,7 @@ class ShowResourceTraderPage extends AbstractGamePage
         $tipo    = '';
 
         $preseleccionDar = HTTP::_GP('dar', '');
-        $recursosValidos = ['metal', 'crystal', 'deuterium'];
+        $recursosValidos = ['metal', 'crystal', 'deuterium', 'norium', 'germanium']; // 🆕 v2.6 — recursos nuevos
         if (!in_array($preseleccionDar, $recursosValidos, true)) {
             $preseleccionDar = '';
         }

@@ -651,7 +651,12 @@ abstract class AbstractGamePage
 			$resourceTable[$resourceID]['name']			= $resource[$resourceID];
 			$resourceTable[$resourceID]['current']		= $PLANET[$resource[$resourceID]];
 			$resourceTable[$resourceID]['max']			= $PLANET[$resource[$resourceID].'_max'];
-			if($USER['urlaubs_modus'] == 1 || $PLANET['planet_type'] != 1)
+			// 🆕 v2.4.0 — Norium (932) / Germanium (933): sin ingreso básico de configuración
+			if ($resourceID == 932 || $resourceID == 933)
+			{
+				$resourceTable[$resourceID]['production']	= $PLANET[$resource[$resourceID].'_perhour'];
+			}
+			elseif($USER['urlaubs_modus'] == 1 || $PLANET['planet_type'] != 1)
 			{
 				$resourceTable[$resourceID]['production']	= $PLANET[$resource[$resourceID].'_perhour'];
 			}

@@ -143,6 +143,10 @@ class ShowAllianceBankPage extends AbstractGamePage
                     $h['recurso_label'] = 'Cristal';
                 } elseif ($rec === 'deuterium') {
                     $h['recurso_label'] = 'Deuterio';
+                } elseif ($rec === 'norium') {          // 🆕 v2.6
+                    $h['recurso_label'] = 'Norium';
+                } elseif ($rec === 'germanium') {       // 🆕 v2.6
+                    $h['recurso_label'] = 'Germanio';
                 } else {
                     $h['recurso_label'] = $rec;
                 }
@@ -218,6 +222,9 @@ class ShowAllianceBankPage extends AbstractGamePage
                 'metal'     => $PLANET['metal'],
                 'crystal'   => $PLANET['crystal'],
                 'deuterium' => $PLANET['deuterium'],
+                // 🆕 v2.6 — Recursos nuevos del planeta actual
+                'norium'    => isset($PLANET['norium']) ? $PLANET['norium'] : 0,
+                'germanium' => isset($PLANET['germanium']) ? $PLANET['germanium'] : 0,
             ],
 
             // Compatibilidad con template viejo
@@ -344,6 +351,6 @@ class ShowAllianceBankPage extends AbstractGamePage
     private function getUserPlanets($userId)
     {
         $p = DB_PREFIX;
-        return Database::get()->select("SELECT `id`, `name`, `galaxy`, `system`, `planet`, `metal`, `crystal`, `deuterium` FROM `".$p."planets` WHERE `id_owner` = '".(int)$userId."' AND `planet_type` = '1' ORDER BY `id` ASC;");
+        return Database::get()->select("SELECT `id`, `name`, `galaxy`, `system`, `planet`, `metal`, `crystal`, `deuterium`, `norium`, `germanium` FROM `".$p."planets` WHERE `id_owner` = '".(int)$userId."' AND `planet_type` = '1' ORDER BY `id` ASC;");
     }
 }

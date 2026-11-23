@@ -1,3 +1,53 @@
+### AstroIO Beta v2.4.0 — 23.11.2026
+**Versión actual de AstroIO**
+
+-🚀 ** GRAN EXPANSIÓN: RECURSOS NORIUM & GERMANIUM + 10 NAVES + 7 DEFENSAS NUEVAS ** ✅ DISPONIBLE
+
+  La expansión más grande del servidor hasta la fecha, basada en el plan de trabajo aprobado (Plan de Trabajo — Expansión de AstroIO v1.1). Dos recursos planetarios nuevos inspirados en xNova Revolution 5.8/5.9, con mina, almacén, técnicas de procesado, comercio con tasas asimétricas y presencia en todo el sistema económico.
+
+  • 🪐 ** Nuevos Recursos Planetarios:**
+    - ⛏️ ** Norium (932)** → Mina de Norio (edificio 7, coste base 500 metal + 150 cristal, factor 1.5), Almacén de Norio (25) y Tecnología de Procesado de Norium (134, +2% producción por nivel). Es el recurso de la guerra: naves capitales y superarmas. Fórmula: 15 × nivel × 1.1^nivel.
+    - 💎 ** Germanium (933)** → Mina de Germanio (17, base 10 × nivel × 1.1^nivel: más escaso que el cristal), Almacén de Germanio (26) y Tecnología de Procesado de Germanium (135, +2% por nivel). Es el recurso de la tecnología y la defensa.
+    - Ambos recursos comienzan en 0 para todas las cuentas existentes (retrocompatible) y se muestran en la economía del juego con su propio tope de almacén y producción por hora.
+
+  • 🛒 ** Comerciante de Recursos (módulo 62) — Norium y Germanio integrados:**
+    - Nuevas pestañas de compra y venta con tasas asimétricas del plan: comprar 1 Norium = 4.000 metal (o 2.000 cristal); vender 1 Norium = 1.000 metal (500 cristal). Germanio: comprar con 6.000 metal / 3.000 cristal; vender por 1.500 metal / 800 cristal.
+    - Regla de diseño del mercader original respetada: comprar SIEMPRE más caro que vender.
+    - Límite diario anti-arbitraje: 50.000 Norium/día y 30.000 Germanio/día por jugador, con registro en la nueva tabla trader_daily.
+    - El fee del comerciante se mantiene en MO / NTX-20 (doble riel QvaPay) y el bonus del Oficial Comerciante sigue aplicando.
+
+  • 🤝 ** Mercado Jugador a Jugador (módulo 45):**
+    - Norium y Germanio ya se pueden publicar como anuncios de venta y como buy orders, con sus iconos propios y saldos validados.
+
+  • 🏦 ** Banco de Alianza (módulo 60):**
+    - Nuevas columnas en el pozo de la alianza: los miembros ya pueden depositar y retirar Norium y Germanio igual que metal, cristal y deuterio.
+
+  • 🚀 ** 10 Naves Nuevas (IDs 228-237):**
+    - Cazador Furtivo (228), Fragata de Plasma (229), Crucero Blindado (230), Nodriza Ligera (231), Acorazado de Norio (232, consume 1.500 Norium), Portaestaciones (233, consume 8.000 Germanio), ** Taladrador de Norio (234)**, Corbeta del Destructor (235), Fragata del General (236, 3.000 Norium + 2.000 Germanio) y Dreadnought del Emperador (237, 2.000.000 Norium + 500.000 Germanio — endgame supremo).
+    - Desbloqueos: 6 naves por investigaciones (Impulsor, Armas, Plasma, Blindaje, Computación, Hiperespacio) y 4 por oficiales (Comandante 611 n.2, Destructor 612 n.1, General 613 n.2, Emperador 615 n.1), todo vía uni1_vars_requriements.
+    - ⚙️ ** Taladrador de Norio:** cada nave suma +0.02% de producción de TODOS los recursos del planeta, con límite estricto de 4 naves por nivel de la Mina de Norio (validado en el astillero, contando lo ya construido y lo encolado).
+    - Fuego rápido nuevo: Dreadnought 5× contra Estrella de la Muerte y 3× contra Star Crasher; Fragata del General 4× cazadores / 3× cruceros; Corbeta del Destructor 6× sondas / 3× cazadores; Acorazado de Norio 3× bombarderos.
+
+  • 🛡️ ** 7 Defensas Nuevas (IDs 416-422):**
+    - Cañón de Plasma Pesado (416), Torre de Iones Avanzada (417), Red Antimisiles Orbital (418), Escudo Planetario (419, consume 12.000 Germanio), Cañón Gravitónico Mejorado (420, 20.000 Norium), Torre del Defensor (421) y Bastión del Búnker (422, 5.000 Norium + 3.000 Germanio).
+    - Desbloqueos: 5 por investigaciones (Plasma, Iones, Blindaje+Silo, Escudo, Investigación 199) y 2 por oficiales (Defensor 608 n.3 y Búnker 609 n.1).
+
+  • ⚖️ ** Reestructuración de Balance (8 ajustes sobre el roster real):**
+    - Acorazado (215): ataque 700 → 1.400 (6.5 → 13.0 atk/k) · Elite Battleship (223): 1.000 → 2.000 · Heavy Frigate (224): 1.100 → 2.600 · Lune Noir (216): 150.000 → 180.000.
+    - Deflector Shield (415): escudo 200.000 → 1.200.000 y coste rebajado (3.5 → 40 esc/k) · Buster Canyon (406): 3.000 → 5.000 · Graviton Canyon (410): 500.000 → 900.000 · Planet Protector (409): 1.000.000 → 1.500.000.
+    - La prima endgame (218/221/222) se mantiene intacta; todas las naves de combate mid-game quedan en banda 12-15 atk/k.
+
+  • 💰 ** Costes nuevos sobre elementos existentes** (demanda real desde el día 1): Crucero, Nave de Batalla, Reciclador, Bombardero, Satélite Solar, Destructor, Estrella de la Muerte, Star Crasher, Giga Reciclador, Gauss, Iones, Buster y Estación Orbital ahora consumen Norium; Portaaviones, Deflector, Planet Protector, Sonda, Transportador y las investigaciones de Espionaje, Computación e Hiperespacio consumen Germanio.
+
+  • 🖼️ ** Imágenes nuevas (37):** ilustraciones para las 6 razas y 6 facciones (nuevo sistema de imágenes con columnas race_img/faction_img en la página de elección), 23 elementos nuevos del juego y 2 iconos de recursos para el mercado. Mapa completo ID → ubicación en docs/imagenes_v2.4.0.md.
+
+  • 🌐 ** Idiomas:** entradas completas en español e inglés (nombres, nombres cortos, descripciones cortas y largas) para los 23 elementos nuevos.
+
+  • 🗄️ ** Migración:** install/migrations/migration_10.sql (columnas de recursos, edificios, técnicas, naves, defensas, requisitos, fuego rápido, banco de alianza, razas/facciones y trader_daily). ⚠️ Tras aplicarla es OBLIGATORIO reconstruir la caché de variables desde el panel de administración.
+
+  • ⚙️ ** Estado:** Implementado y verificado estáticamente (SQL validado, pagos y tasas comprobados). Las pruebas de combate con el motor real y el checklist del capítulo 9 del plan se ejecutan en universo de pruebas antes del despliegue en producción.
+
+
 ### AstroIO Beta v2.3.5 — 19.11.2026
 **Versión actual de AstroIO**
 

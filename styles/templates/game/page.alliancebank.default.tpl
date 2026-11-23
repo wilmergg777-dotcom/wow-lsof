@@ -595,6 +595,8 @@
                         <option value="metal">Metal (planeta: {$current_planet.metal|number_format:0:',,':'.'})</option>
                         <option value="crystal">Cristal (planeta: {$current_planet.crystal|number_format:0:',,':'.'})</option>
                         <option value="deuterium">Deuterio (planeta: {$current_planet.deuterium|number_format:0:',,':'.'})</option>
+                        <option value="norium" {if $current_planet.norium < 1}style="color:#888"{/if}>Norium (planeta: {$current_planet.norium|number_format:0:',':'.'})</option>
+                        <option value="germanium" {if $current_planet.germanium < 1}style="color:#888"{/if}>Germanio (planeta: {$current_planet.germanium|number_format:0:',':'.'})</option>
                         <option value="darkmatter">Materia Oscura (tienes: {$user_darkmatter|number_format:0:',,':'.'})</option>
                         {* 🆕 v2.0 — Moneda dinámica del jugador *}
                         <option value="ntx20">{$moneda} (tienes: {$saldo_actual|number_format:0:',,':'.'})</option>
@@ -625,6 +627,8 @@
                         <option value="metal">Metal (pozo: {$bank.metal|number_format:0:',,':'.'})</option>
                         <option value="crystal">Cristal (pozo: {$bank.crystal|number_format:0:',,':'.'})</option>
                         <option value="deuterium">Deuterio (pozo: {$bank.deuterium|number_format:0:',,':'.'})</option>
+                        <option value="norium">Norium (pozo: {$bank.norium|number_format:0:',':'.'})</option>
+                        <option value="germanium">Germanio (pozo: {$bank.germanium|number_format:0:',':'.'})</option>
                         <option value="darkmatter">Materia Oscura (pozo: {$bank.darkmatter|number_format:0:',,':'.'})</option>
                         {* 🆕 v2.0 — Moneda dinámica del jugador *}
                         <option value="ntx20">{$moneda} (pozo: {$bank_visible|number_format:0:',,':'.'})</option>

@@ -585,6 +585,9 @@ class MarketHelper
             ['type'=>'metal',      'id'=>0, 'name'=>'Metal',          'cat'=>'resource'],
             ['type'=>'crystal',    'id'=>0, 'name'=>'Cristal',        'cat'=>'resource'],
             ['type'=>'deuterium',  'id'=>0, 'name'=>'Deuterio',       'cat'=>'resource'],
+            // 🆕 v2.6 — Recursos nuevos en el mercado jugador a jugador
+            ['type'=>'norium',     'id'=>0, 'name'=>'Norium',         'cat'=>'resource'],
+            ['type'=>'germanium',  'id'=>0, 'name'=>'Germanio',       'cat'=>'resource'],
             ['type'=>'dark_matter','id'=>0, 'name'=>'Materia Oscura', 'cat'=>'resource'],
         ];
 
@@ -675,7 +678,10 @@ class MarketHelper
         switch ($itemType) {
             case 'metal':
             case 'crystal':
-            case 'deuterium':   return 'Recurso';
+            case 'deuterium':
+            case 'norium':      // 🆕 v2.6
+            case 'germanium':   // 🆕 v2.6
+                                return 'Recurso';
             case 'dark_matter': return 'MO';
             case 'ship':        return 'Nave';
             case 'defense':     return 'Defensa';
@@ -693,6 +699,8 @@ class MarketHelper
             case 'metal':       return 'styles/theme/gow/mercado/metal.gif';
             case 'crystal':     return 'styles/theme/gow/mercado/cristal.gif';
             case 'deuterium':   return 'styles/theme/gow/mercado/dulterio.gif';
+            case 'norium':      return 'styles/theme/gow/mercado/norium.gif';    // 🆕 v2.6
+            case 'germanium':   return 'styles/theme/gow/mercado/germanio.gif';  // 🆕 v2.6
             case 'dark_matter': return 'styles/theme/gow/mercado/materia oscura.gif';
             case 'ship':
             case 'defense':
@@ -823,6 +831,8 @@ class MarketHelper
             case 'metal':
             case 'crystal':
             case 'deuterium':
+            case 'norium':      // 🆕 v2.6
+            case 'germanium':   // 🆕 v2.6
                 if ((int)$planetId <= 0) return false;
                 $row = $db->selectSingle(
                     "SELECT `".$type."` AS qty FROM `".$prefix."planets`
@@ -902,6 +912,8 @@ class MarketHelper
             case 'metal':
             case 'crystal':
             case 'deuterium':
+            case 'norium':      // 🆕 v2.6
+            case 'germanium':   // 🆕 v2.6
                 if ((int)$planetId <= 0) return;
                 $db->update(
                     "UPDATE `".$prefix."planets`
@@ -993,6 +1005,8 @@ class MarketHelper
             case 'metal':
             case 'crystal':
             case 'deuterium':
+            case 'norium':      // 🆕 v2.6
+            case 'germanium':   // 🆕 v2.6
                 if ((int)$planetId <= 0) return;
                 $db->update(
                     "UPDATE `".$prefix."planets`
@@ -1104,6 +1118,10 @@ class MarketHelper
             case 'deuterium':
                 return $PLANET['deuterium'] >= $amount
                     ? ['ok'=>true] : ['ok'=>false,'msg'=>'Deuterio insuficiente'];
+            case 'norium':      // 🆕 v2.6
+            case 'germanium':   // 🆕 v2.6
+                return isset($PLANET[$type]) && $PLANET[$type] >= $amount
+                    ? ['ok'=>true] : ['ok'=>false,'msg'=>($type === 'norium' ? 'Norium' : 'Germanio').' insuficiente'];
             case 'dark_matter':
                 // FIX v2.6.4 — Usar la función segura
                 return self::getGlobalDarkMatter() >= $amount
@@ -1183,6 +1201,15 @@ class MarketHelper
                 if ($planetId > 0) {
                     $db->update(
                         "UPDATE `".$prefix."planets` SET deuterium = GREATEST(0, deuterium - :a) WHERE id = :pid",
+                        [':a'=>$amount, ':pid'=>$planetId]);
+                }
+                break;
+            case 'norium':      // 🆕 v2.6
+            case 'germanium':   // 🆕 v2.6
+                $PLANET[$type] = max(0, (int)$PLANET[$type] - $amount);
+                if ($planetId > 0) {
+                    $db->update(
+                        "UPDATE `".$prefix."planets` SET `".$type."` = GREATEST(0, `".$type."` - :a) WHERE id = :pid",
                         [':a'=>$amount, ':pid'=>$planetId]);
                 }
                 break;
@@ -1279,6 +1306,15 @@ class MarketHelper
                 if ($planetId > 0) {
                     $db->update(
                         "UPDATE `".$prefix."planets` SET deuterium = deuterium + :a WHERE id = :pid",
+                        [':a'=>$amount, ':pid'=>$planetId]);
+                }
+                break;
+            case 'norium':      // 🆕 v2.6
+            case 'germanium':   // 🆕 v2.6
+                $PLANET[$type] += $amount;
+                if ($planetId > 0) {
+                    $db->update(
+                        "UPDATE `".$prefix."planets` SET `".$type."` = `".$type."` + :a WHERE id = :pid",
                         [':a'=>$amount, ':pid'=>$planetId]);
                 }
                 break;

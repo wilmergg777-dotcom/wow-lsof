@@ -2117,7 +2117,7 @@
 						<option value="">--- Selecciona un recurso ---</option>
 						<optgroup label="💎 Recursos">
 							{foreach $sell_items as $item}
-								{if $item.type == 'metal' || $item.type == 'crystal' || $item.type == 'deuterium'}
+								{if $item.type == 'metal' || $item.type == 'crystal' || $item.type == 'deuterium' || $item.type == 'norium' || $item.type == 'germanium'}
 									<option value="{$item.type}|{$item.id}" data-avail="{$item.available}" data-name="{$item.name}" data-pen="0" data-resource="1">{$item.name} ({$item.available|number_format:0:',':'.'})</option>
 								{elseif $item.type == 'dark_matter'}
 									<option value="{$item.type}|{$item.id}" data-avail="{$item.available}" data-name="{$item.name}" data-pen="0" data-resource="0">{$item.name} ({$item.available|number_format:0:',':'.'})</option>
@@ -2217,7 +2217,7 @@
 						<option value="">--- Selecciona un recurso ---</option>
 						<optgroup label="💎 Recursos">
 							{foreach $buy_items as $item}
-								{if $item.type == 'metal' || $item.type == 'crystal' || $item.type == 'deuterium'}
+								{if $item.type == 'metal' || $item.type == 'crystal' || $item.type == 'deuterium' || $item.type == 'norium' || $item.type == 'germanium'}
 									<option value="{$item.type}|{$item.id}" data-name="{$item.name}" data-resource="1">{$item.name}</option>
 								{elseif $item.type == 'dark_matter'}
 									<option value="{$item.type}|{$item.id}" data-name="{$item.name}" data-resource="0">{$item.name}</option>

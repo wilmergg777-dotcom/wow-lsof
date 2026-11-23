@@ -111,6 +111,8 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 14px;
 }
+.ra_img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; display: block; }
+.ra_mc_icon { overflow: hidden; }
 .ra_card {
     background: var(--bg-card);
     backdrop-filter: blur(6px);
@@ -313,9 +315,14 @@
     {* ============ MI ELECCIÓN ============ *}
     {if $hasChosen && $myRace && $myFaction}
         <div class="ra_mychoice">
-            <div class="ra_mc_icon">{$myRace.race_icon}</div>
+            <div class="ra_mc_icon">
+                {if $myRace.race_img}<img src="{$dpath}{$myRace.race_img}" alt="{$myRace.race_name}" class="ra_img">{else}{$myRace.race_icon}{/if}
+            </div>
             <div class="ra_mc_info">
-                <h3>{$myRace.race_name} · {$myFaction.faction_name}</h3>
+                <h3>
+                    {if $myFaction.faction_img}<img src="{$dpath}{$myFaction.faction_img}" alt="{$myFaction.faction_name}" class="ra_img" style="width:34px;height:34px;display:inline-block;vertical-align:middle;">{/if}
+                    {$myRace.race_name} · {$myFaction.faction_name}
+                </h3>
                 <span>{$myRace.race_desc}</span>
                 <span>{$myFaction.faction_desc}</span>
             </div>
@@ -336,7 +343,9 @@
                 {foreach $races as $race}
                 <div class="ra_card" data-type="race" data-id="{$race.race_id}">
                     <div class="ra_card_header">
-                        <div class="ra_icon">{$race.race_icon}</div>
+                        <div class="ra_icon">
+                            {if $race.race_img}<img src="{$dpath}{$race.race_img}" alt="{$race.race_name}" class="ra_img">{else}{$race.race_icon}{/if}
+                        </div>
                         <div class="ra_name">{$race.race_name}</div>
                     </div>
                     <div class="ra_desc">{$race.race_desc}</div>
@@ -379,7 +388,9 @@
                 {foreach $factions as $faction}
                 <div class="ra_card" data-type="faction" data-id="{$faction.faction_id}">
                     <div class="ra_card_header">
-                        <div class="ra_icon">{$faction.faction_icon}</div>
+                        <div class="ra_icon">
+                            {if $faction.faction_img}<img src="{$dpath}{$faction.faction_img}" alt="{$faction.faction_name}" class="ra_img">{else}{$faction.faction_icon}{/if}
+                        </div>
                         <div class="ra_name" style="color:{$faction.faction_color};">{$faction.faction_name}</div>
                     </div>
                     <div class="ra_desc">{$faction.faction_desc}</div>

@@ -165,6 +165,8 @@ class ResourceUpdate
 		
 		$ressource	= array_merge(array(), $reslist['resstype'][1], $reslist['resstype'][2]);
 		foreach($ressource as $ID) {
+			// 🆕 v2.4.0 — Norium/Germanium no tienen ingreso básico de configuración
+			if ($ID == 932 || $ID == 933) { $Hash[] = 0; continue; }
 			$Hash[]	= $this->config->{$resource[$ID].'_basic_income'};
 		}
 		
@@ -176,9 +178,20 @@ class ResourceUpdate
 		$Hash[]	= $this->PLANET[$resource[22]];
 		$Hash[]	= $this->PLANET[$resource[23]];
 		$Hash[]	= $this->PLANET[$resource[24]];
+		// 🆕 v2.4.0 — Almacenes de Norio (25) / Germanio (26) en el hash
+		$Hash[]	= isset($resource[25])  && isset($this->PLANET[$resource[25]])  ? $this->PLANET[$resource[25]]  : 0;
+		$Hash[]	= isset($resource[26])  && isset($this->PLANET[$resource[26]])  ? $this->PLANET[$resource[26]]  : 0;
 		$Hash[]	= $this->USER[$resource[131]];
 		$Hash[]	= $this->USER[$resource[132]];
 		$Hash[]	= $this->USER[$resource[133]];
+		// 🆕 v2.4.0 — Técnicas de procesado de Norium (134) / Germanium (135)
+		if (isset($resource[134]) && isset($this->USER[$resource[134]]))
+			$Hash[]	= $this->USER[$resource[134]];
+		if (isset($resource[135]) && isset($this->USER[$resource[135]]))
+			$Hash[]	= $this->USER[$resource[135]];
+		// 🆕 v2.4.0 — Taladrador de Norio (234): +0.02% de producción por nave
+		if (isset($resource[234]) && isset($this->PLANET[$resource[234]]))
+			$Hash[]	= $this->PLANET[$resource[234]];
 		
 		// ============================================
 		// ASTROIO v1.1 - Añadir bonos al hash
@@ -292,6 +305,9 @@ class ResourceUpdate
 		$MaxMetalStorage		= $this->PLANET['metal_max']     * $this->config->max_overflow;
 		$MaxCristalStorage		= $this->PLANET['crystal_max']   * $this->config->max_overflow;
 		$MaxDeuteriumStorage	= $this->PLANET['deuterium_max'] * $this->config->max_overflow;
+		// 🆕 v2.4.0 — Capacidad máxima de Norium y Germanium
+		$MaxNoriumStorage		= $this->PLANET['norium_max']     * $this->config->max_overflow;
+		$MaxGermaniumStorage	= $this->PLANET['germanium_max'] * $this->config->max_overflow;
 
 		// ============================================
 		// ASTROIO - Guardar recursos ANTES de producir
@@ -299,6 +315,8 @@ class ResourceUpdate
 		$astroioMetalBefore   = (float)$this->PLANET['metal'];
 		$astroioCrystalBefore = (float)$this->PLANET['crystal'];
 		$astroioDeutBefore    = (float)$this->PLANET['deuterium'];
+		$astroioNoriumBefore  = isset($this->PLANET['norium'])    ? (float)$this->PLANET['norium']    : 0;
+		$astroioGermanBefore  = isset($this->PLANET['germanium']) ? (float)$this->PLANET['germanium'] : 0;
 		// ============================================
 		
 		$MetalTheoretical		= $this->ProductionTime * (($this->config->metal_basic_income * $this->config->resource_multiplier) + $this->PLANET['metal_perhour']) / 3600;
@@ -337,6 +355,34 @@ class ResourceUpdate
 		$this->PLANET['deuterium']	= max($this->PLANET['deuterium'], 0);
 
 		// ============================================
+		// 🆕 v2.4.0 — Producción de Norium y Germanium
+		// (sin ingreso básico de configuración: solo minas 7/17;
+		//  con tope de almacén igual que los recursos clásicos)
+		// ============================================
+		if (isset($this->PLANET['norium']) && isset($this->PLANET['norium_perhour']))
+		{
+			$NoriumTheoretical	= $this->ProductionTime * $this->PLANET['norium_perhour'] / 3600;
+			if($NoriumTheoretical < 0) {
+				$this->PLANET['norium'] = max($this->PLANET['norium'] + $NoriumTheoretical, 0);
+			} elseif ($this->PLANET['norium'] <= $MaxNoriumStorage) {
+				$this->PLANET['norium'] = min($this->PLANET['norium'] + $NoriumTheoretical, $MaxNoriumStorage);
+			}
+			$this->PLANET['norium'] = max($this->PLANET['norium'], 0);
+		}
+
+		if (isset($this->PLANET['germanium']) && isset($this->PLANET['germanium_perhour']))
+		{
+			$GermaniumTheoretical	= $this->ProductionTime * $this->PLANET['germanium_perhour'] / 3600;
+			if($GermaniumTheoretical < 0) {
+				$this->PLANET['germanium'] = max($this->PLANET['germanium'] + $GermaniumTheoretical, 0);
+			} elseif ($this->PLANET['germanium'] <= $MaxGermaniumStorage) {
+				$this->PLANET['germanium'] = min($this->PLANET['germanium'] + $GermaniumTheoretical, $MaxGermaniumStorage);
+			}
+			$this->PLANET['germanium'] = max($this->PLANET['germanium'], 0);
+		}
+		// ============================================
+
+		// ============================================
 		// ASTROIO - Sumar recursos producidos al evento "get_resources"
 		// ============================================
 		$astroioMetalDiff   = $this->PLANET['metal']     - $astroioMetalBefore;
@@ -345,7 +391,9 @@ class ResourceUpdate
 
 		$astroioProduced = max(0, $astroioMetalDiff)
 		                 + max(0, $astroioCrystalDiff)
-		                 + max(0, $astroioDeutDiff);
+		                 + max(0, $astroioDeutDiff)
+		                 + max(0, $this->PLANET['norium']   - $astroioNoriumBefore)
+		                 + max(0, $this->PLANET['germanium'] - $astroioGermanBefore);
 
 		if ($astroioProduced > 0 && class_exists('EventHelper')) {
 			EventHelper::updateProgress($this->USER['id'], 'get_resources', (int)$astroioProduced);
@@ -411,26 +459,40 @@ class ResourceUpdate
 			911	=> array(
 				'plus'	=> 0,
 				'minus'	=> 0,
+			),
+			// 🆕 v2.4.0 — Recursos nuevos Norium (932) y Germanium (933)
+			932	=> array(
+				'max'	=> 0,
+				'plus'	=> 0,
+				'minus'	=> 0,
+			),
+			933	=> array(
+				'max'	=> 0,
+				'plus'	=> 0,
+				'minus'	=> 0,
 			)
 		);
-		
+
 		$BuildTemp		= $this->PLANET['temp_max'];
 		$BuildEnergy	= $this->USER[$resource[113]];
-		
+
+		// 🆕 v2.4.0 — los recursos nuevos participan del mismo bucle de
+		// almacenaje y producción (minas 7/17, almacenes 25/26, proc. 134/135).
+		// resstype[1] ya incluye 932/933, no hay que añadirlos aquí.
+		$ressIDs	= array_merge(array(), $reslist['resstype'][1], $reslist['resstype'][2]);
+
 		foreach($reslist['storage'] as $ProdID)
 		{
-			foreach($reslist['resstype'][1] as $ID) 
+			foreach($ressIDs as $ID)
 			{
 				if(!isset($ProdGrid[$ProdID]['storage'][$ID]))
 					continue;
-					
+
 				$BuildLevel 		= $this->PLANET[$resource[$ProdID]];
 				$temp[$ID]['max']	+= round(eval(self::getProd($ProdGrid[$ProdID]['storage'][$ID])));
 			}
 		}
-		
-		$ressIDs	= array_merge(array(), $reslist['resstype'][1], $reslist['resstype'][2]);
-		
+
 		foreach($reslist['prod'] as $ProdID)
 		{	
 			$BuildLevelFactor	= $this->PLANET[$resource[$ProdID].'_porcent'];
@@ -534,6 +596,9 @@ class ResourceUpdate
 				$this->PLANET['metal_max']			= $temp[901]['max'] * $this->config->storage_multiplier * (1 + $this->USER['factor']['ResourceStorage'] + $raceStorage + $misticStorage);
 		$this->PLANET['crystal_max']		= $temp[902]['max'] * $this->config->storage_multiplier * (1 + $this->USER['factor']['ResourceStorage'] + $raceStorage + $misticStorage);
 		$this->PLANET['deuterium_max']		= $temp[903]['max'] * $this->config->storage_multiplier * (1 + $this->USER['factor']['ResourceStorage'] + $raceStorage + $misticStorage);
+		// 🆕 v2.4.0 — Almacenaje de Norium y Germanium (almacenes 25/26, mismo patrón)
+		$this->PLANET['norium_max']			= $temp[932]['max'] * $this->config->storage_multiplier * (1 + $this->USER['factor']['ResourceStorage'] + $raceStorage + $misticStorage);
+		$this->PLANET['germanium_max']		= $temp[933]['max'] * $this->config->storage_multiplier * (1 + $this->USER['factor']['ResourceStorage'] + $raceStorage + $misticStorage);
 
 		// ============================================
 		// ASTROIO - Aplicar bonos a la producción de energía
@@ -543,20 +608,31 @@ class ResourceUpdate
 		// ============================================
 		
 		$this->PLANET['energy_used']		= $temp[911]['minus'] * $this->config->energySpeed;
+
+		// 🆕 v2.4.0 — Taladrador de Norio (234): +0.02% de producción por nave
+		// del planeta (factor de planeta, nunca dentro de la fórmula de la mina).
+		$drillBonus	= 0.0002 * (float) (isset($resource[234]) && isset($this->PLANET[$resource[234]]) ? $this->PLANET[$resource[234]] : 0);
+
 		if($this->PLANET['energy_used'] == 0) {
 			$this->PLANET['metal_perhour']		= 0;
 			$this->PLANET['crystal_perhour']	= 0;
 			$this->PLANET['deuterium_perhour']	= 0;
+			$this->PLANET['norium_perhour']		= 0;
+			$this->PLANET['germanium_perhour']	= 0;
 		} else {
 			$prodLevel	= min(1, $this->PLANET['energy'] / abs($this->PLANET['energy_used']));
-			
+
 			// ============================================
 			// ASTROIO - Aplicar bonos a la producción de recursos
 			// (⛏️ Pot. Minero incluido en $totalResources)
 			// ============================================
-			$this->PLANET['metal_perhour']		= ($temp[901]['plus'] * (1 + $this->USER['factor']['Resource'] + 0.02 * $this->USER[$resource[131]] + $totalResources + $misticGeneralResources + $misticMetal) * $prodLevel + $temp[901]['minus']) * $this->config->resource_multiplier;
-			$this->PLANET['crystal_perhour']	= ($temp[902]['plus'] * (1 + $this->USER['factor']['Resource'] + 0.02 * $this->USER[$resource[132]] + $totalResources + $misticGeneralResources + $misticCrystal) * $prodLevel + $temp[902]['minus']) * $this->config->resource_multiplier;
-			$this->PLANET['deuterium_perhour']	= ($temp[903]['plus'] * (1 + $this->USER['factor']['Resource'] + 0.02 * $this->USER[$resource[133]] + $totalResources + $misticGeneralResources + $misticDeuterium) * $prodLevel + $temp[903]['minus']) * $this->config->resource_multiplier;
+			$this->PLANET['metal_perhour']		= (($temp[901]['plus'] * (1 + $this->USER['factor']['Resource'] + 0.02 * $this->USER[$resource[131]] + $totalResources + $misticGeneralResources + $misticMetal) * $prodLevel + $temp[901]['minus']) * $this->config->resource_multiplier) * (1 + $drillBonus);
+			$this->PLANET['crystal_perhour']	= (($temp[902]['plus'] * (1 + $this->USER['factor']['Resource'] + 0.02 * $this->USER[$resource[132]] + $totalResources + $misticGeneralResources + $misticCrystal) * $prodLevel + $temp[902]['minus']) * $this->config->resource_multiplier) * (1 + $drillBonus);
+			$this->PLANET['deuterium_perhour']	= (($temp[903]['plus'] * (1 + $this->USER['factor']['Resource'] + 0.02 * $this->USER[$resource[133]] + $totalResources + $misticGeneralResources + $misticDeuterium) * $prodLevel + $temp[903]['minus']) * $this->config->resource_multiplier) * (1 + $drillBonus);
+			// 🆕 v2.4.0 — Producción de Norium (mina 7 + proc. 134) y Germanium (mina 17 + proc. 135):
+			// heredan bonus de razas (bonus_resources), potenciadores, VIP y árbol de talentos igual que los clásicos.
+			$this->PLANET['norium_perhour']		= (($temp[932]['plus'] * (1 + $this->USER['factor']['Resource'] + (isset($resource[134]) && isset($this->USER[$resource[134]]) ? 0.02 * $this->USER[$resource[134]] : 0) + $totalResources + $misticGeneralResources) * $prodLevel + $temp[932]['minus']) * $this->config->resource_multiplier) * (1 + $drillBonus);
+			$this->PLANET['germanium_perhour']	= (($temp[933]['plus'] * (1 + $this->USER['factor']['Resource'] + (isset($resource[135]) && isset($this->USER[$resource[135]]) ? 0.02 * $this->USER[$resource[135]] : 0) + $totalResources + $misticGeneralResources) * $prodLevel + $temp[933]['minus']) * $this->config->resource_multiplier) * (1 + $drillBonus);
 			// ============================================
 		}
 	}
@@ -805,6 +881,9 @@ class ResourceUpdate
 				if(isset($costResources[902])) { $this->PLANET[$resource[902]]	-= $costResources[902]; }
 				if(isset($costResources[903])) { $this->PLANET[$resource[903]]	-= $costResources[903]; }
 				if(isset($costResources[921])) { $this->USER[$resource[921]]	-= $costResources[921]; }
+				// 🆕 v2.4.0 — Pago en Norium (932) y Germanium (933)
+				if(isset($costResources[932])) { $this->PLANET['norium']	-= $costResources[932]; }
+				if(isset($costResources[933])) { $this->PLANET['germanium']	-= $costResources[933]; }
 				$NewQueue               	= serialize($CurrentQueue);
 				$Loop                  		= false;
 			} else {
@@ -967,6 +1046,9 @@ class ResourceUpdate
 				if(isset($costResources[902])) { $PLANET[$resource[902]]		-= $costResources[902]; }
 				if(isset($costResources[903])) { $PLANET[$resource[903]]		-= $costResources[903]; }
 				if(isset($costResources[921])) { $this->USER[$resource[921]]	-= $costResources[921]; }
+				// 🆕 v2.4.0 — Pago en Norium (932) y Germanium (933)
+				if(isset($costResources[932])) { $PLANET['norium']		-= $costResources[932]; }
+				if(isset($costResources[933])) { $PLANET['germanium']	-= $costResources[933]; }
 				$this->USER['b_tech_id']		= $Element;
 				$this->USER['b_tech']      		= $BuildEndTime;
 				$this->USER['b_tech_planet']	= $PLANET['id'];
@@ -1039,6 +1121,13 @@ class ResourceUpdate
 			':metal'				=> $PLANET['metal'],
 			':crystal'				=> $PLANET['crystal'],
 			':deuterium'			=> $PLANET['deuterium'],
+			// 🆕 v2.4.0 — Norium y Germanium (recursos, tope y producción por hora)
+			':norium'				=> isset($PLANET['norium'])          ? $PLANET['norium']          : 0,
+			':germanium'			=> isset($PLANET['germanium'])       ? $PLANET['germanium']       : 0,
+			':noriumMax'			=> isset($PLANET['norium_max'])      ? $PLANET['norium_max']      : 0,
+			':germaniumMax'			=> isset($PLANET['germanium_max'])   ? $PLANET['germanium_max']   : 0,
+			':noriumPerhour'		=> isset($PLANET['norium_perhour'])  ? $PLANET['norium_perhour']  : 0,
+			':germaniumPerhour'		=> isset($PLANET['germanium_perhour']) ? $PLANET['germanium_perhour'] : 0,
 			':ecoHash'				=> $PLANET['eco_hash'],
 			':lastUpdateTime'		=> $PLANET['last_update'],
 			':b_building'			=> $PLANET['b_building'],
@@ -1095,6 +1184,13 @@ class ResourceUpdate
 		p.metal				= :metal,
 		p.crystal			= :crystal,
 		p.deuterium			= :deuterium,
+		-- 🆕 v2.4.0 — Norium y Germanium
+		p.norium			= :norium,
+		p.germanium			= :germanium,
+		p.norium_max		= :noriumMax,
+		p.germanium_max		= :germaniumMax,
+		p.norium_perhour	= :noriumPerhour,
+		p.germanium_perhour	= :germaniumPerhour,
 		p.eco_hash			= :ecoHash,
 		p.last_update		= :lastUpdateTime,
 		p.b_building		= :b_building,

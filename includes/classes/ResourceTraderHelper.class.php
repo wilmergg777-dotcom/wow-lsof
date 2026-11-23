@@ -46,24 +46,57 @@ class ResourceTraderHelper
      *  - crystal -> deuterium: 2/4 = 0.5
      *  - deuterium -> metal : 4/1 = 4.0
      *  - deuterium -> crystal: 4/2 = 2.0
+     *
+     * 🆕 v2.6 — Norium (932) y Germanium (933): tasas asimétricas del plan
+     * v2.4.0 (comprar SIEMPRE más caro que vender, regla del mercader original):
+     *  - metal    -> norium   : 4.000 metal por Norium   (0.00025)
+     *  - crystal  -> norium   : 2.000 cristal por Norium (0.0005)
+     *  - norium   -> metal    : 1 Norium devuelve 1.000 metal   (1000)
+     *  - norium   -> crystal  : 1 Norium devuelve 500 cristal   (500)
+     *  - metal    -> germanium: 6.000 metal por Germanium (1/6000)
+     *  - crystal  -> germanium: 3.000 cristal por Germanium (1/3000)
+     *  - germanium-> metal    : 1 Germanium devuelve 1.500 metal  (1500)
+     *  - germanium-> crystal  : 1 Germanium devuelve 800 cristal  (800)
      */
     private static $TASAS = [
-        'metal'     => ['crystal'   => 0.5,   'deuterium' => 0.25],
-        'crystal'   => ['metal'     => 2.0,   'deuterium' => 0.5],
-        'deuterium' => ['metal'     => 4.0,   'crystal'   => 2.0],
+        'metal'     => ['crystal'   => 0.5,    'deuterium' => 0.25],
+        'crystal'   => ['metal'     => 2.0,    'deuterium' => 0.5],
+        'deuterium' => ['metal'     => 4.0,    'crystal'   => 2.0],
+        'norium'    => ['metal'     => 1000.0, 'crystal'   => 500.0],
+        'germanium' => ['metal'     => 1500.0, 'crystal'   => 800.0],
+    ];
+
+    /**
+     * 🆕 v2.6 — Pares de compra contra los recursos nuevos
+     * (metal/crystal -> norium/germanium) con su tasa inversa.
+     */
+    private static $TASAS_COMPRA = [
+        'metal'     => ['norium'   => 0.00025,  'germanium' => 0.0001667],
+        'crystal'   => ['norium'   => 0.0005,   'germanium' => 0.0003333],
     ];
 
     private static $NOMBRES = [
         'metal'     => 'Metal',
         'crystal'   => 'Cristal',
         'deuterium' => 'Deuterio',
+        'norium'    => 'Norium',
+        'germanium' => 'Germanio',
     ];
 
     private static $COLUMNAS = [
         'metal'     => 'metal',
         'crystal'   => 'crystal',
         'deuterium' => 'deuterium',
+        'norium'    => 'norium',
+        'germanium' => 'germanium',
     ];
+
+    /**
+     * 🆕 v2.6 — Límite diario de unidades que se pueden RECIBIR de cada
+     * recurso nuevo (anti-arbitraje, configurable en ResourceTraderHelper).
+     */
+    const LIMITE_DIARIO_NORIUM   = 50000;
+    const LIMITE_DIARIO_GERMANIUM = 30000;
 
     /**
      * Prefijo de tablas (mismo patron que VIPHelper)
@@ -81,12 +114,24 @@ class ResourceTraderHelper
 
     public static function getTasa(string $dar, string $recibir): float
     {
-        return self::$TASAS[$dar][$recibir] ?? 0.0;
+        if (isset(self::$TASAS[$dar][$recibir])) {
+            return self::$TASAS[$dar][$recibir];
+        }
+        return self::$TASAS_COMPRA[$dar][$recibir] ?? 0.0;
     }
 
     public static function calcularRecibir(int $cantidadDar, float $tasa): int
     {
         return (int) floor($cantidadDar * $tasa);
+    }
+
+    /**
+     * 🆕 v2.6 — Tasas de compra contra recursos nuevos expuestas
+     * a la UI como tasas especiales (tasa especial=true).
+     */
+    public static function getTasasCompra(string $dar): array
+    {
+        return self::$TASAS_COMPRA[$dar] ?? [];
     }
 
     public static function getNombre(string $recurso): string
@@ -114,12 +159,20 @@ class ResourceTraderHelper
 
     public static function getRecursosRecibir(string $dar): array
     {
-        return array_keys(self::$TASAS[$dar] ?? []);
+        $base     = array_keys(self::$TASAS[$dar] ?? []);
+        $compra   = array_keys(self::$TASAS_COMPRA[$dar] ?? []);
+        return array_merge($base, $compra);
     }
 
     public static function getTodasLasTasas(): array
     {
-        return self::$TASAS;
+        $todas = self::$TASAS;
+        foreach (self::$TASAS_COMPRA as $dar => $pares) {
+            foreach ($pares as $rec => $tasa) {
+                $todas[$dar][$rec] = $tasa;
+            }
+        }
+        return $todas;
     }
 
     public static function getNombres(): array
@@ -263,7 +316,7 @@ class ResourceTraderHelper
         $prefix = self::prefix();
 
         $planeta = $db->selectSingle(
-            "SELECT `metal`, `crystal`, `deuterium`
+            "SELECT `metal`, `crystal`, `deuterium`, `norium`, `germanium`
              FROM `" . $prefix . "planets`
              WHERE `id` = :pid AND `id_owner` = :uid",
             [':pid' => $planetId, ':uid' => $userId]
@@ -280,6 +333,9 @@ class ResourceTraderHelper
             'metal'      => (int) ($planeta['metal']     ?? 0),
             'crystal'    => (int) ($planeta['crystal']   ?? 0),
             'deuterium'  => (int) ($planeta['deuterium'] ?? 0),
+            // 🆕 v2.6 — Recursos nuevos
+            'norium'     => (int) ($planeta['norium']    ?? 0),
+            'germanium'  => (int) ($planeta['germanium'] ?? 0),
             'darkmatter' => (int) ($user['darkmatter']   ?? 0),
             'ntx20'      => (int) ($user['ntx20']        ?? 0),
         ];
@@ -334,9 +390,31 @@ class ResourceTraderHelper
             return $fail('La cantidad a recibir seria 0. Necesitas al menos ' . $minimo . ' unidades.');
         }
 
+        // 🆕 v2.6 — Límite diario anti-arbitraje para los recursos nuevos
+        // (tasas asimétricas: comprar caro / vender barato, con tope diario).
+        $limiteDiario = 0;
+        if ($recibir === 'norium')    { $limiteDiario = self::LIMITE_DIARIO_NORIUM; }
+        if ($recibir === 'germanium') { $limiteDiario = self::LIMITE_DIARIO_GERMANIUM; }
+        if ($limiteDiario > 0) {
+            $hoy   = date('Y-m-d');
+            $rowLimite = $db->selectSingle(
+                "SELECT SUM(`cantidad`) AS total FROM `".$prefix."trader_daily`
+                 WHERE `user_id` = :uid AND `fecha` = :fecha AND `recurso` = :rec",
+                [':uid' => $userId, ':fecha' => $hoy, ':rec' => $recibir]
+            );
+            $usadoHoy = ($rowLimite && !empty($rowLimite['total'])) ? (int) $rowLimite['total'] : 0;
+            if ($usadoHoy + $cantidadRecibir > $limiteDiario) {
+                return $fail(
+                    'Limite diario alcanzado para ' . self::getNombre($recibir)
+                    . ': ' . number_format($limiteDiario) . ' unidades por dia (usado hoy: '
+                    . number_format($usadoHoy) . ').'
+                );
+            }
+        }
+
         // 2) Leer estado fresco
         $planeta = $db->selectSingle(
-            "SELECT `metal`, `crystal`, `deuterium`
+            "SELECT `metal`, `crystal`, `deuterium`, `norium`, `germanium`
              FROM `" . $prefix . "planets`
              WHERE `id` = :pid AND `id_owner` = :uid",
             [':pid' => $planetId, ':uid' => $userId]
@@ -410,7 +488,7 @@ class ResourceTraderHelper
         // 6) UPDATE usuario (MO o la moneda correcta)
         if ($metodoPago === 'mo') {
             $db->update(
-                "UPDATE `" . $prefix . "users`
+                "UPDATE `".$prefix."users`
                  SET `darkmatter` = `darkmatter` - :coste
                  WHERE `id` = :uid
                    AND `darkmatter` >= :coste2",
@@ -419,7 +497,7 @@ class ResourceTraderHelper
         } else {
             // 🆕 v2.4 — Descontar de la columna correcta
             $db->update(
-                "UPDATE `" . $prefix . "users`
+                "UPDATE `".$prefix."users`
                  SET `".$colBalance."` = `".$colBalance."` - :coste
                  WHERE `id` = :uid
                    AND `".$colBalance."` >= :coste2",
@@ -427,9 +505,18 @@ class ResourceTraderHelper
             );
         }
 
+        // 🆕 v2.6 — Registrar el consumo del límite diario (recursos nuevos)
+        if ($limiteDiario > 0) {
+            $db->query(
+                "INSERT INTO `".$prefix."trader_daily` (`user_id`, `fecha`, `recurso`, `cantidad`)
+                 VALUES ('".(int) $userId."', '".date('Y-m-d')."', '".addslashes($recibir)."', '".(int) $cantidadRecibir."')
+                 ON DUPLICATE KEY UPDATE `cantidad` = `cantidad` + VALUES(`cantidad`);"
+            );
+        }
+
         // 7) Refrescar $GLOBALS (regla de oro #19)
         $planetaNuevo = $db->selectSingle(
-            "SELECT `metal`, `crystal`, `deuterium`
+            "SELECT `metal`, `crystal`, `deuterium`, `norium`, `germanium`
              FROM `" . $prefix . "planets`
              WHERE `id` = :pid AND `id_owner` = :uid",
             [':pid' => $planetId, ':uid' => $userId]
@@ -445,6 +532,9 @@ class ResourceTraderHelper
             $GLOBALS['PLANET']['metal']     = (int) $planetaNuevo['metal'];
             $GLOBALS['PLANET']['crystal']   = (int) $planetaNuevo['crystal'];
             $GLOBALS['PLANET']['deuterium'] = (int) $planetaNuevo['deuterium'];
+            // 🆕 v2.6 — Recursos nuevos
+            $GLOBALS['PLANET']['norium']    = (int) $planetaNuevo['norium'];
+            $GLOBALS['PLANET']['germanium'] = (int) $planetaNuevo['germanium'];
         }
         if (isset($GLOBALS['USER']) && is_array($GLOBALS['USER'])) {
             $GLOBALS['USER']['darkmatter'] = (int) $userNuevo['darkmatter'];

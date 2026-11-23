@@ -57,14 +57,16 @@ class VarsBuildCache implements BuildCache
 				'shield'	=> $varsRow['defend'],
 			);
 			
-			$pricelist[$varsRow['elementID']]	= array(
-								'cost'		=> array(
+				$pricelist[$varsRow['elementID']]	= array(
+									'cost'		=> array(
 					901	=> $varsRow['cost901'] ?? 0,
 					902	=> $varsRow['cost902'] ?? 0,
 					903	=> $varsRow['cost903'] ?? 0,
 					911	=> $varsRow['cost911'] ?? 0,
 					921	=> $varsRow['cost921'] ?? 0,
 					931	=> $varsRow['cost931'] ?? 0,
+					932	=> $varsRow['cost932'] ?? 0,
+					933	=> $varsRow['cost933'] ?? 0,
 				),
 				'factor'		=> $varsRow['factor'],
 				'max'			=> $varsRow['maxLevel'],
@@ -102,12 +104,18 @@ class VarsBuildCache implements BuildCache
 				902	=> $varsRow['production902'],
 				903	=> $varsRow['production903'],
 				911	=> $varsRow['production911'],
+				// 🆕 v2.4.0 — Recursos nuevos (mina de Norio 7 / Mina de Germanio 17)
+				932	=> $varsRow['production932'],
+				933	=> $varsRow['production933'],
 			);
-			
+
 			$ProdGrid[$varsRow['elementID']]['storage']	= array(
 				901	=> $varsRow['storage901'],
 				902	=> $varsRow['storage902'],
 				903	=> $varsRow['storage903'],
+				// 🆕 v2.4.0 — Almacenes de Norio (25) / Germanio (26)
+				932	=> $varsRow['storage932'],
+				933	=> $varsRow['storage933'],
 			);
 			
 			if(array_filter($ProdGrid[$varsRow['elementID']]['production']))

@@ -567,6 +567,14 @@
 			{assign var="resClass" value="deuterium"}
 			{assign var="resIcon" value="⚗️"}
 			{assign var="resTradeParam" value="deuterium"}
+		{elseif $resourceID == 932}  {* 🆕 v2.4.0 — Norium *}
+			{assign var="resClass" value="norium"}
+			{assign var="resIcon" value="🛢️"}
+			{assign var="resTradeParam" value="norium"}
+		{elseif $resourceID == 933}  {* 🆕 v2.4.0 — Germanium *}
+			{assign var="resClass" value="germanium"}
+			{assign var="resIcon" value="💠"}
+			{assign var="resTradeParam" value="germanium"}
 		{elseif $resourceID == 911}
 			{assign var="resClass" value="energy"}
 			{assign var="resIcon" value="⚡"}

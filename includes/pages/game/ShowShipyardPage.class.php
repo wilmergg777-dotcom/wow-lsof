@@ -59,10 +59,13 @@ class ShowShipyardPage extends AbstractGamePage
 			
 			$costResources	= BuildFunctions::getElementPrice($USER, $PLANET, $Element, false, $Count);
 		
-			if(isset($costResources[901])) { $PLANET[$resource[901]]	+= $costResources[901] * FACTOR_CANCEL_SHIPYARD; }
-			if(isset($costResources[902])) { $PLANET[$resource[902]]	+= $costResources[902] * FACTOR_CANCEL_SHIPYARD; }
-			if(isset($costResources[903])) { $PLANET[$resource[903]]	+= $costResources[903] * FACTOR_CANCEL_SHIPYARD; }
-			if(isset($costResources[921])) { $USER[$resource[921]]		+= $costResources[921] * FACTOR_CANCEL_SHIPYARD; }
+		if(isset($costResources[901])) { $PLANET[$resource[901]]	+= $costResources[901] * FACTOR_CANCEL_SHIPYARD; }
+		if(isset($costResources[902])) { $PLANET[$resource[902]]	+= $costResources[902] * FACTOR_CANCEL_SHIPYARD; }
+		if(isset($costResources[903])) { $PLANET[$resource[903]]	+= $costResources[903] * FACTOR_CANCEL_SHIPYARD; }
+		if(isset($costResources[921])) { $USER[$resource[921]]		+= $costResources[921] * FACTOR_CANCEL_SHIPYARD; }
+		// 🆕 v2.4.0 — Reembolso en Norium (932) y Germanium (933)
+		if(isset($costResources[932])) { $PLANET['norium']			+= $costResources[932] * FACTOR_CANCEL_SHIPYARD; }
+		if(isset($costResources[933])) { $PLANET['germanium']		+= $costResources[933] * FACTOR_CANCEL_SHIPYARD; }
 			
 			unset($ElementQueue[$Auftr]);
 		}
@@ -102,6 +105,23 @@ class ShowShipyardPage extends AbstractGamePage
 			$Count			= is_numeric($Count) ? round($Count) : 0;
 			$Count 			= max(min($Count, Config::get()->max_fleet_per_build), 0);
 			$Count 			= min($Count, $MaxElements);
+
+			// 🆕 v2.4.0 — Límite del Taladrador de Norio (234):
+			// máximo 4 naves por nivel de la Mina de Norio (7), contando
+			// las construidas y las ya encoladas (anti-exploit).
+			if ($Element == 234 && isset($resource[7], $PLANET[$resource[7]])) {
+				$mineNorio   = (int) $PLANET[$resource[7]];
+				$limiteTotal = 4 * $mineNorio;
+				$enCola      = 0;
+				$BuildArray  = !empty($PLANET[$queueField]) ? unserialize($PLANET[$queueField]) : array();
+				if (is_array($BuildArray)) {
+					foreach ($BuildArray as $ElementArray) {
+						if ($ElementArray[0] == 234) { $enCola += (int) $ElementArray[1]; }
+					}
+				}
+				$disponibles = max(0, $limiteTotal - (int) $PLANET[$resource[234]] - $enCola);
+				$Count       = min($Count, $disponibles);
+			}
 			
 			$BuildArray    	= !empty($PLANET[$queueField]) ? unserialize($PLANET[$queueField]) : array();
 			if (in_array($Element, $reslist['missile']))
@@ -135,6 +155,9 @@ class ShowShipyardPage extends AbstractGamePage
 			if(isset($costResources[902])) { $PLANET[$resource[902]]	-= $costResources[902]; }
 			if(isset($costResources[903])) { $PLANET[$resource[903]]	-= $costResources[903]; }
 			if(isset($costResources[921])) { $USER[$resource[921]]		-= $costResources[921]; }
+			// 🆕 v2.4.0 — Pago en Norium (932) y Germanium (933)
+			if(isset($costResources[932])) { $PLANET['norium']			-= $costResources[932]; }
+			if(isset($costResources[933])) { $PLANET['germanium']		-= $costResources[933]; }
 			
 			$BuildArray[]			= array($Element, $Count);
 			$PLANET[$queueField]	= serialize($BuildArray);

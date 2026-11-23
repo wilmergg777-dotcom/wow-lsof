@@ -75,7 +75,7 @@ class ShowMarketPage extends AbstractGamePage
      * ============================================================ */
     private function isResource($itemType)
     {
-        return in_array($itemType, ['metal', 'crystal', 'deuterium', 'dark_matter'], true);
+        return in_array($itemType, ['metal', 'crystal', 'deuterium', 'dark_matter', 'norium', 'germanium'], true); // 🆕 v2.6
     }
 
     /* ============================================================
@@ -495,6 +495,8 @@ class ShowMarketPage extends AbstractGamePage
                 case 'metal':       $avail = (int)$PLANET['metal'];     break;
                 case 'crystal':     $avail = (int)$PLANET['crystal'];   break;
                 case 'deuterium':   $avail = (int)$PLANET['deuterium']; break;
+                case 'norium':      $avail = (int)$PLANET['norium'];    break; // 🆕 v2.6
+                case 'germanium':   $avail = (int)$PLANET['germanium']; break; // 🆕 v2.6
                 case 'dark_matter': $avail = $dmAmount;                 break;
                 case 'ship':
                 case 'defense':
@@ -983,7 +985,7 @@ class ShowMarketPage extends AbstractGamePage
             'is_penalized' => isset($_POST['is_penalized']) ? (int)$_POST['is_penalized'] : 0,
         ];
 
-        if (in_array($data['item_type'], ['metal', 'crystal', 'deuterium'], true)) {
+        if (in_array($data['item_type'], ['metal', 'crystal', 'deuterium', 'norium', 'germanium'], true)) { // 🆕 v2.6
             $data['amount'] *= self::RESOURCE_MULTIPLIER;
         }
 
@@ -1015,7 +1017,7 @@ class ShowMarketPage extends AbstractGamePage
             'duration'  => isset($_POST['duration'])  ? (int)$_POST['duration'] : 24,
         ];
 
-        if (in_array($data['item_type'], ['metal', 'crystal', 'deuterium'], true)) {
+        if (in_array($data['item_type'], ['metal', 'crystal', 'deuterium', 'norium', 'germanium'], true)) { // 🆕 v2.6
             $data['amount'] *= self::RESOURCE_MULTIPLIER;
         }
 

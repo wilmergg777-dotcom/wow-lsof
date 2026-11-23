@@ -310,6 +310,15 @@ class BuildFunctions
             $elementCost	+= $elementPrice[902];
         }
 
+        // 🆕 v2.4.0 — el tiempo de construcción pondera también Norium (932)
+        // y Germanium (933) con el factor equivalente ×2.5 (mismo criterio atk/k).
+        if(isset($elementPrice[932])) {
+            $elementCost	+= $elementPrice[932] * 2.5;
+        }
+        if(isset($elementPrice[933])) {
+            $elementCost	+= $elementPrice[933] * 2.5;
+        }
+
         // ============================================
         // ASTROIO - Determinar bono de tiempo según tipo (razas/facciones)
         // ============================================
