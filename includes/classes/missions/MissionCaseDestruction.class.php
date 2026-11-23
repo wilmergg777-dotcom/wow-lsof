@@ -185,12 +185,16 @@ HTML;
         // ============================================
         $climaInfo = null;
         if (class_exists('ClimaEngine')) {
-            if (!empty($this->_fleet['clima_id'])) {
-                // Usar el clima fijado al lanzar la flota
-                $climaInfo = ClimaEngine::getFactoresPorClimaId($this->_fleet['clima_id']);
-            } else {
-                // Fallback: usar el clima actual del planeta/luna objetivo
-                $climaInfo = ClimaEngine::getFactoresPlaneta($this->_fleet['fleet_end_id']);
+            try {
+                if (!empty($this->_fleet['clima_id'])) {
+                    // Usar el clima fijado al lanzar la flota
+                    $climaInfo = ClimaEngine::getFactoresPorClimaId($this->_fleet['clima_id']);
+                } else {
+                    // Fallback: usar el clima actual del planeta/luna objetivo
+                    $climaInfo = ClimaEngine::getFactoresPlaneta($this->_fleet['fleet_end_id']);
+                }
+            } catch (Exception $e) {
+                // Silencioso: si el clima falla (p.ej. tablas ausentes), factores en 1.0
             }
         }
 

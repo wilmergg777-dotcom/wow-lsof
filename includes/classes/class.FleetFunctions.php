@@ -858,9 +858,13 @@ class FleetFunctions
 		// ============================================
 		$climaId = null;
 		if (class_exists('ClimaEngine') && in_array($fleetMission, array(1, 2, 6, 9))) {
-			$climaInfo = ClimaEngine::getClimaPlaneta($fleetTargetPlanetID);
-			if (!empty($climaInfo) && isset($climaInfo['clima_id'])) {
-				$climaId = (int)$climaInfo['clima_id'];
+			try {
+				$climaInfo = ClimaEngine::getClimaPlaneta($fleetTargetPlanetID);
+				if (!empty($climaInfo) && isset($climaInfo['clima_id'])) {
+					$climaId = (int)$climaInfo['clima_id'];
+				}
+			} catch (Exception $e) {
+				// Silencioso: el lanzamiento de flota sigue sin clima_id
 			}
 		}
 		// ============================================

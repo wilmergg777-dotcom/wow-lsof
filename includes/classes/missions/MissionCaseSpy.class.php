@@ -255,8 +255,12 @@ class MissionCaseSpy extends MissionFunctions implements Mission
 		$climaPrevisto = null;
 
 		if (class_exists('ClimaEngine')) {
-			$climaActual = ClimaEngine::getClimaPlaneta($this->_fleet['fleet_end_id']);
-			$climaPrevisto = ClimaEngine::getPrediccionPlaneta($this->_fleet['fleet_end_id']);
+			try {
+				$climaActual = ClimaEngine::getClimaPlaneta($this->_fleet['fleet_end_id']);
+				$climaPrevisto = ClimaEngine::getPrediccionPlaneta($this->_fleet['fleet_end_id']);
+			} catch (Exception $e) {
+				// Silencioso: el reporte de espionaje sigue sin bloque de clima
+			}
 		}
 		// ============================================
 
