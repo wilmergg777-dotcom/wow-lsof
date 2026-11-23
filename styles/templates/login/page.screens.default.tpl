@@ -1,57 +1,163 @@
 {block name="title" prepend}{$LNG.siteTitleScreens}{/block}
 {block name="content"}
-{* === ASTROIO v3.0 - estilo nuevo aplicado archivo por archivo: styles/templates/login/page.screens.default.tpl === *}
-
-
-
+{* === ASTROIO v3.1 - Galería de Imágenes (Estilo oscuro, borde naranja) === *}
 {literal}
 <style>
-/* ═══ ASTROIO v8.1 — reskin nextgen (tokens del índice v8.0) ═══ */
-:root {
-    --nx-muted:  #9a9a9a;
-    --nx-cyan:   #59d6ff;
-    --nx-green:  #35ff8f;
-    --nx-red:    #ff5252;
-    --nx-purple: #d946ef;
-    --nx-gold:   #fbbf24;
-    --nx-border: rgba(255, 255, 255, 0.1);
-}
-
-.astroscr_wrap { max-width: 900px; margin: 84px auto 40px; padding: 0 12px; box-sizing: border-box; font-family: 'Rajdhani', 'Segoe UI', sans-serif; }
-.astroscr_panel {
-    background: rgba(0,0,0,.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--nx-border); border-radius: 15px;
-    box-shadow: 0 0 40px rgba(0,0,0,.75); overflow: hidden;
-}
-.astroscr_heading {
-    display: block; background: transparent; color: #ffffff;
-    font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700;
-    letter-spacing: 2px; text-transform: uppercase;
-    padding: 16px 20px; border-bottom: 1px solid var(--nx-border); text-shadow: none;
-}
-.astroscr_body { padding: 18px 20px; color: #e2e8f0; }
-.astroscr_grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 14px; margin-top: 12px;
-}
-.astroscr_item {
-    margin: 0; background: rgba(255,255,255,.03);
-    border: 1px solid var(--nx-border); border-radius: 12px;
-    overflow: hidden; transition: .2s ease;
-}
-.astroscr_item:hover { border-color: rgba(255,255,255,.28); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
-.astroscr_item img { display: block; width: 100%; max-width: 100%; height: auto; border: none; border-radius: 0; }
-
-/* ═══ Móvil ═══ */
-@media (max-width: 768px) {
-    .astroscr_wrap { margin-top: 70px !important; padding: 0 10px !important; }
-    .astroscr_panel { border-radius: 12px; }
-    .astroscr_body { padding: 16px 14px !important; }
-    .astroscr_actions { text-align: center !important; }
-    .astroscr_actions .btn, .astroscr_btn_register, .astroscr_btn_submit { width: 100%; }
-}
+/* === ASTROIO v3.0 === */
+h1, h2, h3, h4 { color:#fff; letter-spacing:.5px; text-shadow:0 1px 3px rgba(0,0,0,.5) }
+a { color:#00e0ff; text-decoration:none; transition:.2s ease }
+a:hover { color:#fff; text-shadow:0 0 10px rgba(0,224,255,.7) }
+table { background:rgba(15,23,42,.55); border:1px solid #1e293b; border-radius:10px; border-collapse:collapse; overflow:hidden }
+table th { background:linear-gradient(135deg,rgba(0,68,136,.85),rgba(0,119,204,.85)); border-bottom:1px solid rgba(0,224,255,.5); color:#fff; padding:6px 9px; text-align:left; text-transform:uppercase; font-size:10px; letter-spacing:.5px; text-shadow:0 1px 2px rgba(0,0,0,.4) }
+table td { padding:6px 9px; border-bottom:1px solid rgba(30,41,59,.7); color:#cbd5e1 }
+table tr:hover td { background:rgba(0,224,255,.04) }
+input[type=text], input[type=password], input[type=email], input[type=number], input[type=date], select, textarea { background:rgba(0,0,0,.5); color:#fff; border:1px solid rgba(0,204,255,.35); border-radius:8px; padding:5px 9px; font-size:12px; font-family:inherit; box-sizing:border-box; max-width:100%; transition:.25s ease }
+input[type=text]:focus, input[type=password]:focus, input[type=email]:focus, input[type=number]:focus, select:focus, textarea:focus { outline:none; border-color:#00e0ff; box-shadow:0 0 12px rgba(0,224,255,.5); background:rgba(0,0,0,.65) }
+textarea { width:100%; resize:vertical; font-family:inherit }
+button, input[type=submit], input[type=button] { background:linear-gradient(180deg,#0066cc,#0099ff); color:#fff; border:1px solid #00e0ff; border-radius:8px; padding:5px 16px; font-size:11.5px; font-weight:600; font-family:inherit; cursor:pointer; transition:.25s ease; text-transform:uppercase; letter-spacing:.5px; text-shadow:0 1px 2px rgba(0,0,0,.4) }
+button:hover, input[type=submit]:hover, input[type=button]:hover { box-shadow:0 0 18px rgba(0,224,255,.5); transform:translateY(-2px) }
+button:active, input[type=submit]:active, input[type=button]:active { transform:translateY(0) }
+input[type=reset] { background:linear-gradient(180deg,#444,#666); border-color:#888 }
+select option { background:#0f172a; color:#cbd5e1 }
+.globalWarning { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.45); color:#fecaca; border-radius:10px; padding:8px 14px; text-align:center }
+/* ✅ FIX: Corregido el error de sintaxis del doble corchete */
+@media (max-width:760px) { body { padding:6px; overflow-x:auto; } table { font-size:11px; } table th, table td { padding:5px 7px; } }
 </style>
 {/literal}
+
+
+<style>
+/* ═══════════════════════════════════════════════
+   AstroIO v3.1 — Galería de Imágenes (Screens)
+   ✅ FIX: Eliminada la barra azul superior.
+   ✅ FIX: Borde naranja y fondo oscuro igual al index.
+   ═══════════════════════════════════════════════ */
+
+:root {
+    --bg-dark:       rgba(11, 16, 30, 0.55);
+    --bg-card:       rgba(10, 15, 25, 0.9); /* Fondo oscuro igual al index */
+    --bg-inner:      rgba(0, 0, 0, 0.35);
+    --border-color:  #ff5e00; /* Borde naranja */
+    --text-main:     #cbd5e1;
+    --text-muted:    #94a3b8;
+    --accent-cyan:   #00e0ff;
+    --accent-orange: #ff5e00;
+}
+
+.astroscr_wrap {
+    max-width: 1100px;
+    margin: 40px auto 20px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+}
+
+.astroscr_panel {
+    background: var(--bg-card) !important;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9) !important;
+    overflow: hidden;
+}
+
+/* ✅ FIX: Ocultar la barra azul de "IMÁGENES DEL JUEGO" */
+.astroscr_heading {
+    display: none !important; 
+}
+
+.astroscr_body {
+    padding: 30px 20px;
+}
+
+/* ═══ Grid de thumbnails ═══ */
+.astroscr_grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+}
+
+.astroscr_item {
+    flex: 0 0 auto;
+    width: 160px;
+    text-align: center;
+}
+
+/* Enlace (fancybox) */
+.astroscr_item a.gallery {
+    display: block;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    transition: 0.25s ease;
+    text-decoration: none;
+}
+
+.astroscr_item a.gallery:hover {
+    border-color: var(--accent-orange) !important; /* Borde naranja al pasar el ratón */
+    box-shadow: 0 0 20px rgba(255, 94, 0, 0.4) !important;
+    transform: translateY(-3px);
+}
+
+.astroscr_item a.gallery::after {
+    content: '🔍';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    font-size: 24px;
+    opacity: 0;
+    transition: 0.25s ease;
+    pointer-events: none;
+    text-shadow: 0 0 10px rgba(255, 94, 0, 0.9);
+}
+
+.astroscr_item a.gallery:hover::after {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+}
+
+/* Imagen */
+.astroscr_item a.gallery img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    transition: 0.25s ease;
+    filter: brightness(0.85) saturate(0.9);
+}
+
+.astroscr_item a.gallery:hover img {
+    filter: brightness(1.1) saturate(1.1);
+    transform: scale(1.05);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .astroscr_wrap {
+        margin-top: 20px;
+        padding: 0 6px;
+    }
+    .astroscr_body {
+        padding: 20px 10px;
+    }
+    .astroscr_grid {
+        gap: 10px;
+    }
+    .astroscr_item {
+        width: 130px;
+    }
+}
+
+@media (max-width: 480px) {
+    .astroscr_item {
+        width: 45%;
+    }
+}
+</style>
 
 <div class="container astroscr_wrap">
     <div class="panel panel-default astroscr_panel">

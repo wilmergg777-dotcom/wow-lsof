@@ -1,93 +1,262 @@
 {block name="content"}
-{* === ASTROIO v3.0 - estilo nuevo aplicado archivo por archivo: styles/templates/login/page.buglist.default.tpl === *}
-
-
-
-{* ASTRO BUG LIST v3.0 — Lista publica de bugs (sin login) *}
+{* === ASTROIO v3.1 - Lista de Bugs (Estilo oscuro, borde naranja) === *}
 {literal}
 <style>
-/* ═══ ASTROIO v8.1 — reskin nextgen (tokens del índice v8.0) ═══ */
-:root {
-    --nx-muted:  #9a9a9a;
-    --nx-cyan:   #59d6ff;
-    --nx-green:  #35ff8f;
-    --nx-red:    #ff5252;
-    --nx-purple: #d946ef;
-    --nx-gold:   #fbbf24;
-    --nx-border: rgba(255, 255, 255, 0.1);
-}
-
-/* Cabecera + tarjetas de bugs (nextgen) */
-.astrobugl_wrap { max-width: 760px; margin: 84px auto 40px; padding: 0 12px; box-sizing: border-box; font-family: 'Rajdhani', 'Segoe UI', sans-serif; }
-.astrobugl_header {
-    background: rgba(0,0,0,.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--nx-border); border-radius: 15px;
-    box-shadow: 0 0 40px rgba(0,0,0,.75);
-    padding: 18px 20px; margin-bottom: 16px;
-}
-.astrobugl_title {
-    color: #ffffff; font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700;
-    letter-spacing: 2px; text-transform: uppercase; text-shadow: none;
-}
-.astrobugl_subtitle { color: var(--nx-muted); font-size: 13.5px; margin-top: 6px; }
-.astrobugl_info {
-    color: #e2e8f0; font-size: 12.5px; line-height: 1.6;
-    background: rgba(255,255,255,.04); border: 1px solid var(--nx-border);
-    border-left: 3px solid var(--nx-cyan); border-radius: 8px; padding: 10px 14px; margin-top: 12px;
-}
-.astrobugl_list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
-.astrobugl_card {
-    background: rgba(0,0,0,.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--nx-border); border-radius: 12px;
-    padding: 14px 16px; transition: .2s ease;
-}
-.astrobugl_card:hover { border-color: rgba(255,255,255,.25); transform: translateY(-1px); }
-.astrobugl_card_head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-.astrobugl_card_id {
-    color: var(--nx-purple); font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700;
-}
-.astrobugl_card_titulo { color: #ffffff; font-size: 15.5px; font-weight: 700; letter-spacing: .3px; }
-.astrobugl_card_estado {
-    font-family: 'Space Mono', monospace; font-size: 9.5px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 1.2px;
-    padding: 3px 10px; border-radius: 20px;
-    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.18); color: #e2e8f0;
-}
-.astrobugl_card_estado.resuelto, .astrobugl_card_estado.resolved { color: var(--nx-green); border-color: rgba(53,255,143,.4); background: rgba(53,255,143,.07); }
-.astrobugl_card_estado.en_proceso, .astrobugl_card_estado.proceso { color: var(--nx-gold); border-color: rgba(251,191,36,.4); background: rgba(251,191,36,.07); }
-.astrobugl_card_meta { color: var(--nx-muted); font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 1px; margin-top: 6px; }
-.astrobugl_card_desc { color: #e2e8f0; font-size: 13.5px; line-height: 1.65; margin-top: 8px; }
-.astrobugl_empty {
-    background: rgba(0,0,0,.5); border: 1px solid var(--nx-border); border-radius: 12px;
-    color: var(--nx-muted); text-align: center; padding: 30px 20px; font-size: 15px; font-style: italic;
-}
-.astrobugl_empty .icon { font-size: 26px; display: block; margin-bottom: 8px; }
-.astrobugl_cta { margin-top: 16px; text-align: center; }
-.astrobugl_cta a, .astrobugl_cta button {
-    display: inline-block; padding: 11px 28px;
-    background: linear-gradient(180deg, #0066cc 0%, #0099ff 100%);
-    color: #fff; border: 1px solid rgba(89,214,255,.55); border-radius: 8px;
-    font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 2px; text-decoration: none; transition: .2s ease;
-}
-.astrobugl_cta a:hover, .astrobugl_cta button:hover {
-    background: linear-gradient(180deg, #0077e6 0%, #00aaff 100%);
-    box-shadow: 0 6px 24px rgba(0,136,255,.6); transform: translateY(-1px);
-}
-
-/* ═══ Móvil ═══ */
-@media (max-width: 768px) {
-    .astrobugl_wrap { margin-top: 70px !important; padding: 0 10px !important; }
-    .astrobugl_panel { border-radius: 12px; }
-    .astrobugl_body { padding: 16px 14px !important; }
-    .astrobugl_actions { text-align: center !important; }
-    .astrobugl_actions .btn, .astrobugl_btn_register, .astrobugl_btn_submit { width: 100%; }
-}
+/* === ASTROIO v3.0 === */
+h1, h2, h3, h4 { color:#fff; letter-spacing:.5px; text-shadow:0 1px 3px rgba(0,0,0,.5) }
+a { color:#00e0ff; text-decoration:none; transition:.2s ease }
+a:hover { color:#fff; text-shadow:0 0 10px rgba(0,224,255,.7) }
+table { background:rgba(15,23,42,.55); border:1px solid #1e293b; border-radius:10px; border-collapse:collapse; overflow:hidden }
+table th { background:linear-gradient(135deg,rgba(0,68,136,.85),rgba(0,119,204,.85)); border-bottom:1px solid rgba(0,224,255,.5); color:#fff; padding:6px 9px; text-align:left; text-transform:uppercase; font-size:10px; letter-spacing:.5px; text-shadow:0 1px 2px rgba(0,0,0,.4) }
+table td { padding:6px 9px; border-bottom:1px solid rgba(30,41,59,.7); color:#cbd5e1 }
+table tr:hover td { background:rgba(0,224,255,.04) }
+input[type=text], input[type=password], input[type=email], input[type=number], input[type=date], select, textarea { background:rgba(0,0,0,.5); color:#fff; border:1px solid rgba(0,204,255,.35); border-radius:8px; padding:5px 9px; font-size:12px; font-family:inherit; box-sizing:border-box; max-width:100%; transition:.25s ease }
+input[type=text]:focus, input[type=password]:focus, input[type=email]:focus, input[type=number]:focus, select:focus, textarea:focus { outline:none; border-color:#00e0ff; box-shadow:0 0 12px rgba(0,224,255,.5); background:rgba(0,0,0,.65) }
+textarea { width:100%; resize:vertical; font-family:inherit }
+button, input[type=submit], input[type=button] { background:linear-gradient(180deg,#0066cc,#0099ff); color:#fff; border:1px solid #00e0ff; border-radius:8px; padding:5px 16px; font-size:11.5px; font-weight:600; font-family:inherit; cursor:pointer; transition:.25s ease; text-transform:uppercase; letter-spacing:.5px; text-shadow:0 1px 2px rgba(0,0,0,.4) }
+button:hover, input[type=submit]:hover, input[type=button]:hover { box-shadow:0 0 18px rgba(0,224,255,.5); transform:translateY(-2px) }
+button:active, input[type=submit]:active, input[type=button]:active { transform:translateY(0) }
+input[type=reset] { background:linear-gradient(180deg,#444,#666); border-color:#888 }
+select option { background:#0f172a; color:#cbd5e1 }
+.globalWarning { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.45); color:#fecaca; border-radius:10px; padding:8px 14px; text-align:center }
+/* ✅ FIX: Corregido el error de sintaxis del doble corchete */
+@media (max-width:760px) { body { padding:6px; overflow-x:auto; } table { font-size:11px; } table th, table td { padding:5px 7px; } }
 </style>
 {/literal}
 
 
+{* ASTRO BUG LIST v3.1 — Lista publica de bugs (sin login) *}
 
+{literal}
+<style>
+/* ====== Variables globales ====== */
+:root {
+    --bg-dark:       rgba(11, 16, 30, 0.55);
+    --bg-card:       rgba(10, 15, 25, 0.9); /* Fondo oscuro igual al index */
+    --bg-inner:      rgba(0, 0, 0, 0.35);
+    --border-color:  #ff5e00; /* Borde naranja */
+    --text-main:     #cbd5e1;
+    --text-muted:    #94a3b8;
+    --text-title:    #ffffff;
+    --accent-cyan:   #00e0ff;
+    --accent-orange: #ff5e00;
+}
+
+.astrobugl_wrap {
+    max-width: 1100px;
+    margin: 40px auto 20px;
+    padding: 15px;
+    color: var(--text-main);
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    box-sizing: border-box;
+}
+
+/* Cabecera (glassmorphism) */
+.astrobugl_header {
+    background: var(--bg-card) !important;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px;
+    padding: 30px 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9) !important;
+    text-align: center;
+}
+
+.astrobugl_title {
+    font-size: 28px;
+    font-weight: bold;
+    color: #ffaa33;
+    text-shadow: 0 0 14px rgba(255, 170, 51, 0.5);
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+}
+
+.astrobugl_subtitle {
+    font-size: 13px;
+    color: #94a3b8 !important;
+    font-style: italic;
+    margin-bottom: 15px;
+}
+
+.astrobugl_info {
+    display: inline-block;
+    background: rgba(0, 204, 255, 0.1);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(0, 204, 255, 0.3);
+    border-radius: 20px;
+    padding: 8px 18px;
+    font-size: 12px;
+    color: #00ccff;
+    text-shadow: 0 0 6px rgba(0, 204, 255, 0.4);
+}
+
+/* Lista de reportes */
+.astrobugl_list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.astrobugl_card {
+    background: rgba(0, 0, 0, 0.5) !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-left: 4px solid var(--border-color) !important; /* Borde naranja izquierdo */
+    border-radius: 10px;
+    padding: 16px 20px;
+    transition: all 0.25s ease;
+}
+
+.astrobugl_card:hover {
+    border-color: var(--border-color) !important;
+    box-shadow: 0 0 20px rgba(255, 94, 0, 0.3) !important;
+    transform: translateX(3px);
+}
+
+/* Estados funcionales */
+.astrobugl_card.aceptado     { border-left-color: #00ccff !important; }
+.astrobugl_card.solucionado  { border-left-color: #4aff88 !important; }
+
+.astrobugl_card_head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.astrobugl_card_left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.astrobugl_card_id {
+    color: #00ccff;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    white-space: nowrap;
+    text-shadow: 0 0 6px rgba(0, 204, 255, 0.4);
+}
+
+.astrobugl_card_titulo {
+    color: var(--text-title) !important;
+    font-size: 15px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.astrobugl_card_estado {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 14px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.astrobugl_card_meta {
+    display: flex;
+    gap: 18px;
+    font-size: 12px;
+    color: #94a3b8 !important;
+    flex-wrap: wrap;
+}
+
+.astrobugl_card_meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.astrobugl_card_desc {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 94, 0, 0.2) !important; /* Línea naranja tenue */
+    color: #a8b8c8 !important;
+    font-size: 12px;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Estado vacio */
+.astrobugl_empty {
+    background: rgba(0, 0, 0, 0.5) !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px dashed var(--border-color) !important; /* Borde naranja discontinuo */
+    border-radius: 12px;
+    padding: 60px 20px;
+    text-align: center;
+    color: #94a3b8 !important;
+    font-size: 14px;
+}
+
+.astrobugl_empty .icon {
+    font-size: 52px;
+    display: block;
+    margin-bottom: 15px;
+    opacity: 0.4;
+}
+
+/* CTA */
+.astrobugl_cta {
+    margin-top: 25px;
+    text-align: center;
+}
+
+.astrobugl_cta a {
+    display: inline-block;
+    background: #222c3c !important;
+    color: #fff !important;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 12px 28px;
+    border-radius: 8px;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+    border: 1px solid #444 !important;
+}
+.astrobugl_cta a:hover {
+    background: #2e3a4e !important;
+    border-color: var(--border-color) !important;
+    box-shadow: 0 0 20px rgba(255, 94, 0, 0.4) !important;
+    transform: translateY(-2px);
+}
+.astrobugl_cta a:active {
+    transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+    .astrobugl_wrap { padding: 10px; margin-top: 20px; }
+    .astrobugl_header { padding: 20px 15px; }
+    .astrobugl_title { font-size: 20px; }
+    .astrobugl_card { padding: 12px 14px; }
+    .astrobugl_card_titulo { font-size: 13px; }
+    .astrobugl_card_meta { font-size: 10px; gap: 10px; }
+    .astrobugl_cta a { width: 100%; text-align: center; box-sizing: border-box; }
+}
+</style>
+{/literal}
 
 <div class="astrobugl_wrap">
 

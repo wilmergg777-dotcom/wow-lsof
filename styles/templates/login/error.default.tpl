@@ -1,94 +1,200 @@
 {block name="title" prepend}{$LNG.fcm_info}{/block}
 {block name="content"}
-{* === ASTROIO v3.0 - estilo nuevo aplicado archivo por archivo: styles/templates/login/error.default.tpl === *}
-
-
-
+{* === ASTROIO v3.1 - Página de Error / Mensaje (Estilo oscuro, borde naranja) === *}
 {literal}
 <style>
-/* ═══ ASTROIO v8.1 — reskin nextgen (tokens del índice v8.0) ═══ */
-:root {
-    --nx-muted:  #9a9a9a;
-    --nx-cyan:   #59d6ff;
-    --nx-green:  #35ff8f;
-    --nx-red:    #ff5252;
-    --nx-purple: #d946ef;
-    --nx-gold:   #fbbf24;
-    --nx-border: rgba(255, 255, 255, 0.1);
-}
+/* === ASTROIO v3.0 === */
+h1, h2, h3, h4 { color:#fff; letter-spacing:.5px; text-shadow:0 1px 3px rgba(0,0,0,.5) }
+a { color:#00e0ff; text-decoration:none; transition:.2s ease }
+a:hover { color:#fff; text-shadow:0 0 10px rgba(0,224,255,.7) }
+table { background:transparent; border:none; border-radius:10px; border-collapse:collapse; overflow:hidden }
+table th { background:rgba(0, 0, 0, 0.6); border-bottom:1px solid #ff5e00; color:#00e0ff; padding:8px 10px; text-align:left; text-transform:uppercase; font-size:10px; letter-spacing:.5px; font-weight: 700; }
+table td { padding:8px 10px; border-bottom:1px solid rgba(255,255,255,0.05); color:#cbd5e1 }
+table tr:hover td { background:rgba(255, 94, 0, 0.05) }
 
-/* ═══ Tarjeta nextgen (idéntica a las del índice) ═══ */
-.astroerr_panel, .panel-default.astroerr_panel {
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--nx-border);
-    border-radius: 15px;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.75);
-    overflow: hidden;
+/* Inputs blancos con letra oscura */
+input[type=text], input[type=password], input[type=email], input[type=number], input[type=date], select, textarea { 
+    background:#ffffff; color:#333333; 
+    border:1px solid rgba(255,255,255,0.2); border-radius:6px; 
+    padding:10px 12px; font-size:13px; font-family:inherit; box-sizing:border-box; max-width:100%; transition:.25s ease 
 }
-.astroerr_section_title, .panel-heading.astroerr_heading, .astroerr_heading {
-    display: block;
-    background: transparent;
-    color: #ffffff;
-    font-family: 'Space Mono', monospace;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--nx-border);
-    text-shadow: none;
+input[type=text]:focus, input[type=password]:focus, input[type=email]:focus, input[type=number]:focus, select:focus, textarea:focus { 
+    outline:none; border-color:#00e0ff; box-shadow:0 0 12px rgba(0,224,255,.5); 
 }
-.astroerr_wrap {
-    font-family: 'Rajdhani', 'Segoe UI', sans-serif;
-}
+textarea { width:100%; resize:vertical; font-family:inherit }
 
-.astroerr_wrap { max-width: 620px; margin: 84px auto 40px; padding: 0 12px; box-sizing: border-box; }
-.astroerr_body { padding: 22px 24px; color: #e2e8f0; font-size: 14px; line-height: 1.7; }
-.astroerr_table { width: 100%; border-collapse: collapse; margin: 0; }
-.astroerr_table tr > td { padding: 0; color: #e2e8f0; vertical-align: top; }
-.astroerr_message {
-    color: #e2e8f0; font-size: 15px; line-height: 1.7; margin: 0 0 16px;
-    padding: 14px 18px;
-    background: rgba(217, 70, 239, 0.06);
-    border: 1px solid var(--nx-border);
-    border-left: 3px solid var(--nx-purple);
-    border-radius: 10px;
+/* Botones oscuros */
+button, input[type=submit], input[type=button] { 
+    background:#222c3c; color:#fff; 
+    border:1px solid #444; border-radius:6px; 
+    padding:10px 20px; font-size:13px; font-weight:700; 
+    font-family:inherit; cursor:pointer; transition:.25s ease; 
+    text-transform:uppercase; letter-spacing:.5px; 
 }
-.astroerr_message p { margin: 0; }
-.astroerr_buttons {
-    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px;
-    padding-top: 16px; border-top: 1px solid var(--nx-border); justify-content: flex-start;
+button:hover, input[type=submit]:hover, input[type=button]:hover { 
+    background:#2e3a4e; border-color:#ff5e00; 
+    box-shadow:0 0 18px rgba(255, 94, 0, 0.4); transform:translateY(-2px) 
 }
-.astroerr_buttons a { text-decoration: none; display: inline-block; }
-.astroerr_buttons .btn, .astroerr_buttons button {
-    display: inline-block; padding: 10px 24px;
-    background: linear-gradient(180deg, #0066cc 0%, #0099ff 100%) !important;
-    color: #ffffff !important;
-    border: 1px solid rgba(89, 214, 255, 0.55) !important;
-    border-radius: 8px;
-    font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700;
-    cursor: pointer; transition: .2s ease;
-    text-transform: uppercase; letter-spacing: 1.5px; text-shadow: none;
-}
-.astroerr_buttons .btn:hover, .astroerr_buttons button:hover {
-    background: linear-gradient(180deg, #0077e6 0%, #00aaff 100%) !important;
-    box-shadow: 0 6px 24px rgba(0, 136, 255, 0.6);
-    transform: translateY(-1px); color: #ffffff !important;
-}
-.astroerr_buttons .btn:active, .astroerr_buttons button:active { transform: translateY(0); }
+button:active, input[type=submit]:active, input[type=button]:active { transform:translateY(0) }
 
-/* ═══ Móvil ═══ */
-@media (max-width: 768px) {
-    .astroerr_wrap { margin-top: 70px !important; padding: 0 10px !important; }
-    .astroerr_panel { border-radius: 12px; }
-    .astroerr_body { padding: 16px 14px !important; }
-    .astroerr_actions { text-align: center !important; }
-    .astroerr_actions .btn, .astroerr_btn_register, .astroerr_btn_submit { width: 100%; }
-}
+input[type=reset] { background:#111; border-color:#333; color:#ccc; }
+input[type=reset]:hover { background:#222; border-color:#555; }
+
+select option { background:#0f172a; color:#cbd5e1 }
+.globalWarning { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.45); color:#fecaca; border-radius:10px; padding:8px 14px; text-align:center }
+
+/* ✅ FIX: Corregido el error de sintaxis del doble corchete */
+@media (max-width:760px) { body { padding:6px; overflow-x:auto; } table { font-size:11px; } table th, table td { padding:5px 7px; } }
 </style>
 {/literal}
+
+
+<style>
+/* ═══════════════════════════════════════════════
+   AstroIO v3.1 — Página de Error / Mensaje
+   ✅ FIX: Eliminada la barra azul superior.
+   ✅ FIX: Fondo oscuro y borde naranja igual al index.
+   ═══════════════════════════════════════════════ */
+
+:root {
+    --bg-dark:       rgba(11, 16, 30, 0.55);
+    --bg-card:       rgba(10, 15, 25, 0.9); /* Fondo oscuro igual al index */
+    --bg-inner:      rgba(0, 0, 0, 0.35);
+    --border-color:  #ff5e00; /* Borde naranja */
+    --text-main:     #cbd5e1;
+    --text-muted:    #94a3b8;
+    --text-title:    #ffffff;
+    --accent-cyan:   #00e0ff;
+}
+
+.astroerr_wrap {
+    max-width: 700px;
+    margin: 40px auto 20px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+}
+
+.astroerr_panel {
+    background: var(--bg-card) !important;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9) !important;
+    overflow: hidden;
+}
+
+/* ✅ FIX: Ocultar la barra azul de "Información" */
+.astroerr_heading {
+    display: none !important;
+}
+
+.astroerr_body {
+    padding: 30px 40px;
+    color: #e2e8f0 !important;
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+/* ═══ Tabla table519 (preservada como referencia) ═══ */
+.astroerr_table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+    background: transparent !important;
+    border: none !important;
+}
+
+.astroerr_table tr > td {
+    padding: 0 !important;
+    color: #e2e8f0 !important;
+    vertical-align: top;
+    border: none !important;
+}
+
+/* ═══ Mensaje ═══ */
+.astroerr_message {
+    color: #e2e8f0 !important;
+    font-size: 15px;
+    line-height: 1.7;
+    margin: 0 0 20px;
+    padding: 15px 20px;
+    background: rgba(0, 224, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-left: 3px solid var(--accent-cyan) !important;
+    border-radius: 8px;
+}
+
+.astroerr_message p {
+    margin: 0;
+}
+
+/* ═══ Botones de redirección ═══ */
+.astroerr_buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 94, 0, 0.3) !important;
+    justify-content: flex-start;
+}
+
+.astroerr_buttons a {
+    text-decoration: none;
+    display: inline-block;
+}
+
+.astroerr_buttons .btn,
+.astroerr_buttons button {
+    display: inline-block;
+    padding: 12px 25px;
+    background: #222c3c !important;
+    color: #ffffff !important;
+    border: 1px solid #444 !important;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.25s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.astroerr_buttons .btn:hover,
+.astroerr_buttons button:hover {
+    background: #2e3a4e !important;
+    border-color: var(--border-color) !important;
+    box-shadow: 0 0 18px rgba(255, 94, 0, 0.4) !important;
+    transform: translateY(-2px);
+    color: #ffffff !important;
+}
+
+.astroerr_buttons .btn:active,
+.astroerr_buttons button:active {
+    transform: translateY(0);
+}
+
+/* ═══ Responsive ═══ */
+@media (max-width: 768px) {
+    .astroerr_wrap {
+        margin-top: 20px;
+        padding: 0 6px;
+    }
+    .astroerr_body {
+        padding: 20px 15px;
+    }
+    .astroerr_buttons {
+        justify-content: center;
+    }
+    .astroerr_buttons .btn,
+    .astroerr_buttons button {
+        width: 100%;
+        text-align: center;
+    }
+}
+</style>
 
 <div class="container astroerr_wrap">
     <div class="panel panel-default astroerr_panel">

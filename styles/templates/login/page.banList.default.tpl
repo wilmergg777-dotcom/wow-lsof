@@ -2,118 +2,229 @@
 {block name="content"}
 
 {* ============================================================
-   ASTROIO BAN LIST (site) v3.0 — Estilo Xnova (glassmorphism)
-   Prefijo CSS: .astrobans_   (aislado, no rompe otros módulos)
-   Acento del módulo: 🔴 Rojo (#ef4444) — Sanciones/Peligro
-   FIX v3.0:
-     - Patrón fleetDealer aplicado (panel glassmorphism, radius 12px)
-     - Centrado con text-align + inline-block (Regla #14)
-     - Selector de universo con radius 8px + focus translateY
-     - Paginación con radius 6px + hover translateY
-     - ⚠️ CRÍTICO: {if $isMultiUniverse} + {html_options} + {if $banCount} intactos
-     - ⚠️ CRÍTICO: {foreach $banList} + {for $site=1 to $maxPage} + hrefs intactos
+   ASTROIO BAN LIST (site) v3.1 — Estilo Xnova (glassmorphism)
+   ✅ FIX: Fondo oscuro, borde naranja y tabla adaptada.
    ============================================================ *}
 
-{literal}
 <style>
-/* ═══ ASTROIO v8.1 — reskin nextgen (tokens del índice v8.0) ═══ */
+/* ====== Variables globales ====== */
 :root {
-    --nx-muted:  #9a9a9a;
-    --nx-cyan:   #59d6ff;
-    --nx-green:  #35ff8f;
-    --nx-red:    #ff5252;
-    --nx-purple: #d946ef;
-    --nx-gold:   #fbbf24;
-    --nx-border: rgba(255, 255, 255, 0.1);
+    --bg-dark:       rgba(11, 16, 30, 0.55);
+    --bg-card:       rgba(10, 15, 25, 0.9); /* Fondo oscuro igual al index */
+    --bg-inner:      rgba(0, 0, 0, 0.35);
+    --border-color:  #ff5e00; /* Borde naranja */
+    --text-main:     #cbd5e1;
+    --text-muted:    #94a3b8;
+    --text-title:    #ffffff;
+    --accent-cyan:   #00e0ff;
+    --accent-red:    #ef4444;
 }
 
-/* ═══ Tarjeta nextgen (idéntica a las del índice) ═══ */
-.astrobans_panel, .panel-default.astrobans_panel {
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--nx-border);
-    border-radius: 15px;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.75);
-    overflow: hidden;
-}
-.astrobans_section_title, .panel-heading.astrobans_heading, .astrobans_heading {
-    display: block;
-    background: transparent;
-    color: #ffffff;
-    font-family: 'Space Mono', monospace;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--nx-border);
-    text-shadow: none;
-}
+/* ====== Wrapper ====== */
 .astrobans_wrap {
-    font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+    width: 100%;
+    padding: 15px;
+    box-sizing: border-box;
+    text-align: center;
 }
 
-.astrobans_wrap { max-width: 860px; margin: 84px auto 40px; padding: 0 12px; box-sizing: border-box; }
-.astrobans_uni_row { padding: 12px 16px; border-bottom: 1px solid var(--nx-border); }
-.astrobans_uni_row select { max-width: 260px; }
-.astrobans_table_wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.astrobans_table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 520px; }
+/* ====== Panel principal ====== */
+.astrobans_panel {
+    display: inline-block;
+    text-align: left;
+    background: var(--bg-card) !important;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9) !important;
+    padding: 25px 35px;
+    color: var(--text-main);
+    width: 900px;
+    max-width: 100%;
+    vertical-align: top;
+    box-sizing: border-box;
+}
+
+/* ====== Título ====== */
+.astrobans_section_title {
+    color: #ff4488;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(255, 94, 0, 0.4) !important; /* Línea naranja */
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    display: block;
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+
+/* ====== Selector de universo ====== */
+.astrobans_uni_row {
+    margin-bottom: 15px;
+}
+.astrobans_uni_row select {
+    padding: 10px 14px;
+    background: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 6px;
+    color: #333333 !important;
+    font-weight: 700;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: 0.25s ease;
+    min-width: 200px;
+}
+.astrobans_uni_row select:hover,
+.astrobans_uni_row select:focus {
+    border-color: var(--accent-cyan) !important;
+    box-shadow: 0 0 12px rgba(0, 224, 255, 0.5) !important;
+}
+.astrobans_uni_row select option {
+    background: #0f1624 !important;
+    color: #ffffff !important;
+    padding: 4px;
+}
+
+/* ====== Tabla ====== */
+.astrobans_table_wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    transition: 0.2s ease;
+}
+.astrobans_table_wrap:hover {
+    border-color: var(--border-color) !important;
+}
+.astrobans_table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 13px;
+}
+
+/* Cabecera */
+.astrobans_table thead tr {
+    background: rgba(0, 0, 0, 0.6) !important;
+}
 .astrobans_table thead th {
-    padding: 9px 10px; background: rgba(255,255,255,.05);
-    color: var(--nx-muted);
-    font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 1.5px;
-    border-bottom: 1px solid var(--nx-border); text-align: left; white-space: nowrap; text-shadow: none;
+    padding: 12px 10px;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    text-align: center;
+    color: #00e0ff !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    white-space: nowrap;
+}
+
+/* Filas */
+.astrobans_table tbody tr {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    transition: 0.15s ease;
+}
+.astrobans_table tbody tr:hover {
+    background: rgba(255, 94, 0, 0.05) !important; /* Hover naranja tenue */
 }
 .astrobans_table tbody td {
-    padding: 8px 10px; color: #e2e8f0; vertical-align: middle; text-align: left;
-    line-height: 1.4; word-break: break-word;
-    border-bottom: 1px solid rgba(255,255,255,.06);
+    padding: 10px;
+    color: var(--text-main) !important;
+    vertical-align: middle;
+    text-align: center;
+    line-height: 1.4;
+    word-break: break-word;
 }
-.astrobans_table tbody tr:hover { background: rgba(255,255,255,.04); }
-.astrobans_table tbody td:nth-child(4) { color: var(--nx-cyan); font-weight: 700; }
-.astrobans_table tbody td:nth-child(5) { color: var(--nx-gold); font-style: italic; }
-.astrobans_table a { color: var(--nx-cyan); text-decoration: none; font-weight: 600; transition: .15s ease; }
-.astrobans_table a:hover { color: #ffffff; }
+.astrobans_table tbody td:nth-child(4) {
+    color: #00e0ff !important;
+    font-weight: 700;
+}
+.astrobans_table tbody td:nth-child(5) {
+    color: #ffaa33 !important;
+    font-style: italic;
+    text-align: left;
+}
+
+/* Enlaces */
+.astrobans_table a {
+    color: #00e0ff !important;
+    text-decoration: none;
+    font-weight: 600;
+    transition: 0.15s ease;
+}
+.astrobans_table a:hover {
+    color: #ffffff !important;
+    text-shadow: 0 0 6px rgba(0, 224, 255, 0.9);
+}
+
+/* Fila de contador */
 .astrobans_count {
-    background: rgba(53,255,143,.06); color: var(--nx-green) !important;
-    font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
-    text-align: center !important; padding: 10px !important; letter-spacing: 1px;
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: #ff4488 !important;
+    font-weight: 700;
+    text-align: center !important;
+    padding: 12px !important;
+    font-size: 12px;
+    letter-spacing: 0.3px;
 }
 .astrobans_empty {
-    color: var(--nx-muted) !important; font-style: italic;
-    text-align: center !important; padding: 16px !important; font-size: 12px;
+    color: var(--text-muted) !important;
+    font-style: italic;
+    text-align: center !important;
+    padding: 20px !important;
+    font-size: 13px;
 }
-/* Paginación */
+
+/* ====== Paginación ====== */
 .astrobans_pagination {
-    display: flex; justify-content: center; align-items: center; gap: 5px;
-    padding: 12px; background: rgba(255,255,255,.03);
-    border: 1px solid var(--nx-border); border-radius: 10px;
-    margin: 14px 16px 16px; flex-wrap: wrap;
-    font-family: 'Space Mono', monospace; font-size: 11px; color: var(--nx-muted); font-weight: 600;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.5) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--text-muted) !important;
+    font-weight: 600;
+    transition: 0.2s ease;
 }
 .astrobans_pagination a {
-    color: var(--nx-cyan); text-decoration: none; padding: 5px 12px;
-    border-radius: 6px; font-weight: 700; transition: .2s ease;
-    border: 1px solid rgba(255,255,255,.12);
+    color: #00e0ff !important;
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    transition: 0.25s ease;
+    border: 1px solid rgba(0, 204, 255, 0.2) !important;
 }
 .astrobans_pagination a:hover {
-    background: rgba(89,214,255,.1); border-color: var(--nx-cyan);
-    color: #ffffff; transform: translateY(-1px);
+    background: rgba(255, 94, 0, 0.15) !important;
+    border-color: var(--border-color) !important;
+    color: #ffffff !important;
+    transform: translateY(-2px);
 }
-.astrobans_pagination a:active { transform: translateY(0); }
+.astrobans_pagination a:active {
+    transform: translateY(0);
+}
 
-/* ═══ Móvil ═══ */
+/* ====== Responsive ====== */
 @media (max-width: 768px) {
-    .astrobans_wrap { margin-top: 70px !important; padding: 0 10px !important; }
-    .astrobans_panel { border-radius: 12px; }
-    .astrobans_body { padding: 16px 14px !important; }
-    .astrobans_actions { text-align: center !important; }
-    .astrobans_actions .btn, .astrobans_btn_register, .astrobans_btn_submit { width: 100%; }
+    .astrobans_wrap { padding: 10px; }
+    .astrobans_panel { padding: 20px 15px; }
+    .astrobans_table { font-size: 11.5px; table-layout: auto; }
+    .astrobans_table thead th { padding: 8px 5px; font-size: 11px; }
+    .astrobans_table tbody td { padding: 8px 5px; }
 }
 </style>
-{/literal}
 
 <div class="astrobans_wrap">
 
@@ -171,7 +282,7 @@
 			{/if}
 			{for $site=1 to $maxPage}
 				{if $site == $page}
-					<a href="#" onclick="false;" style="background:linear-gradient(135deg,#0066cc,#0099ff);color:#fff;box-shadow:0 0 10px rgba(0,224,255,0.4);">{$site}</a>
+					<a href="#" onclick="false;" style="background:#222c3c;border-color:#ff5e00;color:#fff;box-shadow:0 0 10px rgba(255,94,0,0.4);">{$site}</a>
 				{else}
 					<a href="index.php?page=banList&amp;side={$site}">{$site}</a>
 				{/if}
