@@ -1,333 +1,72 @@
-{* === ASTROIO v3.0 - estilo nuevo aplicado archivo por archivo: styles/templates/login/layout.normal.tpl === *}
+{* ============================================================
+   ASTROIO v8.0 — LAYOUT NORMAL LOGIN (clon del layout.normal.tpl
+   de ultimateXnova): wrapper transparente — las tarjetas flotan
+   sobre el fondo. Para páginas internas (news/rules/screens/etc.)
+   se da estilo dark-blur a la caja SOLO fuera de body#index,
+   igual que hacía la v4.1.
+   ============================================================ *}
 {literal}
 <style>
-/* === ASTROIO v3.0 === */
-h1, h2, h3, h4 { color:#fff; letter-spacing:.5px; text-shadow:0 1px 3px rgba(0,0,0,.5) }
-a { color:#00e0ff; text-decoration:none; transition:.2s ease }
-a:hover { color:#fff; text-shadow:0 0 10px rgba(0,224,255,.7) }
-table { background:rgba(15,23,42,.55); border:1px solid #1e293b; border-radius:10px; border-collapse:collapse; overflow:hidden }
-table th { background:linear-gradient(135deg,rgba(0,68,136,.85),rgba(0,119,204,.85)); border-bottom:1px solid rgba(0,224,255,.5); color:#fff; padding:6px 9px; text-align:left; text-transform:uppercase; font-size:10px; letter-spacing:.5px; text-shadow:0 1px 2px rgba(0,0,0,.4) }
-table td { padding:6px 9px; border-bottom:1px solid rgba(30,41,59,.7); color:#cbd5e1 }
-table tr:hover td { background:rgba(0,224,255,.04) }
-input[type=text], input[type=password], input[type=email], input[type=number], input[type=date], select, textarea { background:rgba(0,0,0,.5); color:#fff; border:1px solid rgba(0,204,255,.35); border-radius:8px; padding:5px 9px; font-size:12px; font-family:inherit; box-sizing:border-box; max-width:100%; transition:.25s ease }
-input[type=text]:focus, input[type=password]:focus, input[type=email]:focus, input[type=number]:focus, select:focus, textarea:focus { outline:none; border-color:#00e0ff; box-shadow:0 0 12px rgba(0,224,255,.5); background:rgba(0,0,0,.65) }
-textarea { width:100%; resize:vertical; font-family:inherit }
-button, input[type=submit], input[type=button] { background:linear-gradient(180deg,#0066cc,#0099ff); color:#fff; border:1px solid #00e0ff; border-radius:8px; padding:5px 16px; font-size:11.5px; font-weight:600; font-family:inherit; cursor:pointer; transition:.25s ease; text-transform:uppercase; letter-spacing:.5px; text-shadow:0 1px 2px rgba(0,0,0,.4) }
-button:hover, input[type=submit]:hover, input[type=button]:hover { box-shadow:0 0 18px rgba(0,224,255,.5); transform:translateY(-2px) }
-button:active, input[type=submit]:active, input[type=button]:active { transform:translateY(0) }
-input[type=reset] { background:linear-gradient(180deg,#444,#666); border-color:#888 }
-select option { background:#0f172a; color:#cbd5e1 }
-.globalWarning { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.45); color:#fecaca; border-radius:10px; padding:8px 14px; text-align:center }
-@media (max-width:760px) { { padding:6px; overflow-x:auto } table { font-size:11px } table th, table td { padding:5px 7px } }
+/* Caja interna con estilo solo en páginas que NO son el índice
+   (el índice usa las tarjetas flotantes de ultimateXnova) */
+body:not(#index) #content { max-width: 1100px; margin: 0 auto; }
+body:not(#index) .box-out,
+body:not(#index) .box-inner { border-collapse: collapse; width: 100%; }
+body:not(#index) .box-out tr.box-out-header,
+body:not(#index) .box-out tr.box-out-footer,
+body:not(#index) .box-out td.box-out-content-left,
+body:not(#index) .box-out td.box-out-content-right,
+body:not(#index) .box-inner td.box-inner-content-left,
+body:not(#index) .box-inner td.box-inner-content-right,
+body:not(#index) .box-inner tr.box-inner-footer { display: none; }
+body:not(#index) td.box-inner-content-center {
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 15px;
+    box-shadow: 0px 0px 40px 0px rgba(0,0,0,0.75);
+    color: #fff;
+    padding: 20px;
+    font-family: "Space Mono", monospace;
+}
+body:not(#index) td.box-inner-content-center h1,
+body:not(#index) td.box-inner-content-center h2,
+body:not(#index) td.box-inner-content-center h3 { font-family: "Rajdhani", sans-serif; color: #fff; }
+body:not(#index) td.box-inner-content-center a { color: rgba(255,255,255,0.8); text-decoration: none; }
+body:not(#index) td.box-inner-content-center a:hover { color: #fff; }
+body:not(#index) td.box-inner-content-center table { border-collapse: collapse; width: 100%; }
+body:not(#index) td.box-inner-content-center table td { padding: 6px 9px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+body:not(#index) td.box-inner-content-center input,
+body:not(#index) td.box-inner-content-center select,
+body:not(#index) td.box-inner-content-center textarea {
+    background: rgba(0,0,0,0.5); color: #fff;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+    padding: 6px 10px; font-family: "Space Mono", monospace; box-sizing: border-box;
+}
+body:not(#index) td.box-inner-content-center button,
+body:not(#index) td.box-inner-content-center input[type=submit] {
+    background-color: rgba(0,0,0,0.545); border: 1px solid rgba(255,255,255,0.1);
+    color: #fff; border-radius: 25px; padding: 6px 25px;
+    font-family: "Rajdhani", sans-serif; font-weight: 700; font-size: 1.1em; cursor: pointer;
+}
+@media (max-width: 760px) {
+    body:not(#index) #content { margin: 0 8px; }
+}
+/* Índice: sin caja, tarjetas flotando sobre el fondo */
+#index #content { max-width: none; }
+#index .box-out, #index .box-inner { border-collapse: collapse; width: 100%; }
+#index tr.box-out-header, #index tr.box-out-footer,
+#index tr.box-inner-header, #index tr.box-inner-footer,
+#index td.box-out-content-left, #index td.box-out-content-right,
+#index td.box-inner-content-left, #index td.box-inner-content-right { display: none; }
+#index td.box-out-content-center, #index td.box-inner-content-center { padding: 0; }
 </style>
 {/literal}
 
-{include file="main.header.tpl"}
-{include file="main.navigation.tpl"}
-
-<style>
-/* ═══════════════════════════════════════════════
-   AstroIO v3.0 — Layout Normal (Login/Público)
-   Prefijo: .astrolay_
-   Acento: 🔷 Cyan (#00e0ff)
-   FIX v3.0:
-     - Glassmorphism real (backdrop-filter + rgba)
-     - border-radius 12px (box_out) / 8px (inputs, botones)
-     - Variables --bg-card / --accent-cyan unificadas
-     - Estructura de tablas box-out/box-inner intacta
-     - Blocks title y content intactos
-   ═══════════════════════════════════════════════ */
-
-:root {
-    --bg-dark:       rgba(11, 16, 30, 0.55);
-    --bg-card:       rgba(15, 23, 42, 0.75);
-    --bg-card-solid: rgba(15, 23, 42, 0.85);
-    --bg-inner:      rgba(0, 0, 0, 0.35);
-    --border-color:  #1e293b;
-    --text-main:     #cbd5e1;
-    --text-muted:    #94a3b8;
-    --text-title:    #ffffff;
-    --accent-blue:   #3b82f6;
-    --accent-cyan:   #00e0ff;
-    --accent-purple: #8b5cf6;
-    --accent-gold:   #fbbf24;
-    --accent-green:  #4aff88;
-    --accent-red:    #ef4444;
-}
-
-/* Wrapper principal */
-#content {
-    max-width: 1100px;
-    margin: 20px auto;
-    padding: 0 10px;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Roboto, sans-serif;
-}
-
-#content section {
-    display: block;
-    width: 100%;
-}
-
-/* ═══ BOX OUTER (marco exterior) ═══ */
-.astrolay_box_out {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--bg-card);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    overflow: hidden;
-}
-
-.astrolay_box_out tr.box-out-header,
-.astrolay_box_out tr.box-out-footer {
-    display: none;
-}
-
-.astrolay_box_out td.box-out-content-left,
-.astrolay_box_out td.box-out-content-right {
-    display: none;
-}
-
-.astrolay_box_out td.box-out-content-center {
-    padding: 0;
-}
-
-/* ═══ BOX INNER (marco interior = contenido) ═══ */
-.astrolay_box_inner {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.astrolay_box_inner tr.box-inner-header {
-    display: block;
-}
-
-.astrolay_box_inner td.box-inner-header-left,
-.astrolay_box_inner td.box-inner-header-right {
-    display: none;
-}
-
-.astrolay_box_inner td.box-inner-header-center {
-    display: block;
-    background: linear-gradient(135deg, rgba(0, 68, 136, 0.85), rgba(0, 119, 204, 0.85));
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border-bottom: 1px solid var(--accent-cyan);
-    padding: 10px 16px;
-    text-align: left;
-}
-
-.astrolay_box_inner td.box-inner-header-center h1 {
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 700;
-    margin: 0;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-}
-
-/* ═══ CONTENIDO ═══ */
-.astrolay_box_inner tr.box-inner-content {
-    display: block;
-}
-
-.astrolay_box_inner td.box-inner-content-left,
-.astrolay_box_inner td.box-inner-content-right {
-    display: none;
-}
-
-.astrolay_box_inner td.box-inner-content-center {
-    display: block;
-    padding: 16px 20px;
-    color: var(--text-main);
-    font-size: 13px;
-    line-height: 1.6;
-}
-
-/* ═══ FOOTER INTERNO (ocultar) ═══ */
-.astrolay_box_inner tr.box-inner-footer {
-    display: none;
-}
-
-/* ═══ Tipografía genérica dentro del contenido ═══ */
-.astrolay_box_inner td.box-inner-content-center h1,
-.astrolay_box_inner td.box-inner-content-center h2,
-.astrolay_box_inner td.box-inner-content-center h3 {
-    color: var(--accent-cyan);
-    margin-top: 0;
-    letter-spacing: 0.5px;
-}
-
-.astrolay_box_inner td.box-inner-content-center h1 {
-    font-size: 20px;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 8px;
-}
-
-.astrolay_box_inner td.box-inner-content-center h2 {
-    font-size: 16px;
-}
-
-.astrolay_box_inner td.box-inner-content-center h3 {
-    font-size: 14px;
-}
-
-.astrolay_box_inner td.box-inner-content-center p {
-    color: var(--text-main);
-    line-height: 1.7;
-}
-
-.astrolay_box_inner td.box-inner-content-center a {
-    color: var(--accent-cyan);
-    text-decoration: none;
-    transition: 0.2s ease;
-}
-
-.astrolay_box_inner td.box-inner-content-center a:hover {
-    color: #ffffff;
-    text-shadow: 0 0 10px rgba(0, 224, 255, 0.7);
-}
-
-/* ═══ Tablas dentro del contenido ═══ */
-.astrolay_box_inner td.box-inner-content-center table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-    color: var(--text-main);
-}
-
-.astrolay_box_inner td.box-inner-content-center table th {
-    background: linear-gradient(135deg, rgba(0, 68, 136, 0.85), rgba(0, 119, 204, 0.85));
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border-bottom: 1px solid var(--accent-cyan);
-    color: #ffffff;
-    padding: 6px 10px;
-    text-align: left;
-    font-weight: normal;
-    text-transform: uppercase;
-    font-size: 10.5px;
-    letter-spacing: 0.5px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-}
-
-.astrolay_box_inner td.box-inner-content-center table td {
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.astrolay_box_inner td.box-inner-content-center table tr:hover {
-    background: rgba(0, 224, 255, 0.04);
-}
-
-/* ═══ Inputs / Forms dentro del contenido ═══ */
-.astrolay_box_inner td.box-inner-content-center input[type="text"],
-.astrolay_box_inner td.box-inner-content-center input[type="password"],
-.astrolay_box_inner td.box-inner-content-center input[type="email"],
-.astrolay_box_inner td.box-inner-content-center input[type="number"],
-.astrolay_box_inner td.box-inner-content-center select,
-.astrolay_box_inner td.box-inner-content-center textarea {
-    background: rgba(0, 0, 0, 0.5);
-    color: #ffffff;
-    border: 1px solid rgba(0, 204, 255, 0.35);
-    border-radius: 8px;
-    padding: 6px 10px;
-    font-size: 12px;
-    transition: 0.25s ease;
-    box-sizing: border-box;
-}
-
-.astrolay_box_inner td.box-inner-content-center input:focus,
-.astrolay_box_inner td.box-inner-content-center select:focus,
-.astrolay_box_inner td.box-inner-content-center textarea:focus {
-    outline: none;
-    border-color: var(--accent-cyan);
-    box-shadow: 0 0 12px rgba(0, 224, 255, 0.5);
-    background: rgba(0, 0, 0, 0.65);
-    transform: translateY(-1px);
-}
-
-/* ═══ Botones dentro del contenido ═══ */
-.astrolay_box_inner td.box-inner-content-center button,
-.astrolay_box_inner td.box-inner-content-center input[type="submit"] {
-    background: linear-gradient(180deg, #0066cc 0%, #0099ff 100%);
-    color: #ffffff;
-    border: 1px solid var(--accent-cyan);
-    border-radius: 8px;
-    padding: 6px 18px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: 0.25s ease;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-}
-
-.astrolay_box_inner td.box-inner-content-center button:hover,
-.astrolay_box_inner td.box-inner-content-center input[type="submit"]:hover {
-    box-shadow: 0 0 18px rgba(0, 224, 255, 0.5);
-    transform: translateY(-2px);
-}
-
-.astrolay_box_inner td.box-inner-content-center button:active,
-.astrolay_box_inner td.box-inner-content-center input[type="submit"]:active {
-    transform: translateY(0);
-}
-
-/* ═══ Bloques / Cards dentro del contenido ═══ */
-.astrolay_box_inner td.box-inner-content-center .panel,
-.astrolay_box_inner td.box-inner-content-center .card {
-    background: rgba(0, 224, 255, 0.03);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 12px 14px;
-    margin-bottom: 12px;
-}
-
-.astrolay_box_inner td.box-inner-content-center .panel-heading {
-    background: linear-gradient(135deg, rgba(0, 68, 136, 0.85), rgba(0, 119, 204, 0.85));
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border-bottom: 1px solid var(--accent-cyan);
-    color: #ffffff;
-    padding: 8px 14px;
-    margin: -12px -14px 12px;
-    border-radius: 8px 8px 0 0;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-}
-
-/* ═══ Separadores / HR ═══ */
-.astrolay_box_inner td.box-inner-content-center hr {
-    border: none;
-    border-top: 1px solid var(--border-color);
-    margin: 16px 0;
-}
-
-/* ═══ Responsive ═══ */
-@media (max-width: 768px) {
-    #content {
-        margin: 10px auto;
-        padding: 0 6px;
-    }
-    .astrolay_box_inner td.box-inner-content-center {
-        padding: 12px 14px;
-    }
-}
-</style>
-
 <div id="content">
 <section>
-	<table class="box-out astrolay_box_out">
+	<table class="box-out">
 		<tr class="box-out-header">
 			<td class="box-out-header-left"></td>
 			<td class="box-out-header-center"></td>
@@ -336,7 +75,7 @@ select option { background:#0f172a; color:#cbd5e1 }
 		<tr class="box-out-content">
 			<td class="box-out-content-left"></td>
 			<td class="box-out-content-center">
-				<table class="box-inner astrolay_box_inner">
+				<table class="box-inner">
 					<tr class="box-inner-header">
 						<td class="box-inner-header-left"></td>
 						<td class="box-inner-header-center"><h1>{block name=title}{/block}</h1></td>

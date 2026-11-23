@@ -1,27 +1,11 @@
-{* === ASTROIO v3.0 - estilo nuevo aplicado archivo por archivo: styles/templates/login/main.header.tpl === *}
-{literal}
-<style>
-/* === ASTROIO v3.0 === */
-h1, h2, h3, h4 { color:#fff; letter-spacing:.5px; text-shadow:0 1px 3px rgba(0,0,0,.5) }
-a { color:#00e0ff; text-decoration:none; transition:.2s ease }
-a:hover { color:#fff; text-shadow:0 0 10px rgba(0,224,255,.7) }
-table { background:rgba(15,23,42,.55); border:1px solid #1e293b; border-radius:10px; border-collapse:collapse; overflow:hidden }
-table th { background:linear-gradient(135deg,rgba(0,68,136,.85),rgba(0,119,204,.85)); border-bottom:1px solid rgba(0,224,255,.5); color:#fff; padding:6px 9px; text-align:left; text-transform:uppercase; font-size:10px; letter-spacing:.5px; text-shadow:0 1px 2px rgba(0,0,0,.4) }
-table td { padding:6px 9px; border-bottom:1px solid rgba(30,41,59,.7); color:#cbd5e1 }
-table tr:hover td { background:rgba(0,224,255,.04) }
-input[type=text], input[type=password], input[type=email], input[type=number], input[type=date], select, textarea { background:rgba(0,0,0,.5); color:#fff; border:1px solid rgba(0,204,255,.35); border-radius:8px; padding:5px 9px; font-size:12px; font-family:inherit; box-sizing:border-box; max-width:100%; transition:.25s ease }
-input[type=text]:focus, input[type=password]:focus, input[type=email]:focus, input[type=number]:focus, select:focus, textarea:focus { outline:none; border-color:#00e0ff; box-shadow:0 0 12px rgba(0,224,255,.5); background:rgba(0,0,0,.65) }
-textarea { width:100%; resize:vertical; font-family:inherit }
-button, input[type=submit], input[type=button] { background:linear-gradient(180deg,#0066cc,#0099ff); color:#fff; border:1px solid #00e0ff; border-radius:8px; padding:5px 16px; font-size:11.5px; font-weight:600; font-family:inherit; cursor:pointer; transition:.25s ease; text-transform:uppercase; letter-spacing:.5px; text-shadow:0 1px 2px rgba(0,0,0,.4) }
-button:hover, input[type=submit]:hover, input[type=button]:hover { box-shadow:0 0 18px rgba(0,224,255,.5); transform:translateY(-2px) }
-button:active, input[type=submit]:active, input[type=button]:active { transform:translateY(0) }
-input[type=reset] { background:linear-gradient(180deg,#444,#666); border-color:#888 }
-select option { background:#0f172a; color:#cbd5e1 }
-.globalWarning { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.45); color:#fecaca; border-radius:10px; padding:8px 14px; text-align:center }
-@media (max-width:760px) { { padding:6px; overflow-x:auto } table { font-size:11px } table th, table td { padding:5px 7px } }
-</style>
-{/literal}
-
+{* ============================================================
+   ASTROIO v8.0 — LOGIN ULTIMATE (clon de los archivos reales de
+   https://github.com/ultimateXnova/ultimateXnova, tema nextgen)
+   styles/templates/login/main.header.tpl
+   Bootstrap 5 + UIKit + fuentes Rajdhani/Space Mono + login.css
+   + capas .login-background (misma imagen animada de la nave).
+   Meta y scripts propios del juego conservados.
+   ============================================================ *}
 <!DOCTYPE html>
 <!--[if lt IE 7 ]> <html lang="{$lang}" class="no-js ie6"> <![endif]-->
 <!--[if IE 7 ]>    <html lang="{$lang}" class="no-js ie7"> <![endif]-->
@@ -30,28 +14,27 @@ select option { background:#0f172a; color:#cbd5e1 }
 <!--[if (gt IE 9)|!(IE)]><!--> <html lang="{$lang}" class="no-js"> <!--<![endif]-->
 <head>
 	<meta charset="UTF-8">
-	<link rel="stylesheet" type="text/css" href="styles/resource/css/login/styles.css">
-	<link rel="stylesheet" href="styles/resource/font-awesome/4.5.0/css/font-awesome.min.css" />
-	<link rel="stylesheet" type="text/css" href="styles/resource/css/base/jquery.fancybox.css">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	{assign var="REV" value="1.0.0.8" nocache}
+
+	<!-- Bootstrap 5 (igual que ultimateXnova) -->
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+	<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF" crossorigin="anonymous"></script>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+
+	<!-- NG Fonts + Libraries + CSS (copiados de ultimateXnova, tema nextgen) -->
+	<link rel="stylesheet" href="styles/theme/gow/ultimate/css/fonts.css">
+	<link rel="stylesheet" href="styles/theme/gow/ultimate/css/uikit.min.css">
+	<link rel="stylesheet" href="styles/theme/gow/ultimate/css/login.css">
+	<link rel="stylesheet" href="styles/theme/gow/ultimate/css/style.css">
+
 	<link rel="shortcut icon" href="./favicon.ico" type="image/x-icon">
 	<title>{block name="title"} - {$gameName}{/block}</title>
 	<meta name="generator" content="2Moons {$VERSION}">
-	<!-- 
-		This website is powered by 2Moons {$VERSION}
-		2Moons is a free Space Browsergame initially created by Jan-Otto Kröpke and licensed under MIT.
-		2Moons is copyright 2009-2017 of Jan-Otto Kröpke. Extensions are copyright of their respective owners.
-		Information and contribution at https://github.com/HikeGame/2Moons-1.9/
-	-->
 	<meta name="keywords" content="AstroIO, XNova, 2Moons, Space, Browsergame, Estrategia espacial, Servidor privado">
 	<meta name="description" content="AstroIO — Juego de estrategia espacial en tiempo real. Construye tu imperio, gestiona recursos, investiga tecnologías, forja alianzas y conquista la galaxia.">
-	<meta name="viewport" content="width=device-width" /> <!-- Responsive -->
-
-	<!-- ═══ AstroIO: theme-color para navegadores móviles ═══ -->
-	<meta name="theme-color" content="#0f1624">
-
-	<!-- New code -->
-	<!--<script src="http://code.jquery.com/jquery.js"></script>
-	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script> -->
+	<meta name="theme-color" content="#000000">
 
 	<!--[if lt IE 9]>
 	<script src="scripts/base/html5.js"></script>
@@ -63,85 +46,16 @@ select option { background:#0f172a; color:#cbd5e1 }
 	<script>{if isset($code)}var loginError = {$code|json};{/if}</script>
 	{block name="script"}{/block}
 
-	<!-- ═══════════════════════════════════════════════
-	     AstroIO v3.0 — Variables globales del tema
-	     Compatibilidad con v2.2 (--astroio-*) preservada
-	     Disponibles en TODOS los templates del juego
-	     Uso: var(--bg-card), var(--accent-cyan), etc.
-	     ═══════════════════════════════════════════════ -->
 	<style>
-	:root {
-		/* ═══════════════════════════════════════════
-		   v2.2 — Sistema antiguo (PRESERVADO)
-		   No tocar: templates v2.2 pueden usarlas
-		   ═══════════════════════════════════════════ */
-		/* Fondo */
-		--astroio-bg-dark:   #0f1624;
-		--astroio-bg-mid:    #1a2332;
-		--astroio-bg-light:  #1e3a5f;
-
-		/* Acento principal */
-		--astroio-cyan:      #00ccff;
-		--astroio-cyan-hi:   #00e0ff;
-
-		/* Textos */
-		--astroio-text:      #c8d6e5;
-		--astroio-text-dim:  #a8b8c8;
-		--astroio-text-mute: #7a8ba0;
-
-		/* Estados */
-		--astroio-success:   #66ff99;
-		--astroio-danger:    #ff4488;
-		--astroio-warning:   #ffaa33;
-		--astroio-info:      #00e0ff;
-		--astroio-purple:    #aa44ff;
-
-		/* Botones */
-		--astroio-btn-blue:  linear-gradient(180deg, #0066cc 0%, #0099ff 100%);
-		--astroio-btn-green: linear-gradient(180deg, #228833 0%, #66ff99 100%);
-		--astroio-btn-red:   linear-gradient(180deg, #cc2244 0%, #ff4488 100%);
-		--astroio-btn-orange:linear-gradient(180deg, #aa6600 0%, #ffaa33 100%);
-		--astroio-btn-purple:linear-gradient(180deg, #7700cc 0%, #aa44ff 100%);
-
-		/* Sombras */
-		--astroio-shadow:    0 4px 14px rgba(0,0,0,0.4);
-		--astroio-shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
-		--astroio-glow-cyan: 0 0 14px rgba(0,224,255,0.35);
-		--astroio-glow-green:0 0 14px rgba(102,255,153,0.5);
-		--astroio-glow-red:  0 0 14px rgba(255,68,136,0.5);
-
-		/* Bordes */
-		--astroio-radius-sm: 6px;
-		--astroio-radius-md: 8px;
-		--astroio-radius-lg: 10px;
-		--astroio-radius-xl: 12px;
-
-		/* ═══════════════════════════════════════════
-		   v3.0 — Sistema nuevo (AÑADIDO)
-		   Usar en templates migrados a v3.0
-		   ═══════════════════════════════════════════ */
-		/* Fondos glassmorphism */
-		--bg-dark:       rgba(11, 16, 30, 0.55);
-		--bg-card:       rgba(15, 23, 42, 0.75);
-		--bg-card-solid: rgba(15, 23, 42, 0.85);
-		--bg-inner:      rgba(0, 0, 0, 0.35);
-
-		/* Bordes */
-		--border-color:  #1e293b;
-
-		/* Textos */
-		--text-main:     #cbd5e1;
-		--text-muted:    #94a3b8;
-		--text-title:    #ffffff;
-
-		/* Acentos por módulo */
-		--accent-blue:   #3b82f6;
-		--accent-cyan:   #00e0ff;
-		--accent-purple: #8b5cf6;
-		--accent-gold:   #fbbf24;
-		--accent-green:  #4aff88;
-		--accent-red:    #ef4444;
-	}
+	/* El style.css de ultimate pide img/background/mars.webp que no usamos:
+	   el fondo real del login son las capas .login-background */
+	html { background-image: none !important; background: #000 !important; }
 	</style>
 </head>
-<body id="{$smarty.get.page|default:'overview'|escape}" class="{$bodyclass}">
+<body id="{$smarty.get.page|default:'overview'|escape}" class="{$bodyclass} login">
+	<div class="login-background">
+		<div class="bg-1"></div>
+		<div class="bg-2"></div>
+		<div class="bg-3"></div>
+	</div>
+<div id="page">
