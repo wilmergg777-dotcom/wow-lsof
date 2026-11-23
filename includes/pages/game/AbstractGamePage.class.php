@@ -97,6 +97,9 @@
  *   - FIX v2.0: Se ha añadido el parámetro `false` al final de printMessage
  *     para que el mensaje salga como una ventana (popup) compacta en el centro
  *     de la pantalla, en lugar de ocupar toda la página.
+ *
+ * ✅ FIX AstroIO v1.8 (Versión Dinámica):
+ *   - Lee la versión desde CHANGES.md y la envía a las plantillas como $gameVersion.
  */
 
 abstract class AbstractGamePage
@@ -152,6 +155,20 @@ abstract class AbstractGamePage
 	public static function astroio_avatarPath($avatar)
 	{
 		return (!empty($avatar) && is_file($avatar)) ? $avatar : self::ASTROIO_DEFAULT_AVATAR;
+	}
+
+	/* ═══ AstroIO: Lee la versión desde CHANGES.md ═══ */
+	protected function astroio_getVersionFromChangelog()
+	{
+		$version = '2.0.git'; // Fallback
+		$file = defined('ROOT_PATH') ? ROOT_PATH . 'CHANGES.md' : 'CHANGES.md';
+		if (file_exists($file)) {
+			$content = file_get_contents($file);
+			if (preg_match('/###\s*AstroIO.*?v([0-9\.]+)/i', $content, $matches)) {
+				$version = $matches[1];
+			}
+		}
+		return $version;
 	}
 
 	protected function __construct() {
@@ -594,9 +611,11 @@ abstract class AbstractGamePage
 				'pvp'				=> $pvpData,
 				// ✅ AstroIO v1.2 — Alertas vacías en early-return
 				'globalAlerts'		=> array('attack' => array(), 'spy' => array(), 'transport' => array()),
-			'onlineNow'			=> 0,
+				'onlineNow'			=> 0,
 				// ✅ AstroIO v1.7 — Mini Torneos (contador global)
 				'tourneyEnd'		=> $this->astroio_getTourneyEnd(),
+				// ✅ AstroIO v1.8 — Versión dinámica
+				'gameVersion'		=> $this->astroio_getVersionFromChangelog(),
 			));
 			return;
 		}
@@ -960,6 +979,8 @@ abstract class AbstractGamePage
 			'globalAlerts'		=> $globalAlerts,
 			// ✅ AstroIO v1.7 — Mini Torneos (contador global)
 			'tourneyEnd'		=> $this->astroio_getTourneyEnd(),
+			// ✅ AstroIO v1.8 — Versión dinámica
+			'gameVersion'		=> $this->astroio_getVersionFromChangelog(),
 		));
 	}
 
@@ -1003,6 +1024,8 @@ abstract class AbstractGamePage
 			'Offset'			=> $dateTimeUser->getOffset() - $dateTimeServer->getOffset(),
 			'queryString'		=> $this->getQueryString(),
 			'themeSettings'		=> $THEME->getStyleSettings(),
+			// ✅ AstroIO v1.8 — Versión dinámica (para que esté disponible siempre)
+			'gameVersion'		=> $this->astroio_getVersionFromChangelog(),
 		));
 	}
 
