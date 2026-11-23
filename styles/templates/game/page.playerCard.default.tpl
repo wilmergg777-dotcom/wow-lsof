@@ -110,8 +110,8 @@
 		<td colspan="2">{$lostunits}</td>
 	</tr>
 	<tr>
-		<td>{$LNG.pl_dermetal}</td>
-		<td colspan="2">{$kbmetal}</td>
+		<td>{$LNG.pl_name}</td>
+		<td colspan="2"><img src="{$avatar}" alt="{$name}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid rgba(0,224,255,.55);vertical-align:middle;margin-right:9px">{$name}</td>
 	</tr>
 	<tr>
 		<td>{$LNG.pl_dercrystal}</td>

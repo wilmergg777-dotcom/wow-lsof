@@ -85,7 +85,7 @@ class ShowPlayerCardPage extends AbstractGamePage
 		// ═══════════════════════════════════════════════════════════
 
 		$sql = "SELECT 
-				u.username, u.galaxy, u.system, u.planet, u.wons, u.loos, u.draws, u.kbmetal, u.kbcrystal, u.lostunits, u.desunits, u.ally_id,
+				u.username, u.avatar, u.galaxy, u.system, u.planet, u.wons, u.loos, u.draws, u.kbmetal, u.kbcrystal, u.lostunits, u.desunits, u.ally_id,
 				p.name,
 				s.tech_rank, s.tech_points, s.build_rank, s.build_points, s.defs_rank, s.defs_points, s.fleet_rank, s.fleet_points, s.total_rank, s.total_points,
 				a.ally_name
@@ -133,6 +133,8 @@ class ShowPlayerCardPage extends AbstractGamePage
 			'id'			=> $PlayerID,
 			'yourid'		=> $USER['id'],
 			'name'			=> $query['username'],
+			// ═══ AstroIO: foto del avatar del jugador (o avatar por defecto) ═══
+			'avatar'		=> self::astroio_avatarPath(isset($query['avatar']) ? $query['avatar'] : ''),
 			'homeplanet'	=> $query['name'],
 			'galaxy'		=> $query['galaxy'],
 			'system'		=> $query['system'],

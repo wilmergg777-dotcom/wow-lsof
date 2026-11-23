@@ -652,6 +652,107 @@
 	{/if}
 	{/foreach}
 
+	{* ═══════════ ASTROIO — MENÚ DE USUARIO (botón avatar + submenú, prefijo astromenu_) ═══════════ *}
+	{literal}
+	<style>
+	/* ═══ ASTROIO — menú de usuario ═══ */
+	#astromenu_wrap { position:fixed; top:10px; right:14px; z-index:6000; font-family:inherit }
+	#astromenu_btn { display:flex; align-items:center; gap:8px; background:rgba(10,18,32,.85); border:1px solid #1e293b; border-radius:999px; padding:4px 12px 4px 4px; cursor:pointer; transition:.2s ease; color:#cbd5e1; font-family:inherit }
+	#astromenu_btn:hover { border-color:rgba(0,224,255,.5); box-shadow:0 0 14px rgba(0,224,255,.25) }
+	#astromenu_btn img { width:34px; height:34px; border-radius:50%; object-fit:cover; border:1px solid rgba(0,224,255,.5) }
+	#astromenu_btn .astromenu_name { font-size:12px; font-weight:700; color:#fff; letter-spacing:.3px; text-shadow:0 1px 2px rgba(0,0,0,.4) }
+	#astromenu_btn .astromenu_caret { font-size:10px; color:#00e0ff }
+	#astromenu_pop { position:fixed; top:56px; right:14px; width:272px; background:rgba(10,18,32,.97); border:1px solid #1e293b; border-radius:14px; box-shadow:0 18px 50px rgba(0,0,0,.6); overflow:hidden; z-index:6001; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px) }
+	#astromenu_pop[hidden] { display:none }
+	.astromenu_head { display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid rgba(30,41,59,.8); background:rgba(0,224,255,.05) }
+	.astromenu_head img { width:46px; height:46px; border-radius:50%; object-fit:cover; border:2px solid rgba(0,224,255,.55) }
+	.astromenu_user { color:#fff; font-weight:800; font-size:13.5px; letter-spacing:.3px }
+	.astromenu_mail { color:#94a3b8; font-size:10.5px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+	.astromenu_row { display:flex; align-items:center; justify-content:space-between; padding:9px 14px; border-bottom:1px solid rgba(30,41,59,.6); color:#cbd5e1; font-size:12px }
+	.astromenu_row b { color:#fff }
+	.astromenu_rank { border:1px solid rgba(251,191,36,.55); background:rgba(251,191,36,.08); color:#fbbf24; font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; border-radius:999px; padding:3px 10px }
+	.astromenu_wallet { margin:10px 12px; border:1px solid rgba(0,224,255,.35); background:rgba(0,102,204,.12); border-radius:10px; padding:9px 11px }
+	.astromenu_wallet_t { color:#00e0ff; font-weight:800; font-size:11px; letter-spacing:.5px; text-transform:uppercase; margin-bottom:6px }
+	.astromenu_wallet_row { display:flex; justify-content:space-between; align-items:center; color:#cbd5e1; font-size:12px; padding:2px 0 }
+	.astromenu_wallet_row b { color:#fff; font-size:12.5px }
+	.astromenu_lang { display:flex; align-items:center; gap:8px; margin:10px 12px; padding:0 10px; border:1px solid #1e293b; border-radius:9px; background:rgba(255,255,255,.03) }
+	.astromenu_lang select { flex:1; background:transparent; border:none; color:#cbd5e1; font-size:12px; font-family:inherit; padding:8px 0; cursor:pointer; outline:none; -webkit-appearance:none; appearance:none }
+	.astromenu_lang select option { background:#0f172a; color:#cbd5e1 }
+	.astromenu_item { display:flex; align-items:center; gap:9px; padding:10px 16px; color:#cbd5e1 !important; font-size:12.5px; font-weight:600; text-decoration:none; border-top:1px solid rgba(30,41,59,.5); transition:.15s ease }
+	.astromenu_item:hover { background:rgba(0,224,255,.07); color:#fff !important }
+	.astromenu_item.astromenu_out { color:#ef4444 !important }
+	.astromenu_item.astromenu_out:hover { background:rgba(239,68,68,.08); color:#ff8080 !important }
+	@media (max-width:760px) {
+		#astromenu_wrap { top:8px; right:10px }
+		#astromenu_btn { padding:3px 8px 3px 3px }
+		#astromenu_btn img { width:30px; height:30px }
+		#astromenu_btn .astromenu_name, #astromenu_btn .astromenu_caret { display:none }
+		#astromenu_pop { top:46px; right:8px; width:min(272px,calc(100vw - 16px)) }
+	}
+	</style>
+	{/literal}
+	<div id="astromenu_wrap">
+		<button type="button" id="astromenu_btn" aria-label="Menú de usuario" title="{$username}">
+			<img src="{if !empty($userAvatar)}{$userAvatar}{else}{$AIO_AVATAR_DEF}{/if}" alt="{$username}">
+			<span class="astromenu_name">{$username}</span>
+			<span class="astromenu_caret">▼</span>
+		</button>
+	</div>
+	<div id="astromenu_pop" hidden>
+		<div class="astromenu_head">
+			<img src="{if !empty($userAvatar)}{$userAvatar}{else}{$AIO_AVATAR_DEF}{/if}" alt="{$username}">
+			<div>
+				<div class="astromenu_user">{$username}</div>
+				<div class="astromenu_mail">{$userEmail}</div>
+			</div>
+		</div>
+		<div class="astromenu_row">
+			<span>Puntos: <b>{pretty_number($userPoints)}</b></span>
+			<span class="astromenu_rank">{$userRankName}</span>
+		</div>
+		<div class="astromenu_wallet">
+			<div class="astromenu_wallet_t">💰 Billetera</div>
+			<div class="astromenu_wallet_row"><span>NTX-20</span><b>{$ntx20|default:0}</b></div>
+			{if isset($metodo_retiro) && $metodo_retiro == 'QVAPAY'}
+			<div class="astromenu_wallet_row"><span>UNTX-20</span><b>{$untx20|default:0}</b></div>
+			{/if}
+		</div>
+		{if isset($userLangs) && count($userLangs) > 0}
+		<div class="astromenu_lang">
+			<span>🌐</span>
+			<select id="astromenu_langsel">
+				{foreach from=$userLangs key=code item=langName}
+				<option value="{$code}"{if $code == $userLang} selected="selected"{/if}>{$langName}</option>
+				{/foreach}
+			</select>
+		</div>
+		{/if}
+		<a class="astromenu_item" href="game.php?page=settings">⚙️ Configuración</a>
+		<a class="astromenu_item astromenu_out" href="game.php?page=logout">⏻ Cerrar Sesión</a>
+	</div>
+	<script type="text/javascript">
+	{literal}
+	(function () {
+		var btn = document.getElementById('astromenu_btn');
+		var pop = document.getElementById('astromenu_pop');
+		if (!btn || !pop) return;
+		btn.addEventListener('click', function (e) {
+			e.stopPropagation();
+			pop.hidden = !pop.hidden;
+		});
+		document.addEventListener('click', function (e) {
+			if (!pop.hidden && !pop.contains(e.target)) { pop.hidden = true; }
+		});
+		var langsel = document.getElementById('astromenu_langsel');
+		if (langsel) {
+			langsel.addEventListener('change', function () {
+				window.location = 'game.php?page=settings&mode=lang&lang=' + encodeURIComponent(langsel.value);
+			});
+		}
+	})();
+	{/literal}
+	</script>
+
 	<div class="clear"></div>
 
 	{if !$vmode}

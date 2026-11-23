@@ -123,7 +123,7 @@ class ShowStatisticsPage extends AbstractGamePage
                 $start = max(floor(($range - 1) / 100) * 100, 0);
 
 				if ($config->stat == 2) {
-					$sql = "SELECT DISTINCT s.*, u.id, u.username, u.ally_id, u.country, a.ally_name FROM %%STATPOINTS%% as s
+					$sql = "SELECT DISTINCT s.*, u.id, u.username, u.avatar, u.ally_id, u.country, a.ally_name FROM %%STATPOINTS%% as s
 					INNER JOIN %%USERS%% as u ON u.id = s.id_owner
 					LEFT JOIN %%ALLIANCE%% as a ON a.id = s.id_ally
 					WHERE s.universe = :universe AND s.stat_type = 1 AND u.authlevel < :authLevel
@@ -136,7 +136,7 @@ class ShowStatisticsPage extends AbstractGamePage
 						':limit'	=> 100,
 					));
 				} else {
-					$sql = "SELECT DISTINCT s.*, u.id, u.username, u.ally_id, u.country, a.ally_name FROM %%STATPOINTS%% as s
+					$sql = "SELECT DISTINCT s.*, u.id, u.username, u.avatar, u.ally_id, u.country, a.ally_name FROM %%STATPOINTS%% as s
 					INNER JOIN %%USERS%% as u ON u.id = s.id_owner
 					LEFT JOIN %%ALLIANCE%% as a ON a.id = s.id_ally
 					WHERE s.universe = :universe AND s.stat_type = 1
@@ -156,6 +156,8 @@ class ShowStatisticsPage extends AbstractGamePage
                     $RangeList[]	= array(
                         'id'		=> $StatRow['id'],
                         'name'		=> $StatRow['username'],
+                        // ✅ AstroIO — avatar del jugador en el ranking
+                        'avatar'	=> self::astroio_avatarPath(isset($StatRow['avatar']) ? (string)$StatRow['avatar'] : ''),
                         // ✅ v6.0 — país del jugador para la bandera en el ranking
                         'country'	=> isset($StatRow['country']) ? (string)$StatRow['country'] : '',
                         'points'	=> pretty_number($StatRow[$Points]),

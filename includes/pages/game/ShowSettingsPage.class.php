@@ -110,6 +110,10 @@ class ShowSettingsPage extends AbstractGamePage
 				'discord_linked'    => $discord_linked,
 				'discord_account'   => $discord_account,
 				// ═══ Fin AstroIO ═══
+				// ═══ AstroIO: avatar (subir / quitar foto en la tarjeta Perfil) ═══
+				'AIO_AVATAR_DEF'	=> self::ASTROIO_DEFAULT_AVATAR,
+				'userAvatar'		=> self::astroio_avatarPath(isset($USER['avatar']) ? $USER['avatar'] : ''),
+				'userHasAvatar'		=> !empty($USER['avatar']) && is_file($USER['avatar']),
 			));
 			
 			$this->display('page.settings.default.tpl');
@@ -405,6 +409,12 @@ class ShowSettingsPage extends AbstractGamePage
 			));
 		}
 
+		// ═══ AstroIO: subida de avatar (foto de perfil visible para los demás jugadores) ═══
+		if (!empty($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK && !empty($_FILES['avatar']['name']))
+		{
+			$this->astroio_handleAvatarUpload();
+		}
+
 		$sql =  "UPDATE %%USERS%% SET
 		dpath					= :theme,
 		timezone				= :timezone,
@@ -440,10 +450,116 @@ class ShowSettingsPage extends AbstractGamePage
 			':spyMessagesMode'	=> $spyMessagesMode,
 			':userID'			=> $USER['id']
 		));
-		
+
 		$this->printMessage($LNG['op_options_changed'], array(array(
 			'label'	=> $LNG['sys_forward'],
 			'url'	=> 'game.php?page=settings'
 		)));
+	}
+
+	/* ═══ AstroIO: procesa la subida del avatar (valida imagen real, máx 2 MB) ═══ */
+	private function astroio_handleAvatarUpload()
+	{
+		global $USER, $LNG;
+
+		self::astroio_ensureAvatarColumn();
+
+		$file = $_FILES['avatar'];
+
+		if ($file['size'] > 2 * 1024 * 1024) {
+			$this->printMessage('La foto del avatar no puede superar 2 MB.', array(array(
+				'label'	=> $LNG['sys_back'],
+				'url'	=> 'game.php?page=settings'
+			)));
+		}
+
+		$info = @getimagesize($file['tmp_name']);
+		$allowedTypes = array(
+			IMAGETYPE_JPEG => 'jpg',
+			IMAGETYPE_PNG  => 'png',
+			IMAGETYPE_GIF  => 'gif',
+		);
+		if (defined('IMAGETYPE_WEBP')) {
+			$allowedTypes[IMAGETYPE_WEBP] = 'webp';
+		}
+
+		if ($info === false || !isset($allowedTypes[$info[2]])) {
+			$this->printMessage('El avatar debe ser una imagen JPG, PNG, GIF o WEBP.', array(array(
+				'label'	=> $LNG['sys_back'],
+				'url'	=> 'game.php?page=settings'
+			)));
+		}
+
+		$dir = 'styles/avatars/';
+		if (!is_dir($dir)) {
+			mkdir($dir, 0755, true);
+		}
+
+		$ext  = $allowedTypes[$info[2]];
+		$dest = $dir.'u'.$USER['id'].'_'.TIMESTAMP.'.'.$ext;
+
+		if (!move_uploaded_file($file['tmp_name'], $dest)) {
+			$this->printMessage('No se pudo guardar la foto del avatar. Avisa a un administrador.', array(array(
+				'label'	=> $LNG['sys_back'],
+				'url'	=> 'game.php?page=settings'
+			)));
+		}
+		@chmod($dest, 0644);
+
+		// borra la foto anterior del mismo jugador para no acumular archivos
+		if (!empty($USER['avatar']) && is_file($USER['avatar']) && strpos(basename($USER['avatar']), 'u'.$USER['id'].'_') === 0) {
+			@unlink($USER['avatar']);
+		}
+
+		$db = Database::get();
+		$db->update("UPDATE %%USERS%% SET avatar = :avatar WHERE id = :userID;", array(
+			':avatar'	=> $dest,
+			':userID'	=> $USER['id'],
+		));
+		$USER['avatar'] = $dest;
+	}
+
+	/* ═══ AstroIO: quita la foto del avatar (vuelve al avatar por defecto) ═══ */
+	public function avatarRemove()
+	{
+		global $USER, $LNG;
+
+		self::astroio_ensureAvatarColumn();
+
+		if (!empty($USER['avatar']) && is_file($USER['avatar']) && strpos(basename($USER['avatar']), 'u'.$USER['id'].'_') === 0) {
+			@unlink($USER['avatar']);
+		}
+
+		$db = Database::get();
+		$db->update("UPDATE %%USERS%% SET avatar = '' WHERE id = :userID;", array(
+			':userID'	=> $USER['id'],
+		));
+		$USER['avatar'] = '';
+
+		$this->printMessage('Tu foto de perfil fue eliminada. Volverás a usar el avatar por defecto.', array(array(
+			'label'	=> $LNG['sys_forward'],
+			'url'	=> 'game.php?page=settings'
+		)));
+	}
+
+	/* ═══ AstroIO: cambio rápido de idioma desde el submenú del avatar ═══ */
+	public function lang()
+	{
+		global $USER, $LNG;
+
+		$newLang = HTTP::_GP('lang', '');
+		$allowed = $LNG->getAllowedLangs(false);
+		if (!array_key_exists($newLang, $allowed)) {
+			$newLang = $LNG->getLanguage();
+		}
+
+		$db = Database::get();
+		$db->update("UPDATE %%USERS%% SET lang = :lang WHERE id = :userID;", array(
+			':lang'		=> $newLang,
+			':userID'	=> $USER['id'],
+		));
+		$USER['lang'] = $newLang;
+
+		HTTP::redirectTo('game.php?page=settings');
 	}
 }

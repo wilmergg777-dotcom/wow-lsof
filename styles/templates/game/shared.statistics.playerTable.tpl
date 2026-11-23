@@ -45,6 +45,7 @@
 
 			{* Nombre del jugador con Letras (F) y (D) *}
 			<td>
+				<img src="{$RangeInfo.avatar}" alt="" style="width:22px;height:22px;border-radius:50%;object-fit:cover;border:1px solid rgba(0,224,255,.45);vertical-align:middle;margin-right:6px">
 				<a href="#" onclick="return Dialog.Playercard({$RangeInfo.id}, '{$RangeInfo.name}');" class="rel_{$RangeInfo.relation|default:'default'}">{$RangeInfo.name}</a>
 
 				{* ✅ v6.0 — Bandera del país (users.country, ISO 3166-1 alpha-2).

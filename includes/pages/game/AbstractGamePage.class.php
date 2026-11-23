@@ -115,6 +115,45 @@ abstract class AbstractGamePage
 	protected $window;
 	protected $disableEcoSystem = false;
 
+	/* ═══ AstroIO: avatar por defecto (globo SVG, como en la foto del menú de usuario) ═══ */
+	const ASTROIO_DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%230066cc'/%3E%3Cstop offset='1' stop-color='%2300e0ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='30' fill='url(%23g)'/%3E%3Cpath d='M2 32h60M32 2v60' stroke='rgba(255,255,255,.5)' stroke-width='2' fill='none'/%3E%3Ccircle cx='32' cy='32' r='14' fill='none' stroke='rgba(255,255,255,.35)' stroke-width='2'/%3E%3C/svg%3E";
+
+	/* ═══ AstroIO: garantiza la columna avatar en %%USERS%% (migración automática, una vez por request) ═══ */
+	public static function astroio_ensureAvatarColumn()
+	{
+		static $checked = false;
+		if ($checked) return;
+		$checked = true;
+		try {
+			$db    = Database::get();
+			$names = $db->getDbTableNames();
+			$idx   = array_search('%%USERS%%', $names['keys']);
+			if ($idx === false) return;
+			$usersTable = $names['names'][$idx];
+			$res = $db->getHandle()->query("SHOW COLUMNS FROM `".$usersTable."` LIKE 'avatar'");
+			if ($res && $res->fetch() === false) {
+				$db->getHandle()->exec("ALTER TABLE `".$usersTable."` ADD COLUMN `avatar` VARCHAR(255) NOT NULL DEFAULT '' AFTER `email`");
+			}
+		} catch (Exception $e) { /* silencioso */ }
+	}
+
+	/* ═══ AstroIO: rango militar según puntos (cosmético para el submenú del avatar) ═══ */
+	public static function astroio_rankName($points)
+	{
+		if ($points < 1000)    return 'Cadete';
+		if ($points < 10000)   return 'Teniente';
+		if ($points < 50000)   return 'Capitán';
+		if ($points < 250000)  return 'Comandante';
+		if ($points < 1000000) return 'Coronel';
+		return 'Almirante';
+	}
+
+	/* ═══ AstroIO: ruta del avatar (vacío o inexistente = avatar por defecto) ═══ */
+	public static function astroio_avatarPath($avatar)
+	{
+		return (!empty($avatar) && is_file($avatar)) ? $avatar : self::ASTROIO_DEFAULT_AVATAR;
+	}
+
 	protected function __construct() {
 
 		if(!AJAX_REQUEST)
@@ -531,6 +570,14 @@ abstract class AbstractGamePage
 				'hasAdminAccess'	=> false,
 				'hasGate'			=> false,
 				'username'			=> '',
+				// ═══ AstroIO: defaults del submenú de usuario (early-return) ═══
+				'AIO_AVATAR_DEF'	=> self::ASTROIO_DEFAULT_AVATAR,
+				'userAvatar'		=> self::ASTROIO_DEFAULT_AVATAR,
+				'userEmail'			=> '',
+				'userPoints'		=> 0,
+				'userRankName'		=> 'Cadete',
+				'userLangs'			=> array(),
+				'userLang'			=> '',
 				'previousPlanet'	=> 0,
 				'nextPlanet'		=> 0,
 				'allyName'			=> '',
@@ -555,6 +602,9 @@ abstract class AbstractGamePage
 
 		$config			= Config::get();
 		$db 			= Database::get();
+
+		// ═══ AstroIO: asegura la columna avatar antes de usarla en cualquier página ═══
+		self::astroio_ensureAvatarColumn();
 
 		$PlanetSelect	= array();
 
@@ -848,7 +898,21 @@ abstract class AbstractGamePage
 
 		$themeSettings	= $THEME->getStyleSettings();
 
+		// ═══ AstroIO: datos del submenú del avatar (foto 1: datos, puntos, billetera, idioma) ═══
+		self::astroio_ensureAvatarColumn();
+		$UserPoints = 0;
+		try {
+			$UserPoints = (int) $db->selectSingle('SELECT total_points FROM %%STATPOINTS%% WHERE id_owner = :uid AND stat_type = 1', array(':uid' => $USER['id']), 'total_points');
+		} catch (Exception $e) {}
+
 		$this->assign(array(
+			'AIO_AVATAR_DEF'	=> self::ASTROIO_DEFAULT_AVATAR,
+			'userAvatar'		=> self::astroio_avatarPath(isset($USER['avatar']) ? $USER['avatar'] : ''),
+			'userEmail'			=> $USER['email'],
+			'userPoints'		=> $UserPoints,
+			'userRankName'		=> self::astroio_rankName($UserPoints),
+			'userLangs'			=> $LNG->getAllowedLangs(false),
+			'userLang'			=> isset($USER['lang']) ? $USER['lang'] : $LNG->getLanguage(),
 			'PlanetSelect'		=> $PlanetSelect,
 			'new_message' 		=> $USER['messages'],
 			'vacation'			=> $USER['urlaubs_modus'] ? _date($LNG['php_tdformat'], $USER['urlaubs_until'], $USER['timezone']) : false,
