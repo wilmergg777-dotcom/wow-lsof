@@ -65,13 +65,24 @@
 .cm_planet .p_body { display:flex; gap:16px; margin-top:14px; align-items:stretch }
 .cm_planet .p_img { flex:0 0 150px; width:150px; min-height:112px; border-radius:12px; border:1px solid var(--cm-border); background-color:#0a0f1c; background-size:cover; background-position:center; position:relative; overflow:hidden }
 .cm_planet .p_img span { position:absolute; left:8px; bottom:8px; background:rgba(2,6,12,.75); color:#fff; font-size:9px; font-weight:800; letter-spacing:1px; border-radius:6px; padding:3px 8px; text-transform:uppercase }
-.cm_stats { flex:1; display:grid; grid-template-columns:repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap:10px }
-.cm_stat { background:var(--cm-bg2); border:1px solid var(--cm-border); border-radius:10px; padding:10px 12px; display:flex; align-items:center; gap:10px; transition:.2s ease }
+.cm_stats { flex:1; display:grid; grid-template-columns:repeat(auto-fit, minmax(min(140px, 100%), 1fr)); gap:10px; margin-top:14px }
+.cm_stat { background:rgba(2,6,12,.5); border:1px solid var(--cm-border); border-radius:10px; padding:10px 13px; display:flex; flex-direction:column; gap:3px; transition:.2s ease }
 .cm_stat:hover { border-color:rgba(56,189,248,.5) }
-.cm_stat .ic { flex:0 0 30px; width:30px; height:30px; border-radius:9px; background:rgba(56,189,248,.12); display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--cm-cyan) }
-.cm_stat .lbl { color:var(--cm-muted); font-size:9.5px; text-transform:uppercase; letter-spacing:.8px }
-.cm_stat .val { color:#fff; font-size:13px; font-weight:800; margin-top:1px }
+.cm_stat .val { color:#fff; font-size:14px; font-weight:900; white-space:nowrap }
+.cm_stat .lbl { color:var(--cm-muted); font-size:9.5px; text-transform:uppercase; letter-spacing:.8px; display:flex; align-items:center; gap:5px }
+.cm_stat .lbl .ic { font-style:normal; font-size:11px }
 .cm_stat .val a { color:#fff }
+
+/* ═══ Fila Videos de batalla (mockup8_3) ═══ */
+.cm_videos { display:flex; align-items:center; gap:12px; background:var(--cm-bg); border:1px solid var(--cm-border); border-radius:14px; padding:12px 16px }
+.cm_videos .v_icon { flex:0 0 40px; width:40px; height:40px; border-radius:10px; background:rgba(56,189,248,.12); border:1px solid rgba(56,189,248,.4); display:flex; align-items:center; justify-content:center; font-size:18px }
+.cm_videos .v_title { color:#fff; font-weight:900; font-size:13px }
+.cm_videos .v_sub { color:var(--cm-muted); font-size:11px; margin-top:1px }
+.cm_videos .v_grow { flex:1 }
+.cm_videos .v_toggle { flex:0 0 46px; width:46px; height:24px; border-radius:999px; background:#334155; border:none; position:relative; cursor:pointer; transition:.2s ease; padding:0 }
+.cm_videos .v_toggle .v_knob { position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#94a3b8; transition:.2s ease }
+.cm_videos .v_toggle.on { background:#3b82f6; box-shadow:0 0 10px rgba(59,130,246,.5) }
+.cm_videos .v_toggle.on .v_knob { left:25px; background:#fff }
 .cm_planet .p_actions { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap }
 .cm_btn_grad { flex:1; min-width:0; display:inline-flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(90deg,#3b82f6,#60a5fa); border:1px solid rgba(96,165,250,.7); color:#fff !important; border-radius:11px; padding:11px 16px; font-weight:800; font-size:12.5px; text-decoration:none !important; cursor:pointer; transition:.2s ease; text-transform:none; letter-spacing:.3px; box-shadow:0 6px 18px rgba(59,130,246,.35); font-family:inherit }
 .cm_btn_grad:hover { box-shadow:0 8px 24px rgba(59,130,246,.5); transform:translateY(-1px); filter:brightness(1.06) }
@@ -151,6 +162,16 @@
 .cm_status .st_chip a { color:var(--cm-cyan); text-decoration:none; font-weight:800 }
 .cm_status .st_ticket { border-color:rgba(56,189,248,.45); color:var(--cm-cyan) }
 .cm_status .st_ticket:hover { background:rgba(56,189,248,.1); color:#fff }
+
+/* ═══ Próximos pasos: tarjeta urgente (naranja como mockup8_3) ═══ */
+.cm_step .st_btn.st_orange { background:rgba(245,158,11,.15); border-color:rgba(245,158,11,.6); color:#fbbf24 !important }
+.cm_step .st_btn.st_orange:hover { background:rgba(245,158,11,.25); color:#fde68a !important }
+.cm_step.cm_urgent { border-color:rgba(245,158,11,.4) }
+
+/* ═══ Selector de diseño: modo Clásico (emojis) ═══ */
+body.aio-classic .astrobd_card_img, body.aio-classic .astrorc_card_img { background-image:none !important; background:rgba(56,189,248,.08); border:1px solid rgba(56,189,248,.35) }
+body.aio-classic .astrobd_card_img:before, body.aio-classic .astrorc_card_img:before { content:attr(data-emoji); position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:52px; filter:drop-shadow(0 0 10px rgba(56,189,248,.45)) }
+body.aio-classic .astrobd_card_img > *, body.aio-classic .astrorc_card_img > * { z-index:2; position:relative }
 
 /* ═══ Próximos pasos (colas de construcción) ═══ */
 .cm_steps { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap:12px }
@@ -290,7 +311,7 @@
 						BOOST FIN DE SEMANA <b>&times;{$weekend_boost.multiplier}</b>
 					{/if}
 				</div>
-				<div class="b_sub">Se notifica cuando empieza y mientras avanza &middot; comunidad el s&aacute;bado a las 20:00</div>
+				<div class="b_sub">Se notifica cuando empieza y mientras avanza &middot; comienza el s&aacute;bado a las 20:00</div>
 			</div>
 			<div class="b_grow"></div>
 			{if $weekend_boost.phase != 'active'}<span class="b_chip">PR&Oacute;XIMAMENTE</span>{else}<span class="b_chip" style="background:rgba(74,255,136,.12); border-color:rgba(74,255,136,.5); color:#4aff88">ACTIVO</span>{/if}
@@ -298,6 +319,17 @@
 			<button type="button" class="xb_close" onclick="xbDismiss(); return false;" title="Cerrar">&#10006;</button>
 		</div>
 		{/if}
+
+		{* ═══════════ VIDEOS DE BATALLA (mockup8_3) ═══════════ *}
+		<div class="cm_videos" id="cm_videos_row">
+			<div class="v_icon">&#127909;</div>
+			<div>
+				<div class="v_title">Videos de batalla</div>
+				<div class="v_sub">Se muestran videos de las batallas: redadas, duelos y destrucciones</div>
+			</div>
+			<div class="v_grow"></div>
+			<button type="button" class="v_toggle" id="cm_videos_toggle" onclick="cmToggleVideos(this)" aria-label="Videos de batalla"><span class="v_knob"></span></button>
+		</div>
 
 		{* ═══════════ TARJETA PLANETA PRINCIPAL ═══════════ *}
 		<div class="cm_card cm_planet">
@@ -307,29 +339,13 @@
 				<a href="game.php?page=galaxy&amp;galaxy={$galaxy}&amp;system={$system}" class="p_coords">&#128205; <b>[{$galaxy}:{$system}:{$planet}]</b></a>
 				<div class="p_grow"></div>
 			</div>
-			<div class="p_body">
-				<div class="p_img" style="background-image: url({$dpath}planeten/{$planetimage}.jpg);"><span>PLANETA</span></div>
-				<div class="cm_stats">
-					<div class="cm_stat">
-						<div class="ic">&#128207;</div>
-						<div class="info"><div class="lbl">{$LNG.ov_diameter}</div><div class="val">{$planet_diameter} {$LNG.ov_distance_unit}</div></div>
-					</div>
-					<div class="cm_stat">
-						<div class="ic">&#9641;</div>
-						<div class="info"><div class="lbl">Campos</div><div class="val">{$planet_field_current} / {$planet_field_max}</div></div>
-					</div>
-					<div class="cm_stat">
-						<div class="ic">&#127777;</div>
-						<div class="info"><div class="lbl">{$LNG.ov_temperature}</div><div class="val">{$planet_temp_min}&deg;C ~ {$planet_temp_max}&deg;C</div></div>
-					</div>
-					<div class="cm_stat">
-						<div class="ic">&#128205;</div>
-						<div class="info"><div class="lbl">{$LNG.ov_position}</div><div class="val"><a href="game.php?page=galaxy&amp;galaxy={$galaxy}&amp;system={$system}">[{$galaxy}:{$system}:{$planet}]</a></div></div>
-					</div>
-				</div>
+			<div class="cm_stats">
+				<div class="cm_stat"><div class="val">{$planet_diameter} {$LNG.ov_distance_unit}</div><div class="lbl"><span class="ic">&#128207;</span> {$LNG.ov_diameter}</div></div>
+				<div class="cm_stat"><div class="val">{$planet_field_current} / {$planet_field_max}</div><div class="lbl"><span class="ic">&#128203;</span> Campos</div></div>
+				<div class="cm_stat"><div class="val">{$planet_temp_min}&deg;C ~ {$planet_temp_max}&deg;C</div><div class="lbl"><span class="ic">&#127777;</span> {$LNG.ov_temperature}</div></div>
 			</div>
 			<div class="p_actions">
-				<a href="#" onclick="return Dialog.PlanetAction();" class="cm_btn_grad">&#128293; Renombra planeta</a>
+				<a href="#" onclick="return Dialog.PlanetAction();" class="cm_btn_grad">&#128293; Renombrar planeta</a>
 				<a href="game.php?page=galaxy&amp;galaxy={$galaxy}&amp;system={$system}" class="cm_btn_ghost">&#128640; Ver galaxia</a>
 			</div>
 		</div>
@@ -628,17 +644,17 @@
 				</div>
 				<a href="game.php?page=shipyard" class="st_btn">{if $buildInfo.fleet}Ver hangar &rsaquo;{else}Construir naves &rsaquo;{/if}</a>
 			</div>
-			<div class="cm_step {if $buildInfo.defense}busy{/if}">
+			<div class="cm_step cm_urgent {if $buildInfo.defense}busy{/if}">
 				<div class="st_top"><div class="st_ic">&#128737;&#65039;</div><div class="st_name">Defensa</div></div>
 				<div class="st_status">
 					{if $buildInfo.defense}
 						{$LNG.tech[$buildInfo.defense['id']]} <b>({$buildInfo.defense['level']})</b><br>
 						<span class="timer" data-time="{$buildInfo.defense['timeleft']}">{$buildInfo.defense['starttime']}</span>
 					{else}
-						Sin defensas en producci&oacute;n. Un planeta sin torretas es un bot&iacute;n f&aacute;cil.
+						Un planeta sin defensas es un bot&iacute;n f&aacute;cil para los saqueadores.
 					{/if}
 				</div>
-				<a href="game.php?page=shipyard&amp;mode=defense" class="st_btn">{if $buildInfo.defense}Ver defensas &rsaquo;{else}Construir defensas &rsaquo;{/if}</a>
+				<a href="game.php?page=shipyard&amp;mode=defense" class="st_btn {if !$buildInfo.defense}st_orange{/if}">{if $buildInfo.defense}Ver defensas &rsaquo;{else}Construir defensas &rsaquo;{/if}</a>
 			</div>
 		</div>
 
@@ -808,8 +824,8 @@
 				</div>
 			</div>
 			<div class="cmd_stats">
-				<div class="cs"><b>{$points_part}</b><span>Puntos</span></div>
 				<div class="cs"><b>{if isset($fleet_count)}{$fleet_count|number}{else}0{/if}</b><span>Naves</span></div>
+				<div class="cs"><b>{$fleets|@count}</b><span>Flotas</span></div>
 				<div class="cs"><b>{if isset($defense_count)}{$defense_count|number}{else}0{/if}</b><span>Defensa</span></div>
 			</div>
 		</div>
@@ -990,9 +1006,7 @@
         var s = sec % 60;
         var parts = [];
         if (d > 0) parts.push(d + 'd');
-        if (d > 0 || h > 0) parts.push((h < 10 ? '0' : '') + h + 'h');
-        parts.push((m < 10 ? '0' : '') + m + 'm');
-        parts.push((s < 10 ? '0' : '') + s + 's');
+        parts.push((h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s);
         return parts.join(' ');
     }
 
@@ -1170,6 +1184,23 @@ function xbDismiss() {
     setInterval(updateBuffTimer, 1000);
 })();
 </script>
+
+
+/* ═══ ASTROIO v7.1 — Videos de batalla (persistente) ═══ */
+function cmToggleVideos(btn) {
+	var on = !btn.classList.contains('on');
+	btn.classList.toggle('on', on);
+	try { localStorage.setItem('aio_battle_videos', on ? '1' : '0'); } catch (e) {}
+	var ev = new CustomEvent('aio:battleVideos', { detail: { enabled: on } });
+	document.dispatchEvent(ev);
+}
+(function() {
+	var pref = '1';
+	try { pref = localStorage.getItem('aio_battle_videos') || '1'; } catch (e) {}
+	var btn = document.getElementById('cm_videos_toggle');
+	if (btn && pref === '1') btn.classList.add('on');
+	if (pref === '0') document.documentElement.classList.add('aio-hide-battle-videos');
+})();
 {/block}
 {block name="script" append}
 <script src="scripts/game/overview.js"></script>
