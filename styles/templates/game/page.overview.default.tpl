@@ -266,6 +266,10 @@ body.aio-classic .astrobd_card_img > *, body.aio-classic .astrorc_card_img > * {
   .cm_boost .b_title, .cm_boost .b_sub { white-space:normal !important }
   .cm_boost .b_timerbox { width:100%; text-align:center; font-size:12px; padding:5px 6px; box-sizing:border-box; letter-spacing:.5px }
   .cm_boost .b_chip { align-self:flex-start }
+  .cm_videos { flex-wrap:wrap }
+  .cm_videos > div { min-width:0; overflow-wrap:anywhere }
+  .cm_videos .v_grow { display:none }
+  .cm_videos .v_toggle { flex:0 0 auto }
   .cm_boost .b_title { font-size:12.5px }
   .planet-node.center-node { display:none }
   .planet-node.end-node { display:none }
