@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="astro_bg">#0A0F1A</color>
+    <color name="astro_bg2">#131A2A</color>
+    <color name="astro_accent">#00E0FF</color>
+    <color name="astro_green">#00CC66</color>
+    <color name="astro_text">#CBD5E1</color>
+    <color name="astro_title">#FFFFFF</color>
+    <color name="astro_bad">#FF5A6E</color>
+</resources>

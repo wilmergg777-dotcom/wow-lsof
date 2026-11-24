@@ -1,0 +1,7 @@
+# Generados (no se suben al repo)
+build/
+.gradle/
+local.properties
+app/src/main/assets/game/
+*.iml
+.idea/

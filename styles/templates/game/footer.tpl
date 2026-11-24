@@ -34,6 +34,15 @@
     transform: scale(0.96);
 }
 
+/* v2.4.2 - Icono real de la burbuja (icons8 telegrama del tema gow) */
+#astrofloat_chat_btn img.astrofloat_icon {
+    width: 30px;
+    height: 30px;
+    display: block;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
 /* Badge rojo de mensajes nuevos */
 #astrofloat_chat_badge {
     position: absolute;
@@ -263,16 +272,16 @@
 }
 </style>
 
-<!-- Botón flotante -->
+<!-- Botón flotante — v2.4.2: icono del tema gow en lugar del emoji -->
 <div id="astrofloat_chat_btn" onclick="astrofloat_toggle()" title="Chat rápido">
-    💬
+    <img class="astrofloat_icon" src="styles/theme/gow/images/icons8-aplicaci&oacute;n-telegrama-48.png" alt="Chat">
     <span id="astrofloat_chat_badge">0</span>
 </div>
 
 <!-- Ventana flotante -->
 <div id="astrofloat_chat_window">
     <div class="astrofloat_header">
-        <span class="title">💬 Chat Rápido</span>
+        <span class="title">Chat R&aacute;pido</span>
         <span class="status">En línea</span>
         <span class="close" onclick="astrofloat_toggle()">✖</span>
     </div>

@@ -1,0 +1,64 @@
+════════════════════════════════════════════════════════════════
+ ASTROIO — CÓMO ACTUALIZAR LA APK EN TU SERVIDOR
+════════════════════════════════════════════════════════════════
+
+La app comprueba SIEMPRE, al abrirse, este archivo:
+
+    https://astroio.duckdns.org/AstroIO3.4/apk/version.json
+
+Si el "versionCode" de ese archivo es MAYOR que el de la APK
+instalada, la app descarga e instala la nueva versión sola y no
+deja entrar al juego hasta que termine la actualización.
+
+────────────────────────────────────────────────────────────────
+ PASOS PARA PUBLICAR UNA NUEVA VERSIÓN
+────────────────────────────────────────────────────────────────
+
+1) Sube la versión de la app:
+   - Edita apk/android/app/build.gradle → versionCode (+1) y
+     versionName (ej. "1.0.1").
+   - Haz push a la rama Xnovaaaa.
+   - GitHub Actions compila y te da DOS archivos: AstroIO.apk y
+     version.json (en "Artifacts" del workflow, o en el Release
+     "apk-vX" del repositorio).
+
+2) Entra por FTP (o al panel de tu servidor) y crea la carpeta:
+
+       /var/www/.../AstroIO3.4/apk/
+
+3) Sube AstroIO.apk a esa carpeta.
+
+4) Abre el version.json que generó el workflow (ya trae el SHA256
+   correcto) y súbelo también a esa carpeta. Debe quedar así:
+
+   {
+     "versionCode": 2,
+     "versionName": "1.0.1",
+     "url": "https://astroio.duckdns.org/AstroIO3.4/apk/AstroIO.apk",
+     "sha256": "<el sha256 que genera el workflow>"
+   }
+
+   IMPORTANTE: el "versionCode" del JSON debe ser IGUAL al que
+   pusiste en build.gradle. El "url" ya apunta a tu servidor.
+
+5) Comprueba en el navegador:
+       https://astroio.duckdns.org/AstroIO3.4/apk/version.json
+   Debe mostrar el JSON. Si te da 404, revisa la ruta/carpeta.
+
+6) Listo. Los jugadores con la app antigua, al abrirla, se
+   actualizarán solos y después entrarán al juego.
+
+────────────────────────────────────────────────────────────────
+ NOTAS
+────────────────────────────────────────────────────────────────
+- Si el archivo version.json NO existe todavía, la app entra al
+  juego directamente (útil la primera vez, antes de subir nada).
+- Si el jugador no tiene Internet, la app muestra un aviso
+  genérico ("Sin conexión...") SIN mostrar el dominio del
+  servidor.
+- El SHA256 evita que se instale un paquete corrupto o
+  modificado durante la descarga.
+- La APK no puede abrirse si está firmada con otro certificado
+  (protección contra APK Editor) ni si detecta una app de
+  edición de APK instalada.
+════════════════════════════════════════════════════════════════

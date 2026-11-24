@@ -9,7 +9,10 @@
 --      carga), 204 (Cazador ligero), 205 (Cazador pesado) y
 --      212 (Satélite solar).
 --    - TODAS las defensas piden Norium EXCEPTO: 401 (Lanzamisiles)
---      y 402 (Láser pequeño). Los 2 misiles (502/503) piden Norium.
+--      y 402 (Láser pequeño).
+--    - MISILES (regla final v2.4.2): 502 (Misil de intercepción) y
+--      503 (Misil interplanetario) NO piden Norium; 504 (Misil
+--      Antimateria) y 505 (Interceptor Avanzado) SÍ lo piden.
 --    - TODAS las investigaciones piden Germanium EXCEPTO:
 --      113 (Energía), 115 (Motor de combustión) y 120 (Láser).
 --    - Edificios que piden Germanium: 14 Robots, 15 Nanobots,
@@ -111,10 +114,16 @@ UPDATE `%PREFIX%vars` SET `cost932` =   1000 WHERE `elementID` = 419 AND COALESC
 UPDATE `%PREFIX%vars` SET `cost932` =   1500 WHERE `elementID` = 421 AND COALESCE(`cost932`,0) = 0;  -- Torre defensora
 
 -- ============================================================
--- 4) MISILES: coste en NORIUM (932) — los 2 misiles lo piden
+-- 4) MISILES (v2.4.2 — regla corregida):
+--    502 (Misil de intercepción) y 503 (Misil interplanetario):
+--      NO piden Norium → quedan a 0.
+--    504 (Misil Antimateria) y 505 (Interceptor Avanzado):
+--      SÍ piden Norium.
 -- ============================================================
-UPDATE `%PREFIX%vars` SET `cost932` =    800 WHERE `elementID` = 502 AND COALESCE(`cost932`,0) = 0;  -- Interceptor
-UPDATE `%PREFIX%vars` SET `cost932` =   1200 WHERE `elementID` = 503 AND COALESCE(`cost932`,0) = 0;  -- Misil Antimateria (interplanetario)
+UPDATE `%PREFIX%vars` SET `cost932` =       0 WHERE `elementID` = 502;  -- Misil de intercepción (SIN Norium)
+UPDATE `%PREFIX%vars` SET `cost932` =       0 WHERE `elementID` = 503;  -- Misil interplanetario  (SIN Norium)
+UPDATE `%PREFIX%vars` SET `cost932` =    1200 WHERE `elementID` = 504;  -- Misil Antimateria      (con Norium)
+UPDATE `%PREFIX%vars` SET `cost932` =     800 WHERE `elementID` = 505;  -- Interceptor Avanzado   (con Norium)
 
 -- ============================================================
 -- 5) INVESTIGACIONES: coste en GERMANIUM (933)

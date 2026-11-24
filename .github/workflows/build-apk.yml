@@ -1,0 +1,84 @@
+name: Compilar APK AstroIO
+
+# Cada push a Xnovaaaa que toque la carpeta apk/ compila la APK firmada,
+# calcula su SHA-256 y publica AstroIO.apk + version.json (artefacto y Release).
+
+on:
+  push:
+    branches: ["Xnovaaaa"]
+    paths: ["apk/**", ".github/workflows/build-apk.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Instalar Gradle 8.7
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.7"
+
+      - name: Copiar imágenes del juego a los assets de la APK
+        run: bash apk/copiar_assets.sh
+
+      - name: Compilar APK (release firmada)
+        run: |
+          cd apk/android
+          gradle assembleRelease --no-daemon
+
+      - name: Preparar AstroIO.apk y version.json
+        run: |
+          set -e
+          mkdir -p out
+          cp apk/android/app/build/outputs/apk/release/app-release.apk out/AstroIO.apk
+          SHA=$(sha256sum out/AstroIO.apk | cut -d' ' -f1)
+          CODE=$(grep -oE 'versionCode[[:space:]]+[0-9]+' apk/android/app/build.gradle | grep -oE '[0-9]+' | head -1)
+          VER=$(grep -oE 'versionName[[:space:]]+"[^"]+"' apk/android/app/build.gradle | sed 's/.*"\(.*\)"/\1/')
+          echo "CODE=$CODE" >> "$GITHUB_ENV"
+          echo "VER=$VER" >> "$GITHUB_ENV"
+          cat > out/version.json <<JSON
+          {
+            "versionCode": ${CODE},
+            "versionName": "${VER}",
+            "url": "https://astroio.duckdns.org/AstroIO3.4/apk/AstroIO.apk",
+            "sha256": "${SHA}"
+          }
+          JSON
+          echo "── version.json generado ──"
+          cat out/version.json
+
+      - name: Guardar artefactos (APK + version.json)
+        uses: actions/upload-artifact@v4
+        with:
+          name: astroio-apk-v${{ env.CODE }}-${{ env.VER }}
+          path: |
+            out/AstroIO.apk
+            out/version.json
+
+      - name: Publicar Release apk-v${{ env.CODE }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-v${{ env.CODE }}
+          name: AstroIO APK v${{ env.VER }} (build ${{ env.CODE }})
+          body: |
+            APK firmada de AstroIO v${{ env.VER }} (versionCode ${{ env.CODE }}).
+
+            Para actualizar tu servidor:
+            1) Descarga AstroIO.apk y version.json de este Release.
+            2) Súbelos por FTP a /AstroIO3.4/apk/
+            (instrucciones completas en apk/server/LEEME-SERVIDOR.txt)
+          files: |
+            out/AstroIO.apk
+            out/version.json
