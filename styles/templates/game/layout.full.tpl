@@ -3,13 +3,13 @@
 {include file="main.topnav.tpl"}
 {if $hasAdminAccess}
 <div class="globalWarning">
-	{$LNG.admin_access_1} <a id="drop-admin">{$LNG.admin_access_link}</a>{$LNG.admin_access_2}
+        {$LNG.admin_access_1} <a id="drop-admin">{$LNG.admin_access_link}</a>{$LNG.admin_access_2}
 </div>
 {/if}
 {include file="main.navigation.tpl"}
 <div id="page">
-	<div id="content">
-		{block name="content"}
+        <div id="content">
+                {block name="content"}
 {* ═══ ASTROIO v3.0 — estilo nuevo aplicado archivo por archivo: styles/templates/game/layout.full.tpl ═══ *}
 {literal}
 <style>
@@ -34,7 +34,9 @@
 </style>
 {/literal}
 {/block}
-	</div>
+        </div>
 </div>
 {foreach $cronjobs as $cronjob}<img src="cronjob.php?cronjobID={$cronjob}" alt="">{/foreach}
+{* ═══ ASTROIO — Chat Flotante (burbuja + ventana) — FIX: footer.tpl nunca se incluía, por eso no aparecía la burbuja ═══ *}
+{include file="footer.tpl" nocache}
 {include file="main.footer.tpl" nocache}
