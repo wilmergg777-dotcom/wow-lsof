@@ -52,7 +52,7 @@ jobs:
           {
             "versionCode": ${CODE},
             "versionName": "${VER}",
-            "url": "https://astroio.duckdns.org/AstroIO3.4/apk/AstroIO.apk",
+            "url": "https://astroio.duckdns.org/apk/AstroIO.apk",
             "sha256": "${SHA}"
           }
           JSON
@@ -77,7 +77,7 @@ jobs:
 
             Para actualizar tu servidor:
             1) Descarga AstroIO.apk y version.json de este Release.
-            2) Súbelos por FTP a /AstroIO3.4/apk/
+            2) Súbelos por FTP a /apk/  (raíz del dominio, sin subcarpeta)
             (instrucciones completas en apk/server/LEEME-SERVIDOR.txt)
           files: |
             out/AstroIO.apk

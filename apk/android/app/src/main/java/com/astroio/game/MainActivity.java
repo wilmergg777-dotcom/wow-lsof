@@ -60,7 +60,7 @@ public class MainActivity extends Activity {
     // ════════════════════════════════════════════════════════════════
     private static final int XK = 0x5A;
     private static final String HOST_ENC = "3b292e28353335743e2f39313e34297435283d";
-    // ASTROIO v1.2: el juego pasa a la RAÍZ del dominio (antes /AstroIO3.4/).
+    // ASTROIO v2.4.1: el juego está en la RAÍZ del dominio (antes /AstroIO3.4/).
     // Cadena vacía => sin subcarpeta (https://astroio.duckdns.org/...).
     private static final String BASE_PATH_ENC = "";
 
