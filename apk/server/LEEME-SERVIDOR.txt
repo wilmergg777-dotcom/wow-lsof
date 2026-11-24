@@ -82,6 +82,66 @@ Windows y el de Linux se actualizan del mismo tirón al cambiar la
 versión, porque todos leen el mismo version.json.
 
 ────────────────────────────────────────────────────────────────
+ MAPA EXACTO: DÓNDE VA CADA ARCHIVO EN EL SERVIDOR
+────────────────────────────────────────────────────────────────
+
+Todo va en la RAÍZ del dominio (la misma carpeta donde están
+game.php, index.php, chat_bridge.php, etc.). Con tu dominio:
+
+  /var/www/.../  (raíz del dominio = https://astroio.duckdns.org/)
+   │
+   ├── game.php, index.php, chat_bridge.php, ...   ← el juego
+   │
+   ├── apk/                                        ← CARPETA apk/
+   │    ├── AstroIO.apk      ← la APK compilada y firmada
+   │    └── version.json     ← versión + urls + sha256 (lo genera el workflow)
+   │
+   └── launcher/                                   ← CARPETA launcher/
+        ├── AstroIO-Launcher-windows.exe           ← launcher Windows
+        └── AstroIO-Launcher-linux                 ← launcher Linux
+
+URLS PÚBLICAS QUE DEBEN FUNCIONAR (pruébalas en el navegador):
+
+   https://astroio.duckdns.org/apk/AstroIO.apk
+   https://astroio.duckdns.org/apk/version.json
+   https://astroio.duckdns.org/launcher/AstroIO-Launcher-windows.exe
+   https://astroio.duckdns.org/launcher/AstroIO-Launcher-linux
+
+Si alguna da 404, el archivo está en una carpeta equivocada:
+la APK va DENTRO de la carpeta apk/ y los launchers DENTRO de
+la carpeta launcher/, ambas en la raíz del dominio.
+
+────────────────────────────────────────────────────────────────
+ PÁGINA DE DESCARGAS DENTRO DEL JUEGO (v2.4.4)
+────────────────────────────────────────────────────────────────
+
+Los jugadores ya tienen una página para descargar todo desde el
+juego:  game.php?page=descargas
+
+   - Botón "📥 Descargas" en el menú lateral (pestaña MOP).
+   - Icono de descarga en la barra superior (junto al bicho).
+   - Muestra 3 tarjetas: APK Android, Launcher Windows y
+     Launcher Linux, y resalta la que corresponde al dispositivo
+     del jugador.
+   - Lee apk/version.json del servidor: muestra SIEMPRE la
+     versión y las URLs reales sin tocar código. Si el archivo
+     no existe, usa valores de respaldo.
+
+ARCHIVOS DEL JUEGO QUE AÑADE/CAMBIA (subir por FTP y vaciar
+la caché de Smarty en /cache/ después):
+
+   includes/pages/game/ShowDescargasPage.class.php      (nuevo)
+   styles/templates/game/page.descargas.default.tpl     (nuevo)
+   styles/templates/game/main.navigation.tpl            (cambiado)
+   styles/templates/game/main.navigation_header.tpl     (cambiado)
+   styles/templates/login/page.downloads.default.tpl    (cambiado:
+     la página de descargas del login apuntaba a rutas viejas
+     styles/theme/gow/descarga/... que ya no existen; ahora
+     usa apk/ y launcher/ de la raíz y añade Linux)
+
+NOTA: no necesita SQL ni tablas nuevas.
+
+────────────────────────────────────────────────────────────────
  NOTAS
 ────────────────────────────────────────────────────────────────
 - Si el archivo version.json NO existe todavía, la app entra al

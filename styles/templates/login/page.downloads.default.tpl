@@ -52,7 +52,7 @@ h1 { font-size: 2.2rem; margin-bottom: 10px; }
 
 .astro-dl-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
     margin-bottom: 40px;
 }
@@ -199,26 +199,43 @@ h1 { font-size: 2.2rem; margin-bottom: 10px; }
     </div>
 
     <div class="astro-dl-grid">
-        <!-- Opción PC -->
+        <!-- Opción Launcher Windows -->
         <div class="astro-dl-card">
-            <h3>💻 Launcher (PC)</h3>
+            <h3>💻 Launcher (Windows)</h3>
             
             <div class="astro-dl-changelog">
-                <p>🚀 <strong>¡NUEVA ACTUALIZACIÓN! — AstroIO v3.14</strong></p>
-                <p>⚙️ Versión: v3.14</p>
+                <p>🚀 <strong>Launcher oficial de AstroIO</strong></p>
+                <p>⚙️ Versión: v2.4.1</p>
                 <p>🤖 Sistema: Windows</p>
                 <p>📱 Compatible: W7, W8, W8.1, W10 y W11</p>
-                <p>🛂 Desarrollo: @Holows</p>
-                <p>🗒 Nota: Modo BETA, todavía en desarrollo.</p>
-                <p>♻️ <strong>Errores corregidos:</strong></p>
+                <p>🗒 Nota: Abre el juego como una app de escritorio, sin navegador.</p>
+                <p>♻️ <strong>Ventajas:</strong></p>
                 <ul>
-                    <li>Reanudación de la interfaz.</li>
-                    <li>Correcciones mínimas.</li>
+                    <li>Se actualiza solo cuando hay versión nueva.</li>
+                    <li>Abre directo en modo app (sin barras del navegador).</li>
                 </ul>
-                <p class="astro-dl-warning">👀 Aviso importante: Por favor, eviten compartir este contenido. Este trabajo se hace exclusivamente para nuestra comunidad.</p>
             </div>
 
-            <a href="styles/theme/gow/descarga/LauncherAstroIO.exe" class="astro-dl-btn" download>Descargar para Windows</a>
+            <a href="https://astroio.duckdns.org/launcher/AstroIO-Launcher-windows.exe" class="astro-dl-btn" download>Descargar para Windows</a>
+        </div>
+
+        <!-- Opción Launcher Linux -->
+        <div class="astro-dl-card">
+            <h3>🐧 Launcher (Linux)</h3>
+            
+            <div class="astro-dl-changelog">
+                <p>🚀 <strong>Launcher oficial de AstroIO</strong></p>
+                <p>⚙️ Versión: v2.4.1</p>
+                <p>🤖 Sistema: Linux (64 bits)</p>
+                <p>📱 Compatible: la mayoría de distribuciones Linux</p>
+                <p>🗒 Nota: Después de descargarlo, dale permiso de ejecución:</p>
+                <ul>
+                    <li>Clic derecho → Propiedades → Permitir ejecutar, o</li>
+                    <li>En terminal: <strong>chmod +x AstroIO-Launcher-linux</strong></li>
+                </ul>
+            </div>
+
+            <a href="https://astroio.duckdns.org/launcher/AstroIO-Launcher-linux" class="astro-dl-btn" download>Descargar para Linux</a>
         </div>
         
         <!-- Opción Android APK -->
@@ -226,21 +243,15 @@ h1 { font-size: 2.2rem; margin-bottom: 10px; }
             <h3>📱 APK (Android)</h3>
             
             <div class="astro-dl-changelog">
-                <p>🚀 <strong>¡NUEVA ACTUALIZACIÓN! — AstroIO v3.14</strong></p>
-                <p>⚙️ Versión: v3.14</p>
+                <p>🚀 <strong>Aplicación oficial de AstroIO</strong></p>
+                <p>⚙️ Versión: v2.4.1</p>
                 <p>🤖 Sistema: Android</p>
-                <p>📱 Compatible: Android 5.0+</p>
-                <p>🛂 Desarrollo: @Holows</p>
-                <p>🗒 Nota: Modo BETA, todavía en desarrollo.</p>
-                <p>♻️ <strong>Errores corregidos:</strong></p>
-                <ul>
-                    <li>Reanudación de la interfaz móvil.</li>
-                    <li>Correcciones mínimas.</li>
-                </ul>
-                <p class="astro-dl-warning">👀 Aviso importante: Por favor, eviten compartir este contenido. Este trabajo se hace exclusivamente para nuestra comunidad.</p>
+                <p>📱 Compatible: Android 7.0 o superior</p>
+                <p>🗒 Nota: Se actualiza sola cuando sale una versión nueva.</p>
+                <p class="astro-dl-warning">👀 Aviso: si el teléfono pide activar "orígenes desconocidos", actívalo solo para instalar esta app.</p>
             </div>
 
-            <a href="styles/theme/gow/descarga/AstroIO.apk" class="astro-dl-btn" download>Descargar APK</a>
+            <a href="https://astroio.duckdns.org/apk/AstroIO.apk" class="astro-dl-btn" download>Descargar APK</a>
         </div>
     </div>
 
@@ -262,8 +273,17 @@ h1 { font-size: 2.2rem; margin-bottom: 10px; }
         <div>
             <strong>Windows (Launcher)</strong>
             <ul>
-                <li>Windows XP o superior</li>
+                <li>Windows 7 o superior</li>
                 <li>Procesador Intel/AMD de doble núcleo</li>
+                <li>500 MB RAM (1 GB recomendado)</li>
+                <li>Conexión a internet estable</li>
+            </ul>
+        </div>
+
+        <div>
+            <strong>Linux (Launcher)</strong>
+            <ul>
+                <li>Distribución Linux 64 bits</li>
                 <li>500 MB RAM (1 GB recomendado)</li>
                 <li>Conexión a internet estable</li>
             </ul>
@@ -272,7 +292,7 @@ h1 { font-size: 2.2rem; margin-bottom: 10px; }
         <div>
             <strong>Android (APK)</strong>
             <ul>
-                <li>Android 5.0 o superior</li>
+                <li>Android 7.0 o superior</li>
                 <li>Procesador ARM de 64 bits</li>
                 <li>200 MB RAM (1 GB recomendado)</li>
                 <li>Espacio libre de 500 MB</li>
