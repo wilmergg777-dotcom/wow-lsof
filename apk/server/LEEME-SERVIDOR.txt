@@ -4,7 +4,7 @@
 
 La app comprueba SIEMPRE, al abrirse, este archivo:
 
-    https://astroio.duckdns.org/AstroIO3.4/apk/version.json
+    https://astroio.duckdns.org/apk/version.json
 
 Si el "versionCode" de ese archivo es MAYOR que el de la APK
 instalada, la app descarga e instala la nueva versión sola y no
@@ -24,7 +24,7 @@ deja entrar al juego hasta que termine la actualización.
 
 2) Entra por FTP (o al panel de tu servidor) y crea la carpeta:
 
-       /var/www/.../AstroIO3.4/apk/
+       /var/www/.../apk/
 
 3) Sube AstroIO.apk a esa carpeta.
 
@@ -34,7 +34,7 @@ deja entrar al juego hasta que termine la actualización.
    {
      "versionCode": 2,
      "versionName": "1.0.1",
-     "url": "https://astroio.duckdns.org/AstroIO3.4/apk/AstroIO.apk",
+     "url": "https://astroio.duckdns.org/apk/AstroIO.apk",
      "sha256": "<el sha256 que genera el workflow>"
    }
 
@@ -42,7 +42,7 @@ deja entrar al juego hasta que termine la actualización.
    pusiste en build.gradle. El "url" ya apunta a tu servidor.
 
 5) Comprueba en el navegador:
-       https://astroio.duckdns.org/AstroIO3.4/apk/version.json
+       https://astroio.duckdns.org/apk/version.json
    Debe mostrar el JSON. Si te da 404, revisa la ruta/carpeta.
 
 6) Listo. Los jugadores con la app antigua, al abrirla, se

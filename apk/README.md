@@ -39,7 +39,7 @@ apk/
    que no tiene guardado (HTML, JSON y demás).
 
 2. **Auto-actualización interna**: al abrir la app se lee
-   `https://astroio.duckdns.org/AstroIO3.4/apk/version.json`.
+   `https://astroio.duckdns.org/apk/version.json`.
    - Si el `versionCode` del servidor es mayor → descarga la nueva APK,
      verifica su SHA-256 y la instala. **No deja entrar al juego hasta
      que la app esté actualizada.**
@@ -83,7 +83,7 @@ y subirlos al servidor (ver `server/LEEME-SERVIDOR.txt`).
    `apk/android/app/build.gradle`.
 2. Push a la rama `Xnovaaaa` → descarga la APK y el `version.json`
    del workflow.
-3. Súbelos por FTP a `/AstroIO3.4/apk/` (ver `server/LEEME-SERVIDOR.txt`).
+3. Súbelos por FTP a `/apk/` (ver `server/LEEME-SERVIDOR.txt`).
 
 ## Certificado de firma
 

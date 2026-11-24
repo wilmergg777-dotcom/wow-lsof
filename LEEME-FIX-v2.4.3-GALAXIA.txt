@@ -1,0 +1,108 @@
+══════════════════════════════════════════════════════════════
+ ASTROIO — FIX v2.4.3 · GALAXIA v3.2 + APK v1.2
+ Fecha: 24-11-2026 · Rama GitHub: Xnovaaaa
+══════════════════════════════════════════════════════════════
+
+CONTENIDO DE ESTA ENTREGA
+═════════════════════════
+
+1) GALAXIA REDISEÑADA (estilo de la foto enviada, SIN copiarla)
+   - Se mantiene el panel oscuro tipo glassmorphism con tabla
+     clásica XNOVA: Pos. | Planeta | Nombre (Actividad) | Luna |
+     Escombros | Jugador (Estado) | Alianza | Acción.
+   - NO tiene los botones "Otros modos" de la foto (Fortalezas,
+     Planetas del tesoro, Batalla de naves, Nova War, Chess
+     Galaxy, Estadio galáctico) ni la sección "Ocupaciones".
+     (Estos botones venían de falcoxnova y nunca existieron en
+     AstroIO: confirmado, no hay nada que quitar.)
+   - Nueva BARRA DE ESTADO superior al estilo de la foto:
+     Sondas · Recicladores · Mega-Recicladores · Flotas · Misiles
+     (los contadores se actualizan en vivo con cada envío AJAX).
+   - Archivo: styles/templates/game/page.galaxy.default.tpl
+
+2) LEYENDA 100% COMPLETA (siempre visible bajo la tabla)
+   ✔ Tu planeta               (verde)
+   ✔ Planeta ocupado          (cian)
+   ✔ Posición Vacía           (gris)
+   ✔ Luna
+   ✔ Campo de Escombros       (naranja)
+   ✔ Espacio Profundo         (azul — fila 16, expedición)
+   ✔ Jugador Protegido        (verde, jugador débil "D")
+   ✔ Atacable                 (rojo, jugador fuerte "F")
+   ✔ Depósito de Alianza disponible (dorado — badge 🏦 en la
+     fila del planeta que tiene el Depósito construido)
+   ✔ 💀 Ruinas (Inhabitable)  (posiciones de planeta destruido;
+     ahora la tabla muestra "💀 Ruinas (Inhabitable)" en vez de
+     "Planeta Destruido")
+   ✔ Sensor Phalanx (clicable — icono ✛ en la columna Acción
+     cuando el planeta tiene Phalanx y está en tu rango)
+   Debajo: estados abreviados F / D / V / B / i / I.
+   Idiomas: español e inglés (language/es/INGAME.php,
+   language/en/INGAME.php).
+
+3) BUG DE RECICLAJE — ARREGLADO (reciclaje AUTOMÁTICO)
+   Antes: al pinchar el Campo de Escombros o el Asteroide y dar
+   "Reciclar", no se enviaban naves; había que entrar a la base
+   de flota y mandar los recicladores manualmente.
+   Ahora:
+   - PINCHAR el icono del Campo de Escombros envía AL INSTANTE
+     los Recicladores/Mega-Recicladores (misión 8 por AJAX).
+   - PINCHAR el icono del Asteroide envía AL INSTANTE los
+     recicladores a esa posición vacía (misión 32 por AJAX,
+     nueva en fleetAjax: no necesita registro de planeta).
+   - El tooltip sigue ofreciendo el enlace "Reciclar (automático)"
+     y el enlace secundario "Enviar desde la base de flota".
+   - Mensaje flotante (toast) verde/rojo confirma el envío:
+     "Enviando 3 Reciclador hacia 2:58:5 ...", o errores claros:
+     sin recicladores / sin deuterio / sin escombros / sin
+     asteroide / sin slots.
+   - Los contadores de sondas, recicladores y flotas se
+     actualizan solos tras cada envío.
+   Archivos: includes/pages/game/ShowFleetAjaxPage.class.php,
+             scripts/game/galaxy.js,
+             page.galaxy.default.tpl,
+             includes/classes/class.GalaxyRows.php (ally_deposit)
+
+4) APK v1.2 (versionCode 2) — CAMBIO DE SERVIDOR
+   - La APK ya NO se conecta a
+     https://astroio.duckdns.org/AstroIO3.4/...
+   - Ahora se conecta a la RAÍZ del dominio:
+     https://astroio.duckdns.org/  (game.php y apk/version.json)
+   - Cambiado el BASE_PATH ofuscado (XOR 0x5A) en MainActivity:
+     cadena vacía = sin subcarpeta.
+   - versionCode 2 / versionName 1.2.0 → los jugadores con la
+     v1.x recibirán la actualización forzosa por OTA al abrir
+     la app.
+   - apk/server/version.json y LEEME-SERVIDOR.txt actualizados:
+     subir AstroIO.apk + version.json a  /apk/  (raíz del VPS).
+
+ARCHIVOS MODIFICADOS
+════════════════════
+  styles/templates/game/page.galaxy.default.tpl
+  scripts/game/galaxy.js
+  includes/pages/game/ShowFleetAjaxPage.class.php
+  includes/classes/class.GalaxyRows.php
+  language/es/INGAME.php
+  language/en/INGAME.php
+  apk/android/app/src/main/java/com/astroio/game/MainActivity.java
+  apk/android/app/build.gradle
+  apk/server/version.json
+  apk/server/LEEME-SERVIDOR.txt
+  apk/README.md
+
+INSTALACIÓN EN TU SERVIDOR
+══════════════════════════
+  a) Copia los archivos de galaxia/ e idiomas/ respetando las
+     rutas.
+  b) NO hace falta SQL nuevo (ally_deposit ya existe).
+  c) BORRA la caché de plantillas: vacía la carpeta cache/
+     ( indispensable para ver la galaxia nueva ).
+  d) APK: cuando GitHub Actions compile la v1.2.0, sube la APK
+     y version.json al VPS en /apk/ (raíz, sin AstroIO3.4).
+     El sha256 de la APK nueva va en version.json.
+
+VERIFICACIÓN VISUAL
+═══════════════════
+  galaxia_vista_previa.html — ábrelo en el navegador: es la
+  galaxia nueva con el CSS real y datos de ejemplo (filas de
+  todos los estados + leyenda completa + toast de reciclaje).
