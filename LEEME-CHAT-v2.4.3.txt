@@ -1,0 +1,90 @@
+════════════════════════════════════════════════════════════════
+ ASTROIO v2.4.3 — CHAT FLOTANTE v3 (General + Alianza + no leídos)
+════════════════════════════════════════════════════════════════
+
+ARCHIVOS MODIFICADOS (2, sin SQL nuevo):
+  1. chat_bridge.php                      → v1.4: acción "unread" nueva
+  2. styles/templates/game/footer.tpl     → burbuja v3 completa
+
+────────────────────────────────────────────────────────────────
+ QUÉ HACE LA BURBUJA AHORA
+────────────────────────────────────────────────────────────────
+
+1) PESTAÑAS DENTRO DE LA BURBUJA
+   - La ventana del chat flotante tiene 2 pestañas:
+       "💬 General"  y  "🛡️ Alianza"
+   - AL ABRIR LA BURBUJA SIEMPRE ENTRA EN "General" (por defecto).
+   - La pestaña "Alianza" SOLO aparece si el jugador pertenece a
+     una alianza. Los mensajes van al mismo canal que usa el chat
+     oficial (uni1_chat_messages: canal 0 = general, canal
+     ally_id + 100 = alianza), así que la burbuja y la página de
+     chat comparten los mismos mensajes.
+
+2) NÚMERO DE MENSAJES NO LEÍDOS (badge rojo de la burbuja)
+   - Si el jugador NO tiene el chat abierto y alguien escribe en
+     General o en Alianza, aparece un número junto a la burbuja
+     con la cantidad de mensajes que no ha leído (suma de ambos).
+   - Al ENTRAR a la burbuja, el número se quita (todo queda
+     marcado como leído) y no vuelve a salir hasta que lleguen
+     mensajes nuevos con el chat cerrado.
+   - El "ya leído" se guarda en el navegador (localStorage), así
+     que si el jugador recarga la página o abre el juego mañana,
+     el número sigue contando los mensajes que no vio todavía.
+   - La primera vez que un jugador entra al juego, el historial
+     viejo NO cuenta como no leído (solo lo que llegue a partir
+     de ese momento).
+
+3) CHEQUEO EN SEGUNDO PLANO
+   - Con el chat cerrado: consulta cada 15 s (ligera, solo
+     conteos).
+   - Con el chat abierto: trae mensajes nuevos cada 4 s del canal
+     activo.
+
+────────────────────────────────────────────────────────────────
+ DETALLE TÉCNICO (backend)
+────────────────────────────────────────────────────────────────
+
+chat_bridge.php v1.4 añade la acción:
+
+   GET chat_bridge.php?action=unread&genLast=<id>&allyLast=<id>
+
+Respuesta JSON:
+   {
+     "success": true,
+     "gen": 3,           ← no leídos en General (id > genLast)
+     "ally": 2,          ← no leídos en Alianza (id > allyLast)
+     "latestGen": 120,   ← último ID visible en General
+     "latestAlly": 87,
+     "userAllyId": 5,
+     "hasAlly": true
+   }
+
+Respeta el filtro de comandos de sistema (/login, /kick, etc.)
+y la retención configurada en el Panel Admin
+(chat_retention_minutes), igual que la acción "get".
+
+────────────────────────────────────────────────────────────────
+ INSTALACIÓN EN EL SERVIDOR
+────────────────────────────────────────────────────────────────
+
+1) Sube por FTP los 2 archivos, respetando las rutas:
+      /chat_bridge.php
+      /styles/templates/game/footer.tpl
+
+2) VACÍA LA CACHE DE SMARTY (importante o no verás el cambio):
+      borra TODO el contenido de  /cache/  y  /templates_c/
+      (si existe). El juego se regenera solo.
+
+3) Prueba en el juego:
+      - Abre cualquier página → la burbuja está abajo a la derecha.
+      - Escribe un mensaje desde OTRO usuario en General → debe
+        salir el número en tu burbuja (con el chat cerrado).
+      - Entra a la burbuja → abre en "General" y el número se va.
+      - Con alianza: que un miembro escriba en el chat de alianza
+        → el número cuenta también esos, y la pestaña "🛡️ Alianza"
+        los muestra.
+
+NO hace falta actualizar la APK por este cambio: es código del
+servidor (PHP/JS), el navegador del juego lo descarga solo.
+(Más detalles en el documento "GUIA-ACTUALIZAR-APK".)
+════════════════════════════════════════════════════════════════

@@ -1,5 +1,12 @@
 <!-- ═══════════════════════════════════════════════
-     ASTROIO — Chat Flotante (debajo de la campanita)
+     ASTROIO — Chat Flotante v3 (debajo de la campanita)
+     v2.4.3:
+       - Pestañas General / Alianza (abre por defecto en GENERAL)
+       - Badge con el nº de mensajes NO LEÍDOS de ambos chats
+         (se guarda en localStorage → sobrevive a recargas)
+       - Al abrir la burbuja el badge se quita (todo marcado leído)
+       - Canal Alianza solo visible si el jugador tiene alianza
+       - Backend: chat_bridge.php v1.4 (acción unread nueva)
      ═══════════════════════════════════════════════ -->
 
 <style>
@@ -34,7 +41,7 @@
     transform: scale(0.96);
 }
 
-/* v2.4.2 - Icono real de la burbuja (icons8 telegrama del tema gow) */
+/* Icono real de la burbuja (icons8 telegrama del tema gow) */
 #astrofloat_chat_btn img.astrofloat_icon {
     width: 30px;
     height: 30px;
@@ -43,7 +50,7 @@
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
 }
 
-/* Badge rojo de mensajes nuevos */
+/* Badge rojo de mensajes nuevos (General + Alianza) */
 #astrofloat_chat_badge {
     position: absolute;
     top: -4px;
@@ -151,6 +158,44 @@
     color: #ffbbbb;
     transform: scale(1.2);
 }
+
+/* ====== PESTAÑAS General / Alianza (v3) ====== */
+.astrofloat_tabs {
+    display: flex;
+    gap: 6px;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+.astrofloat_tab {
+    flex: 1;
+    padding: 7px 4px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(0, 255, 136, 0.25);
+    border-radius: 7px;
+    color: #9fd8b8;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: 0.3px;
+}
+
+.astrofloat_tab:hover {
+    color: #fff;
+    border-color: rgba(0, 255, 136, 0.5);
+}
+
+.astrofloat_tab.active {
+    background: linear-gradient(135deg, #008844, #00cc66);
+    color: #fff;
+    border-color: #00ff88;
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+}
+
+.astrofloat_tab.hidden { display: none; }
 
 /* ====== Mensajes ====== */
 .astrofloat_messages {
@@ -272,7 +317,7 @@
 }
 </style>
 
-<!-- Botón flotante — v2.4.2: icono del tema gow en lugar del emoji -->
+<!-- Botón flotante — icono del tema gow -->
 <div id="astrofloat_chat_btn" onclick="astrofloat_toggle()" title="Chat rápido">
     <img class="astrofloat_icon" src="styles/theme/gow/images/icons8-aplicaci&oacute;n-telegrama-48.png" alt="Chat">
     <span id="astrofloat_chat_badge">0</span>
@@ -282,8 +327,12 @@
 <div id="astrofloat_chat_window">
     <div class="astrofloat_header">
         <span class="title">Chat R&aacute;pido</span>
-        <span class="status">En línea</span>
+        <span class="status">En l&iacute;nea</span>
         <span class="close" onclick="astrofloat_toggle()">✖</span>
+    </div>
+    <div class="astrofloat_tabs">
+        <button type="button" class="astrofloat_tab active" id="astrofloat_tab_gen" onclick="astrofloat_setChannel('gen')">💬 General</button>
+        <button type="button" class="astrofloat_tab hidden" id="astrofloat_tab_ally" onclick="astrofloat_setChannel('ally')">🛡️ Alianza</button>
     </div>
     <div class="astrofloat_messages" id="astrofloat_messages"></div>
     <div class="astrofloat_input_area">
@@ -298,114 +347,173 @@
 </div>
 
 <script>
+{literal}
 /* ═══════════════════════════════════════════════
-   ASTROIO — Chat Flotante
+   ASTROIO — Chat Flotante v3
+   Canales: General (0) y Alianza (ally_id + 100)
+   Badge  : nº de mensajes no leídos de ambos canales
    ═══════════════════════════════════════════════ */
 (function() {
-    var lastId      = 0;
-    var myId        = 0;
-    var interval    = null;
-    var isOpen      = false;
-    var unreadCount = 0;
-    var initialized = false;
+    var OPEN_POLL_MS    = 4000;   /* mensaje nuevo con la ventana abierta */
+    var CLOSED_POLL_MS  = 15000;  /* chequeo del badge con la ventana cerrada */
+
+    var st = {
+        ch: 'gen',            /* canal activo en la ventana — DEFAULT: General */
+        genLast: 0,           /* último mensaje de General VISTO (localStorage) */
+        allyLast: 0,          /* último mensaje de Alianza VISTO (localStorage) */
+        genId: 0, allyId: 0,  /* último mensaje CARGADO en el panel */
+        allyCh: 0,            /* canal numérico de la alianza (ally_id + 100) */
+        hasAlly: false,
+        myId: 0,
+        isOpen: false,
+        timer: null,
+        baseline: false       /* primera visita: lo viejo no cuenta como no leído */
+    };
+
+    try {
+        st.genLast  = parseInt(localStorage.getItem('astrofloat_lastGen'))  || 0;
+        st.allyLast = parseInt(localStorage.getItem('astrofloat_lastAlly')) || 0;
+        st.baseline = localStorage.getItem('astrofloat_baseline') === '1';
+    } catch (e) {}
 
     var btn     = document.getElementById('astrofloat_chat_btn');
     var win     = document.getElementById('astrofloat_chat_window');
     var msgBox  = document.getElementById('astrofloat_messages');
     var input   = document.getElementById('astrofloat_input');
     var badge   = document.getElementById('astrofloat_chat_badge');
+    var tabGen  = document.getElementById('astrofloat_tab_gen');
+    var tabAlly = document.getElementById('astrofloat_tab_ally');
 
-    // ---- Toggle abrir/cerrar ----
-    window.astrofloat_toggle = function() {
-        isOpen = !isOpen;
-        if (isOpen) {
-            win.classList.add('open');
-            unreadCount = 0;
-            badge.style.display = 'none';
-            if (!initialized) {
-                initialized = true;
-                astrofloat_load();
-            }
-            astrofloat_startPolling();
-            setTimeout(function(){ input.focus(); }, 150);
-        } else {
-            win.classList.remove('open');
-            astrofloat_stopPolling();
-        }
-    };
-
-    // ---- Polling ----
-    function astrofloat_startPolling() {
-        astrofloat_stopPolling();
-        interval = setInterval(astrofloat_load, 4000);
+    /* ---- Persistencia del "ya leído" ---- */
+    function saveSeen() {
+        try {
+            localStorage.setItem('astrofloat_lastGen',  String(st.genLast));
+            localStorage.setItem('astrofloat_lastAlly', String(st.allyLast));
+        } catch (e) {}
     }
 
-    function astrofloat_stopPolling() {
-        if (interval) { clearInterval(interval); interval = null; }
+    function markRead(which, id) {
+        id = parseInt(id) || 0;
+        if (id <= 0) return;
+        if (which === 'gen' && id > st.genLast)   { st.genLast  = id; saveSeen(); }
+        if (which === 'ally' && id > st.allyLast) { st.allyLast = id; saveSeen(); }
     }
 
-    // ---- Cargar mensajes ----
-    function astrofloat_load() {
-        var url = 'chat_bridge.php?action=get';
-        if (lastId > 0) url += '&last_id=' + lastId;
-
+    /* ---- API ---- */
+    function api(params, cb) {
         var xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
+        xhr.open('GET', 'chat_bridge.php?' + params, true);
         xhr.onreadystatechange = function() {
             if (xhr.readyState !== 4 || xhr.status !== 200) return;
-            try {
-                var data = JSON.parse(xhr.responseText);
-                if (data.error) return;
-                myId = data.userId;
-
-                if (lastId === 0) msgBox.innerHTML = '';
-
-                data.messages.forEach(function(msg) {
-                    astrofloat_addMsg(msg);
-                    if (parseInt(msg.id) > lastId) lastId = parseInt(msg.id);
-
-                    // Contar no leídos (si la ventana está cerrada)
-                    if (!isOpen && parseInt(msg.userID) !== parseInt(myId)) {
-                        unreadCount++;
-                    }
-                });
-
-                if (!isOpen && unreadCount > 0) {
-                    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-                    badge.style.display = 'flex';
-                }
-            } catch (e) { console.error(e); }
+            try { cb(JSON.parse(xhr.responseText)); } catch (e) { console.error(e); }
         };
         xhr.send();
     }
 
-    // ---- Añadir mensaje ----
-    function astrofloat_addMsg(msg) {
-        var isMe = (parseInt(msg.userID) === parseInt(myId));
+    /* ---- Badge ---- */
+    function setBadge(n) {
+        n = parseInt(n) || 0;
+        if (n > 0 && !st.isOpen) {
+            badge.textContent = n > 99 ? '99+' : String(n);
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    /* ---- Polling del badge (ventana cerrada) ---- */
+    function pollUnread() {
+        api('action=unread&genLast=' + st.genLast + '&allyLast=' + st.allyLast, function(d) {
+            if (!d || d.error) return;
+            st.hasAlly = !!d.hasAlly;
+            if (parseInt(d.userAllyId) > 0) st.allyCh = parseInt(d.userAllyId) + 100;
+            tabAlly.classList.toggle('hidden', !st.hasAlly);
+            if (st.isOpen) return;   /* abierta → el badge no se muestra */
+
+            /* Primera visita: lo que ya estaba en el chat no cuenta como no leído */
+            if (!st.baseline) {
+                st.baseline = true;
+                if (st.genLast === 0  && parseInt(d.latestGen)  > 0) st.genLast  = parseInt(d.latestGen);
+                if (st.allyLast === 0 && parseInt(d.latestAlly) > 0) st.allyLast = parseInt(d.latestAlly);
+                try { localStorage.setItem('astrofloat_baseline', '1'); } catch (e) {}
+                saveSeen();
+                return;
+            }
+            setBadge(parseInt(d.gen) + parseInt(d.ally));
+        });
+    }
+
+    /* ---- Polling / carga de mensajes ---- */
+    function stopPolling() {
+        if (st.timer) { clearInterval(st.timer); st.timer = null; }
+    }
+
+    function startPolling(open) {
+        stopPolling();
+        if (open) {
+            st.timer = setInterval(function() { loadChannel(false); }, OPEN_POLL_MS);
+        } else {
+            st.timer = setInterval(pollUnread, CLOSED_POLL_MS);
+        }
+    }
+
+    function loadChannel(reset) {
+        var ch = st.ch;
+        if (ch === 'ally' && (!st.hasAlly || !st.allyCh)) return;
+
+        var chanId = (ch === 'gen') ? 0 : st.allyCh;
+        var lastId = reset ? 0 : (ch === 'gen' ? st.genId : st.allyId);
+
+        api('action=get&channel=' + chanId + '&last_id=' + lastId, function(d) {
+            if (!d || d.error) return;
+            st.myId = parseInt(d.userId) || 0;
+            if (parseInt(d.userAllyId) > 0) {
+                st.hasAlly = true;
+                st.allyCh = parseInt(d.userAllyId) + 100;
+                tabAlly.classList.remove('hidden');
+            }
+
+            if (reset) msgBox.innerHTML = '';
+            var msgs = d.messages || [];
+            for (var i = 0; i < msgs.length; i++) {
+                appendMsg(msgs[i]);
+                if (ch === 'gen') { if (msgs[i].id > st.genId) st.genId = parseInt(msgs[i].id); }
+                else              { if (msgs[i].id > st.allyId) st.allyId = parseInt(msgs[i].id); }
+            }
+
+            /* Viendo el canal activo con la ventana abierta → marcado leído */
+            markRead(ch, ch === 'gen' ? st.genId : st.allyId);
+            scrollBottom(reset);
+        });
+    }
+
+    function appendMsg(m) {
+        var isMe = (parseInt(m.userID) === parseInt(st.myId));
         var tmp = document.createElement('div');
-        tmp.innerHTML = msg.text;
+        tmp.innerHTML = m.text;
         var plain = tmp.textContent || tmp.innerText || '';
 
         var div = document.createElement('div');
         div.className = 'astrofloat_msg ' + (isMe ? 'me' : 'other');
 
         var hora = '';
-        if (msg.dateTime) {
-            var d = new Date(msg.dateTime.replace(' ', 'T'));
+        if (m.dateTime) {
+            var d = new Date(String(m.dateTime).replace(' ', 'T'));
             if (!isNaN(d)) {
-                hora = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+                hora = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
             }
         }
 
-        div.innerHTML = '<span class="name">' + escapeHtml(msg.userName) + '</span>' +
+        div.innerHTML = '<span class="name">' + escapeHtml(m.userName || '???') + '</span>' +
                         escapeHtml(plain) +
                         '<span class="time">' + hora + '</span>';
 
         msgBox.appendChild(div);
+    }
 
-        // Auto-scroll si está cerca del fondo
+    function scrollBottom(force) {
         var nearBottom = (msgBox.scrollHeight - msgBox.scrollTop - msgBox.clientHeight) < 100;
-        if (nearBottom || isMe) msgBox.scrollTop = msgBox.scrollHeight;
+        if (nearBottom || force) msgBox.scrollTop = msgBox.scrollHeight;
     }
 
     function escapeHtml(t) {
@@ -414,15 +522,54 @@
         return d.innerHTML;
     }
 
-    // ---- Enviar ----
+    /* ---- Cambiar de canal (pestañas) ---- */
+    function setChannel(ch) {
+        if (ch === 'ally' && !st.hasAlly) return;
+        st.ch = ch;
+        tabGen.classList.toggle('active', ch === 'gen');
+        tabAlly.classList.toggle('active', ch === 'ally');
+        loadChannel(true);           /* historial del canal */
+        startPolling(true);          /* polling del canal activo */
+    }
+    window.astrofloat_setChannel = setChannel;
+
+    /* ---- Abrir / cerrar la burbuja ---- */
+    window.astrofloat_toggle = function() {
+        st.isOpen = !st.isOpen;
+        if (st.isOpen) {
+            win.classList.add('open');
+            badge.style.display = 'none';
+
+            /* Al entrar al chat TODO se marca leído → el número desaparece */
+            api('action=unread&genLast=' + st.genLast + '&allyLast=' + st.allyLast, function(d) {
+                if (!d || d.error) return;
+                st.hasAlly = !!d.hasAlly;
+                if (parseInt(d.userAllyId) > 0) st.allyCh = parseInt(d.userAllyId) + 100;
+                tabAlly.classList.toggle('hidden', !st.hasAlly);
+                markRead('gen',  d.latestGen);
+                markRead('ally', d.latestAlly);
+            });
+
+            setChannel('gen');       /* SIEMPRE abre en General */
+            setTimeout(function() { input.focus(); }, 150);
+        } else {
+            win.classList.remove('open');
+            startPolling(false);
+            pollUnread();            /* recalcular el badge al cerrar */
+        }
+    };
+
+    /* ---- Enviar ---- */
     window.astrofloat_send = function() {
         var text = input.value.trim();
         if (text === '') return;
         input.value = '';
         input.focus();
 
+        var chanId = (st.ch === 'gen') ? 0 : st.allyCh;
         var fd = new FormData();
         fd.append('action', 'send');
+        fd.append('channel', String(chanId));
         fd.append('text', text);
 
         var xhr = new XMLHttpRequest();
@@ -431,17 +578,20 @@
             if (xhr.readyState !== 4) return;
             if (xhr.status !== 200) { alert('Error al enviar'); return; }
             try {
-                var data = JSON.parse(xhr.responseText);
-                if (data.success) astrofloat_load();
-                else alert('Error: ' + (data.error || 'desconocido'));
+                var d = JSON.parse(xhr.responseText);
+                if (d.success) {
+                    loadChannel(true);   /* recarga el canal y lo marca leído */
+                } else {
+                    alert('Error: ' + (d.error || 'desconocido'));
+                }
             } catch (e) { console.error(e); }
         };
         xhr.send(fd);
     };
 
-    // ---- Polling ligero incluso si está cerrado (para el badge) ----
-    setInterval(function() {
-        if (!isOpen) astrofloat_load();
-    }, 15000);
+    /* ---- Inicio: badge desde el primer segundo + chequeo cada 15 s ---- */
+    pollUnread();
+    startPolling(false);
 })();
+{/literal}
 </script>

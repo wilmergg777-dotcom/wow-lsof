@@ -3,7 +3,9 @@
  * chat_bridge.php
  * Puente entre el Chat Flotante (nuevo) y AJAX Chat (oficial)
  * Soporta: canal Global (0) y canal Alianza (ally_id + 100)
- * AstroIO 2026 - v1.3
+ * AstroIO 2026 - v1.4
+ *   - NUEVO: acción "unread" → conteo de mensajes no leídos por canal
+ *     (General y Alianza) para el badge de la burbuja flotante v3
  *   - Fix nombres (fallback si userName viene vacío)
  *   - Validación de canal ANTES de la purga
  *   - Filtro de mensajes de sistema (/login, /logout, /kick, /ban, etc.)
@@ -208,6 +210,47 @@ if ($retentionMinutes > 0) {
             @fclose($fp);
         }
     }
+}
+
+// ═══════════════════════════════════════════════
+// 4.b ASTROIO v1.4 — UNREAD: mensajes no leídos por canal (badge burbuja v3)
+//     El cliente envía genLast/allyLast = último ID de mensaje VISTO (localStorage).
+//     Devuelve: gen, ally (no leídos), latestGen, latestAlly (último ID visible),
+//               userAllyId, hasAlly. Respeta el filtro de sistema y la retención.
+if ($action === 'unread') {
+    $genLast  = isset($_REQUEST['genLast'])  ? intval($_REQUEST['genLast'])  : 0;
+    $allyLast = isset($_REQUEST['allyLast']) ? intval($_REQUEST['allyLast']) : 0;
+
+    try {
+        $sqlUnread = "SELECT COALESCE(MAX(id), 0) AS latest,
+                             COALESCE(SUM(id > :last), 0) AS unread
+                      FROM %%CHAT_MES%%
+                      WHERE channel = :channel "
+                      . $sysFilter . " " . $timeFilter;
+
+        $rowGen = $db->selectSingle($sqlUnread, array(':last' => $genLast, ':channel' => 0));
+
+        $out = array(
+            'success'    => true,
+            'gen'        => intval($rowGen['unread']),
+            'latestGen'  => intval($rowGen['latest']),
+            'ally'       => 0,
+            'latestAlly' => 0,
+            'userAllyId' => $userAllyId,
+            'hasAlly'    => ($userAllyId > 0),
+        );
+
+        if ($userAllyId > 0) {
+            $rowAlly = $db->selectSingle($sqlUnread, array(':last' => $allyLast, ':channel' => $userAllyId + 100));
+            $out['ally']       = intval($rowAlly['unread']);
+            $out['latestAlly'] = intval($rowAlly['latest']);
+        }
+
+        echo json_encode($out);
+    } catch (Exception $e) {
+        echo json_encode(array('error' => 'db_error', 'msg' => $e->getMessage()));
+    }
+    exit;
 }
 
 // ═══════════════════════════════════════════════
