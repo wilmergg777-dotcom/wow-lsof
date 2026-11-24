@@ -2,5 +2,17 @@
   "versionCode": 3,
   "versionName": "2.4.1",
   "url": "https://astroio.duckdns.org/apk/AstroIO.apk",
-  "sha256": "AQUI_VA_EL_SHA256_DE_LA_APK"
+  "sha256": "c6a444c0f1a8d96f3a865f53cf1a239de7f0ae9f69d7edda187cb11412024369",
+  "launcher": {
+    "versionCode": 1,
+    "versionName": "2.4.1",
+    "windows": {
+      "url": "https://astroio.duckdns.org/launcher/AstroIO-Launcher-windows.exe",
+      "sha256": "9e5cae50c0f27e68d56632d80b8d32b88e1d77a6a12a82d8eb6876a7ed7173a9"
+    },
+    "linux": {
+      "url": "https://astroio.duckdns.org/launcher/AstroIO-Launcher-linux",
+      "sha256": "ed238df60b4843385764db73127ac9b5cd6f0172fec4df146647aa8c313677a1"
+    }
+  }
 }

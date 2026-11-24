@@ -1,0 +1,72 @@
+════════════════════════════════════════════════════════════════
+ ASTROIO LAUNCHER — PC Windows y Linux (v1, build 1)
+════════════════════════════════════════════════════════════════
+
+QUÉ ES
+------
+Un programa chiquito (5 MB) para que los jugadores entren al juego
+SIN abrir el navegador a mano y SIN escribir la dirección:
+
+   - Hace doble clic en el icono → abre el juego en una ventana
+     limpia (sin pestañas, sin barra de direcciones: modo "app"
+     del Edge/Chrome; si no los encuentra, usa el navegador por
+     defecto del sistema).
+   - Al abrirse comprueba la versión en el servidor igual que la
+     APK: si hay launcher nuevo, lo descarga, verifica su SHA-256,
+     se reemplaza solo y abre el juego ya actualizado.
+   - La dirección del servidor va ofuscada dentro del programa
+     (XOR, igual que en la APK): no aparece en texto plano.
+
+ARCHIVOS
+--------
+   main.go                  → código fuente (una sola fuente para
+                              Windows y Linux)
+   hidewindow_windows.go    → evita la ventana negra de consola
+   hidewindow_other.go      → equivalente para Linux
+   go.mod                   → módulo Go (sin dependencias externas)
+   build.sh                 → compila los 2 ejecutables y muestra
+                              los SHA-256 para version.json
+   instalar-linux.sh        → instalador para Linux (copia a
+                              ~/.local/bin y crea el acceso "AstroIO"
+                              en el menú de aplicaciones)
+
+CÓMO LO USA UN JUGADOR
+----------------------
+WINDOWS:
+   1) Descarga AstroIO-Launcher-windows.exe
+   2) Guárdalo donde quiera (ej. Escritorio) y haz doble clic.
+      La primera vez, Windows puede mostrar el aviso azul de
+      SmartScreen ("Windows protegió tu PC") porque el .exe no
+      está firmado con certificado de pago: clic en
+      "Más información" → "Ejecutar de todas formas".
+      Solo sale la primera vez.
+   3) El launcher abre la ventana del juego solo.
+
+LINUX:
+   1) Descarga AstroIO-Launcher-linux
+   2) Opción fácil:  bash instalar-linux.sh  → queda instalado
+      como app "AstroIO" en el menú.
+      Opción directa: dar permiso de ejecución y abrirlo:
+         chmod +x AstroIO-Launcher-linux
+         ./AstroIO-Launcher-linux
+   3) Requiere algún navegador (Chromium/Chrome/Brave/Edge para
+      la ventana en modo app; con Firefox abre en ventana normal).
+
+CÓMO PUBLICAR UNA VERSIÓN NUEVA (para el administrador)
+-------------------------------------------------------
+1) Edita launcher/main.go → sube launcherVersionCode (+1) y
+   launcherVersionName si corresponde.
+2) bash launcher/build.sh  → genera los 2 archivos y te imprime
+   los SHA-256.
+3) Sube los 2 archivos por FTP a  /launcher/  del servidor.
+4) Actualiza el bloque "launcher" de  /apk/version.json  (urls +
+   sha256 + versionCode nuevo) y súbelo a /apk/.
+5) Listo: los launchers viejos se actualizan solos al abrirse.
+
+NOTA IMPORTANTE
+---------------
+Si el jugador NO tiene Internet, el launcher abre el juego igual
+(solo fallará la carga de la página, que ya muestra su propio
+aviso). La actualización automática se salta en silencio y se
+reintentará la próxima vez que abra.
+════════════════════════════════════════════════════════════════

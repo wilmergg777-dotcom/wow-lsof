@@ -49,6 +49,39 @@ deja entrar al juego hasta que termine la actualización.
    actualizarán solos y después entrarán al juego.
 
 ────────────────────────────────────────────────────────────────
+ LAUNCHERS DE PC (Windows + Linux) — misma mecánica
+────────────────────────────────────────────────────────────────
+
+Los launchers de PC también se auto-actualizan leyendo ESTE MISMO
+archivo version.json. El bloque "launcher" del JSON indica:
+
+   - launcher.versionCode : versión actual del launcher
+   - launcher.windows     : url + sha256 del .exe de Windows
+   - launcher.linux       : url + sha256 del binario de Linux
+
+PUBLICAR UNA VERSIÓN NUEVA DEL LAUNCHER (sin tocar la APK):
+
+1) Edita launcher/main.go → launcherVersionCode (+1).
+2) Ejecuta  bash launcher/build.sh  (o deja que el workflow de
+   GitHub Actions lo compile: compila APK + launchers juntos).
+3) Crea en el servidor la carpeta   /launcher/   (raíz del dominio)
+   y sube ahí los 2 archivos:
+       AstroIO-Launcher-windows.exe
+       AstroIO-Launcher-linux
+4) Actualiza el bloque "launcher" del version.json con las urls y
+   los sha256 nuevos y súbelo a /apk/ como siempre.
+5) Comprueba en el navegador:
+       https://astroio.duckdns.org/launcher/AstroIO-Launcher-linux
+   Debe descargar el archivo (si da 404, revisa la carpeta).
+
+Cuando un jugador abre el launcher, este compara el versionCode
+del bloque "launcher" con el suyo: si el del servidor es mayor,
+se descarga el nuevo, verifica su SHA-256, se reemplaza a sí mismo
+y abre el juego con la versión nueva. La APK, el launcher de
+Windows y el de Linux se actualizan del mismo tirón al cambiar la
+versión, porque todos leen el mismo version.json.
+
+────────────────────────────────────────────────────────────────
  NOTAS
 ────────────────────────────────────────────────────────────────
 - Si el archivo version.json NO existe todavía, la app entra al

@@ -1,12 +1,13 @@
 name: Compilar APK AstroIO
 
-# Cada push a Xnovaaaa que toque la carpeta apk/ compila la APK firmada,
-# calcula su SHA-256 y publica AstroIO.apk + version.json (artefacto y Release).
+# Cada push a Xnovaaaa que toque apk/ o launcher/ compila la APK firmada y los
+# launchers de Windows/Linux, calcula sus SHA-256 y publica AstroIO.apk +
+# version.json + launchers (artefacto y Release).
 
 on:
   push:
     branches: ["Xnovaaaa"]
-    paths: ["apk/**", ".github/workflows/build-apk.yml"]
+    paths: ["apk/**", "launcher/**", ".github/workflows/build-apk.yml"]
   workflow_dispatch:
 
 permissions:
@@ -38,14 +39,27 @@ jobs:
           cd apk/android
           gradle assembleRelease --no-daemon
 
-      - name: Preparar AstroIO.apk y version.json
+      - name: Instalar Go 1.22 (para los launchers)
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Compilar launchers (Windows + Linux)
+        run: bash launcher/build.sh
+
+      - name: Preparar AstroIO.apk, launchers y version.json
         run: |
           set -e
-          mkdir -p out
+          mkdir -p out/launcher
           cp apk/android/app/build/outputs/apk/release/app-release.apk out/AstroIO.apk
           SHA=$(sha256sum out/AstroIO.apk | cut -d' ' -f1)
           CODE=$(grep -oE 'versionCode[[:space:]]+[0-9]+' apk/android/app/build.gradle | grep -oE '[0-9]+' | head -1)
           VER=$(grep -oE 'versionName[[:space:]]+"[^"]+"' apk/android/app/build.gradle | sed 's/.*"\(.*\)"/\1/')
+          cp launcher/AstroIO-Launcher-windows.exe launcher/AstroIO-Launcher-linux out/launcher/
+          SHA_W=$(sha256sum out/launcher/AstroIO-Launcher-windows.exe | cut -d' ' -f1)
+          SHA_L=$(sha256sum out/launcher/AstroIO-Launcher-linux | cut -d' ' -f1)
+          LCODE=$(grep -oE 'launcherVersionCode = [0-9]+' launcher/main.go | grep -oE '[0-9]+' | head -1)
+          LVER=$(grep -oE 'launcherVersionName = "[^"]+"' launcher/main.go | sed 's/.*"\(.*\)"/\1/')
           echo "CODE=$CODE" >> "$GITHUB_ENV"
           echo "VER=$VER" >> "$GITHUB_ENV"
           cat > out/version.json <<JSON
@@ -53,19 +67,32 @@ jobs:
             "versionCode": ${CODE},
             "versionName": "${VER}",
             "url": "https://astroio.duckdns.org/apk/AstroIO.apk",
-            "sha256": "${SHA}"
+            "sha256": "${SHA}",
+            "launcher": {
+              "versionCode": ${LCODE},
+              "versionName": "${LVER}",
+              "windows": {
+                "url": "https://astroio.duckdns.org/launcher/AstroIO-Launcher-windows.exe",
+                "sha256": "${SHA_W}"
+              },
+              "linux": {
+                "url": "https://astroio.duckdns.org/launcher/AstroIO-Launcher-linux",
+                "sha256": "${SHA_L}"
+              }
+            }
           }
           JSON
           echo "── version.json generado ──"
           cat out/version.json
 
-      - name: Guardar artefactos (APK + version.json)
+      - name: Guardar artefactos (APK + launchers + version.json)
         uses: actions/upload-artifact@v4
         with:
           name: astroio-apk-v${{ env.CODE }}-${{ env.VER }}
           path: |
             out/AstroIO.apk
             out/version.json
+            out/launcher/
 
       - name: Publicar Release apk-v${{ env.CODE }}
         uses: softprops/action-gh-release@v2
@@ -73,12 +100,15 @@ jobs:
           tag_name: apk-v${{ env.CODE }}
           name: AstroIO APK v${{ env.VER }} (build ${{ env.CODE }})
           body: |
-            APK firmada de AstroIO v${{ env.VER }} (versionCode ${{ env.CODE }}).
+            APK firmada de AstroIO v${{ env.VER }} (versionCode ${{ env.CODE }}) + launchers Windows/Linux.
 
             Para actualizar tu servidor:
-            1) Descarga AstroIO.apk y version.json de este Release.
-            2) Súbelos por FTP a /apk/  (raíz del dominio, sin subcarpeta)
+            1) Descarga AstroIO.apk, version.json y la carpeta launcher/ de este Release.
+            2) Sube AstroIO.apk y version.json por FTP a /apk/
+            3) Sube los launchers por FTP a /launcher/
             (instrucciones completas en apk/server/LEEME-SERVIDOR.txt)
           files: |
             out/AstroIO.apk
             out/version.json
+            out/launcher/AstroIO-Launcher-windows.exe
+            out/launcher/AstroIO-Launcher-linux
