@@ -179,7 +179,7 @@ $mk = {
 }
 foreach ($dir in @($desk, $sm)) { & $mk $dir 'AstroIO.lnk' $exe $null }
 & $mk $sm 'AstroIO - Borrar datos.lnk' $exe '--borrar-datos'
-& $mk $sm 'Desinstalar AstroIO.lnk' 'powershell.exe' "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$ps1`""
+& $mk $sm 'Desinstalar AstroIO.lnk' 'powershell.exe' ('-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $ps1 + '"')
 `
 	tmp := filepath.Join(os.TempDir(), "astroio-setup-shortcuts.ps1")
 	if err := os.WriteFile(tmp, []byte(ps), 0644); err != nil {
