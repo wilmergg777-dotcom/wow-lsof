@@ -1,75 +1,72 @@
 ════════════════════════════════════════════════════════════════
- ASTROIO LAUNCHER — PC Windows y Linux (v5, build 5 / versión 2.4.8)
+ ASTROIO LAUNCHER — PC Windows y Linux (v6, build 6 / versión 2.4.9)
 ════════════════════════════════════════════════════════════════
 
-QUÉ ES
-------
-Un programa chiquito (5 MB) para que los jugadores entren al juego
-SIN abrir el navegador a mano y SIN escribir la dirección:
+QUÉ ES (AHORA SÍ UNA APP DE VERDAD, COMO LA APK)
+------------------------------------------------
+Ya no abre "el navegador": es una APLICACIÓN con ventana propia.
 
-   - Hace doble clic en el icono → abre el juego en una ventana
-     limpia (sin pestañas, sin barra de direcciones: modo "app"
-     del Edge/Chrome; si no los encuentra, usa el navegador por
-     defecto del sistema).
-   - Al abrirse comprueba la versión en el servidor igual que la
-     APK: si hay launcher nuevo, lo descarga, verifica su SHA-256,
-     se reemplaza solo y abre el juego ya actualizado.
-   - La dirección del servidor va ofuscada dentro del programa
-     (XOR, igual que en la APK): no aparece en texto plano.
+   - WINDOWS: ventana propia con WebView2 (el motor de Edge que
+     trae Windows 10/11). Si el runtime de WebView2 no está, el
+     SETUP lo instala solo (instalador oficial de Microsoft,
+     embebido dentro del Setup).
+   - LINUX: navegador Chromium/Chrome/Edge/Brave en MODO APP con
+     PERFIL PROPIO del launcher (la sesión no se mezcla con la de
+     tu navegador).
+   - Las IMÁGENES DEL JUEGO VAN DENTRO del launcher (las mismas
+     que lleva la APK: edificios, planetas, razas, etc.). Por eso
+     el exe pesa ~140 MB UNA sola vez: después de instalar, las
+     imágenes NO se vuelven a descargar → NO gasta datos por gusto.
+   - Lo estático que no va embebido (css/js/fuentes sueltos) se
+     guarda en CACHÉ DE DISCO la primera vez y ya no se baja más.
+   - Acceso directo "AstroIO - Borrar datos" (menú Inicio / menú
+     de apps): borra sesión, caché y ajustes, IGUAL QUE LA APK.
+   - Se AUTO-ACTUALIZA consultando version.json igual que la APK
+     (descarga, verifica SHA-256 y se reemplaza sola).
+   - La dirección del servidor va ofuscada dentro (XOR 0x5A).
 
-NUEVO EN LA v4 (2.4.7): SETUP DE WINDOWS EN GO
-----------------------------------------------
-El Setup antiguo (NSIS, 249 MB) instalaba un AstroIO.exe con el
-manifest SxS roto y Windows mostraba al hacer doble clic:
-
-   "No se pudo iniciar la aplicación: la configuración en
-    paralelo no es correcta" (sxstrace.exe)
-
-AHORA el instalador también es Go (launcher/setup/), 100% estático
-(sin ningún runtime de C++): ese error es IMPOSIBLE por
-construcción. Además pesa ~5 MB en vez de 249 MB y:
-
-   - No pide permisos de administrador (instala por usuario en
-     %LOCALAPPDATA%\Programs\AstroIO).
-   - Crea los accesos directos en el Escritorio y en el menú
-     Inicio, y pregunta si quieres abrir el juego al terminar.
-   - Instala el mismo launcher auto-actualizable de siempre.
-
-Si un jugador tiene la versión rota instalada: basta con ejecutar
-el Setup nuevo una vez; sobrescribe AstroIO.exe con el bueno.
+HISTORIAL
+---------
+   v4 (2.4.7): Setup en Go — adiós al error SxS del NSIS viejo
+               ("la configuración en paralelo no es correcta").
+   v5 (2.4.8): icono del juego incrustado en los exes de Windows.
+   v6 (2.4.9): app de verdad: ventana WebView2 propia, imágenes
+               embebidas + caché, "Borrar datos", desinstalador.
 
 ARCHIVOS
 --------
-   main.go                  → código fuente del launcher (una sola
-                              fuente para Windows y Linux)
-   hidewindow_windows.go    → evita la ventana negra de consola
-   hidewindow_other.go      → equivalente para Linux
-   go.mod                   → módulo Go (sin dependencias externas)
-   build.sh                 → compila launcher Windows/Linux + Setup
-                              y muestra los SHA-256 para version.json
-   assets/astroio.ico       → icono del juego que se incrusta en
-                              los exes de Windows (vía rsrc)
-   setup/                   → código del instalador Windows en Go
-                              (embebe el launcher con go:embed)
-   AstroIO-Setup-Windows.exe→ instalador de Windows (lo genera
-                              build.sh; se publica en /launcher/)
-   instalar-linux.sh        → instalador para Linux (copia a
-                              ~/.local/bin y crea el acceso "AstroIO"
-                              en el menú de aplicaciones)
+   main.go                  → código del launcher (común Win/Linux)
+   proxy.go                 → proxy local 127.0.0.1: imágenes
+                              embebidas + caché de disco + cookies
+   window_windows.go        → ventana WebView2 (motor de la app)
+   window_linux.go          → navegador modo app con perfil propio
+   hidewindow_*.go          → evita consolas negras auxiliares
+   build.sh                 → compila las 3 piezas (dependencias,
+                              imágenes, bootstrapper WebView2, icono)
+   assets/astroio.ico       → icono incrustado en los exes Windows
+   setup/                   → instalador de Windows en Go: copia el
+                              launcher, instala WebView2 si falta,
+                              crea accesos directos + desinstalador
+   instalar-linux.sh        → instalador por usuario en Linux con
+                              icono y entradas en el menú de apps
 
 CÓMO LO USA UN JUGADOR
 ----------------------
 WINDOWS (instalador):
-   1) Descarga AstroIO-Setup-Windows.exe
-   2) Doble clic → instala solo (sin admin) y crea los accesos.
-      La primera vez puede salir el aviso azul de SmartScreen
-      ("Windows protegió tu PC") porque el .exe no está firmado
-      con certificado de pago: "Más información" →
-      "Ejecutar de todas formas". Solo sale la primera vez.
-   3) Desde entonces: doble clic en el icono "AstroIO".
+   1) Descarga AstroIO-Setup-Windows.exe (del Release o de la
+      página Descargas del juego).
+   2) Doble clic → instala el juego + accesos directos; si falta
+      WebView2 lo instala (pide permiso de administrador UNA vez).
+      Puede salir el aviso azul de SmartScreen ("Windows protegió
+      tu PC") porque el exe no está firmado con certificado de
+      pago: "Más información" → "Ejecutar de todas formas".
+   3) Desde entonces: doble clic en el icono "AstroIO" → ventana
+      propia del juego. "AstroIO - Borrar datos" en el menú Inicio
+      para limpiar sesión/caché; "Desinstalar AstroIO" para quitar
+      todo.
 WINDOWS (sin instalar):
-   También puede descargarse AstroIO-Launcher-windows.exe y
-   ejecutarlo directamente donde quiera.
+   AstroIO-Launcher-windows.exe funciona también suelto (doble
+   clic); pide WebView2 a Windows si no está.
 LINUX:
    1) Del Release de GitHub descarga LOS 2 archivos y guárdalos en
       la MISMA carpeta (ej. Descargas):
@@ -77,31 +74,26 @@ LINUX:
    2) Abre una terminal EN ESA CARPETA y ejecuta:
          bash instalar-linux.sh
       (no necesita permisos de administrador: instala por usuario)
-   3) Listo: abre "AstroIO" desde el menú de aplicaciones del
-      sistema, o con:  ~/.local/bin/AstroIO-Launcher
-      El launcher se auto-actualiza solo al abrirse.
-   Nota: no intentes dar doble clic al binario descargado: siempre
-   pasa por instalar-linux.sh, que es el que crea el icono y la
-   entrada del menú.
+   3) Abre "AstroIO" desde el menú de aplicaciones (categoría
+      Juegos) o con:  ~/.local/bin/AstroIO-Launcher
+      También queda "AstroIO - Borrar datos" en el menú.
 
 CÓMO PUBLICAR UNA VERSIÓN NUEVA (para el administrador)
 -------------------------------------------------------
-1) Edita launcher/main.go → sube launcherVersionCode (+1) y
-   launcherVersionName si corresponde.
-2) bash launcher/build.sh  → genera launcher Windows/Linux +
-   AstroIO-Setup-Windows.exe e imprime los 3 SHA-256.
-   (El workflow de GitHub Actions hace todo esto solo en cada
-   push que toque apk/ o launcher/.)
-3) Sube los 3 archivos por FTP a  /launcher/  del servidor.
-4) Sube /apk/version.json REGENERADO por el workflow (lleva los
-   SHA-256 reales de los 3 archivos; NUNCA lo edites a mano).
-5) Listo: los launchers viejos se actualizan solos al abrirse.
+1) Edita launcher/main.go → sube launcherVersionCode (+1).
+2) El workflow de GitHub Actions compila TODO solo en cada push
+   que toque apk/ o launcher/: dependencias, imágenes, WebView2,
+   icono, los 3 binarios y el version.json con SHA-256 reales.
+3) Del Release nuevo: sube los 3 binarios por FTP a /launcher/
+   y el version.json a /apk/ (NUNCA edites el version.json a mano).
+4) Los launchers viejos se actualizan solos al abrirse.
 
-NOTA IMPORTANTE
----------------
-Si el jugador NO tiene Internet, el launcher abre el juego igual
-(solo fallará la carga de la página, que ya muestra su propio
-aviso). La actualización automática se salta en silencio y se
-reintentará la próxima vez que abra.
+NOTAS IMPORTANTES
+-----------------
+- El launcher pesa ~140 MB PORQUE LLEVA LAS IMÁGENES DENTRO (es el
+  mismo peso que la APK). La descarga es UNA vez; jugar no consume
+  datos de imágenes nunca más.
+- Sin Internet: la auto-actualización se salta en silencio y la
+  ventana abre igual (las imágenes embebidas se ven; el juego
+  necesita conexión para las partidas).
 ════════════════════════════════════════════════════════════════
-

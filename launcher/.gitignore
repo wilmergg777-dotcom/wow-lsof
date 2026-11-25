@@ -1,2 +1,6 @@
 rsrc_windows_amd64.syso
 setup/rsrc_windows_amd64.syso
+assets/game/
+setup/launcher.exe
+setup/webview2bootstrapper.exe
+AstroIO-Setup-Windows.exe

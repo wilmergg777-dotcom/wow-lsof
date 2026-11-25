@@ -1,15 +1,21 @@
 // ═══════════════════════════════════════════════════════════════
-// AstroIO Launcher — Windows + Linux (v1)
+// AstroIO Launcher — Windows + Linux (v6)
 //
-// Abre el juego en modo "app" (ventana sin barras del navegador)
-// y se AUTO-ACTUALIZA igual que la APK: consulta version.json en
-// el servidor y, si hay una versión de launcher más nueva, la
-// descarga, verifica su SHA-256 y se reemplaza a sí misma antes
-// de abrir el juego.
+// Launcher REAL, igual que la APK:
+//   - Abre una VENTANA PROPIA (WebView2 en Windows; navegador en
+//     modo app con perfil propio en Linux). No abre el navegador
+//     "pelado" del sistema.
+//   - Lleva las IMÁGENES DEL JUEGO DENTRO (igual que la APK) para
+//     no gastar datos por gusto: un proxy local en 127.0.0.1 las
+//     sirve desde el propio exe; lo estático que no lleva, lo
+//     guarda en caché de disco la primera vez y ya no se baja más.
+//   - Atajo/menu "Borrar datos" (--borrar-datos): limpia sesión,
+//     caché y ajustes igual que la APK.
+//   - Se AUTO-ACTUALIZA consultando version.json en el servidor
+//     (descarga, verifica SHA-256 y se reemplaza sola).
 //
-// Compilar (ver build.sh):
-//   Windows: GOOS=windows GOARCH=amd64 go build -ldflags "-H=windowsgui -s -w" -o AstroIO-Launcher-windows.exe
-//   Linux:   GOOS=linux   GOARCH=amd64 go build -ldflags "-s -w"      -o AstroIO-Launcher-linux
+// Compilar (ver build.sh): el Windows con -H=windowsgui e icono
+// incrustado (.syso con rsrc); el Linux estático normal.
 // ═══════════════════════════════════════════════════════════════
 package main
 
@@ -33,12 +39,12 @@ const xorKey = 0x5A
 const hostEnc = "3b292e28353335743e2f39313e34297435283d" // astroio.duckdns.org
 
 // Versión de ESTE launcher (subir +1 y recompilar para publicar)
-// v4 (2.4.7): el Setup NSIS viejo instalaba un AstroIO.exe con el
-// manifest SxS roto ("la configuración en paralelo no es correcta");
-// ahora el Setup también es Go (launcher/setup) y no puede fallar así.
 // v5 (2.4.8): icono incrustado en los exes de Windows.
-const launcherVersionCode = 5
-const launcherVersionName = "2.4.8"
+// v6 (2.4.9): ventana PROPIA con WebView2 (no abre el navegador),
+//             imágenes del juego embebidas + caché de disco (no
+//             gastan datos), atajo "Borrar datos" como la APK.
+const launcherVersionCode = 6
+const launcherVersionName = "2.4.9"
 
 func deobf(hexStr string) string {
         raw := make([]byte, len(hexStr)/2)
@@ -65,7 +71,24 @@ func hexVal(c byte) byte {
 func serverHost() string { return deobf(hostEnc) }
 
 func versionURL() string { return "https://" + serverHost() + "/apk/version.json" }
-func gameURL() string    { return "https://" + serverHost() + "/game.php" }
+
+// ── Carpetas de datos del launcher (como los datos de la APK) ──
+// Windows: %LOCALAPPDATA%\AstroIO\{datos,cache}
+// Linux:   ~/.local/share/AstroIO/{datos,cache,perfil}
+func dataRoot() string {
+        if runtime.GOOS == "windows" {
+                local := os.Getenv("LocalAppData")
+                if local == "" {
+                        local = "."
+                }
+                return filepath.Join(local, "AstroIO")
+        }
+        home, err := os.UserHomeDir()
+        if err != nil {
+                home = "."
+        }
+        return filepath.Join(home, ".local", "share", "AstroIO")
+}
 
 // ── Estructura de version.json ─────────────────────────────────
 type launcherTarget struct {
@@ -86,7 +109,7 @@ type serverVersion struct {
         Launcher    launcherBlock `json:"launcher"`
 }
 
-// ── HTTP con límite de tiempo ──────────────────────────────────
+// ── HTTP con límite de tiempo (comprobaciones cortas) ──────────
 func httpGet(url string, seconds int) (*http.Response, error) {
         client := &http.Client{Timeout: time.Duration(seconds) * time.Second}
         req, err := http.NewRequest("GET", url, nil)
@@ -127,7 +150,16 @@ func selfUpdate(sv *serverVersion) bool {
         }
 
         fmt.Println("Descargando nueva version del launcher...")
-        resp, err := httpGet(target.URL, 60)
+        // SIN timeout total: el launcher ahora es grande porque lleva
+        // las imágenes del juego dentro (como la APK). El SHA-256
+        // garantiza que lo descargado esté completo y sea auténtico.
+        req, err := http.NewRequest("GET", target.URL, nil)
+        if err != nil {
+                fmt.Println("No se pudo descargar la actualizacion:", err)
+                return false
+        }
+        req.Header.Set("User-Agent", "AstroIOLauncher/"+launcherVersionName)
+        resp, err := (&http.Client{}).Do(req)
         if err != nil || resp.StatusCode != 200 {
                 fmt.Println("No se pudo descargar la actualizacion:", err)
                 return false
@@ -211,7 +243,7 @@ func cleanupOld() {
         os.Remove(filepath.Join(filepath.Dir(exePath), filepath.Base(exePath)+".download"))
 }
 
-// ── Buscar navegador con modo --app ────────────────────────────
+// ── Buscar navegador con modo --app (respaldo) ─────────────────
 func findBrowser() string {
         if runtime.GOOS == "windows" {
                 candidates := []string{
@@ -248,40 +280,24 @@ func fileExists(p string) bool {
         return err == nil
 }
 
-// ── Abrir el juego ─────────────────────────────────────────────
-func launchGame() {
-        url := gameURL()
-        browser := findBrowser()
-
-        if browser != "" {
-                fmt.Println("Abriendo el juego en modo app...")
-                cmd := exec.Command(browser, "--app="+url, "--window-size=1280,860")
-                if runtime.GOOS == "windows" {
-                        cmd.SysProcAttr = hideWindow()
-                }
-                if err := cmd.Start(); err == nil {
-                        return
-                }
-        }
-
-        // Fallback: navegador por defecto del sistema
-        fmt.Println("Usando el navegador por defecto...")
-        if runtime.GOOS == "windows" {
-                exec.Command("cmd", "/c", "start", "", url).Start()
-        } else {
-                if p, err := exec.LookPath("firefox"); err == nil {
-                        exec.Command(p, "--new-window", url).Start()
-                } else {
-                        exec.Command("xdg-open", url).Start()
-                }
-        }
-}
-
 func main() {
         cleanupOld()
+        fmt.Printf("AstroIO Launcher v%s (build %d)\n", launcherVersionName, launcherVersionCode)
+
+        root := dataRoot()
+        datosDir := filepath.Join(root, "datos")
+        cacheDir := filepath.Join(root, "cache")
+
+        // 0) --borrar-datos: limpia sesión, caché y ajustes (igual que la APK).
+        //    El Setup/Linux crean un acceso directo que pasa este flag.
+        if len(os.Args) > 1 && (os.Args[1] == "--borrar-datos" || os.Args[1] == "--clear-data") {
+                fmt.Println("Borrando datos del juego (sesión, caché y ajustes)...")
+                os.RemoveAll(root)
+        }
+        os.MkdirAll(datosDir, 0755)
+        os.MkdirAll(cacheDir, 0755)
 
         // 1) Comprobar si hay launcher nuevo (mismo mecanismo que la APK)
-        fmt.Printf("AstroIO Launcher v%s (build %d)\n", launcherVersionName, launcherVersionCode)
         resp, err := httpGet(versionURL(), 6)
         if err != nil {
                 fmt.Println("Sin conexion con el servidor, abriendo el juego...")
@@ -296,9 +312,17 @@ func main() {
                 }
         }
 
-        // 2) Abrir el juego en modo app
-        launchGame()
+        // 2) Proxy local con las imágenes embebidas + caché de disco.
+        //    Si el proxy no pudiera arrancar (caso rarísimo), se abre
+        //    la URL real del servidor directamente.
+        localURL := "https://" + serverHost() + "/game.php"
+        if p, err := startProxy(cacheDir); err == nil {
+                localURL = p.local + "/game.php"
+        } else {
+                fmt.Println("No se pudo iniciar el proxy local:", err)
+        }
 
-        // Dar tiempo a que el navegador arranque antes de cerrar el launcher
-        time.Sleep(2 * time.Second)
+        // 3) Ventana propia: WebView2 en Windows, navegador en modo
+        //    app con perfil propio en Linux (ver window_*.go).
+        openWindow(localURL, datosDir)
 }

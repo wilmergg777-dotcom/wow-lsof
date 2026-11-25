@@ -65,6 +65,18 @@ Categories=Game;
 StartupWMClass=AstroIO
 EOF
 
+# 5b) Entrada "Borrar datos" en el menú (igual que la APK)
+cat > "$HOME/.local/share/applications/astroio-borrar-datos.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=AstroIO - Borrar datos
+Comment=Borra sesión, caché y ajustes del juego AstroIO
+Exec=$DEST --borrar-datos
+Icon=$HOME/.local/share/icons/astroio.png
+Terminal=false
+Categories=Game;
+EOF
+
 # 6) Actualizar cachés de menú si existen
 command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$HOME/.local/share/applications" >/dev/null 2>&1 || true
 command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -f -t "$HOME/.local/share/icons" >/dev/null 2>&1 || true
@@ -73,4 +85,5 @@ echo ""
 say "¡Listo! AstroIO quedó instalado."
 echo    "    · Ábrelo desde el MENÚ DE APLICACIONES del sistema (categoría Juegos),"
 echo    "      o desde la terminal con:  $DEST"
+echo    "    · También hay una entrada \"AstroIO - Borrar datos\" (sesión, caché y ajustes)."
 echo    "    · Se auto-actualiza solo al abrirse, igual que la APK."
