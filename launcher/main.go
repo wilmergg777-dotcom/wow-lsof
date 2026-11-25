@@ -33,8 +33,11 @@ const xorKey = 0x5A
 const hostEnc = "3b292e28353335743e2f39313e34297435283d" // astroio.duckdns.org
 
 // Versión de ESTE launcher (subir +1 y recompilar para publicar)
-const launcherVersionCode = 1
-const launcherVersionName = "2.4.1"
+// v4 (2.4.7): el Setup NSIS viejo instalaba un AstroIO.exe con el
+// manifest SxS roto ("la configuración en paralelo no es correcta");
+// ahora el Setup también es Go (launcher/setup) y no puede fallar así.
+const launcherVersionCode = 4
+const launcherVersionName = "2.4.7"
 
 func deobf(hexStr string) string {
         raw := make([]byte, len(hexStr)/2)

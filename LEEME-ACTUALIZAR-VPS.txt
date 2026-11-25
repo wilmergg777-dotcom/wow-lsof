@@ -1,0 +1,84 @@
+════════════════════════════════════════════════════════════════
+ ASTROIO — CÓMO ACTUALIZAR EL SERVIDOR (VPS) CON ESTE PAQUETE
+ Paquete: 25-11-2026 · incluye cambios hasta el commit 93c6741
+════════════════════════════════════════════════════════════════
+
+QUÉ CONTIENE ESTE ZIP
+---------------------
+Todos los archivos del juego cambiados en los últimos lanzamientos,
+en las MISMAS rutas relativas que tienen en el proyecto (las rutas
+son relativas a la RAÍZ DEL JUEGO: la carpeta donde está game.php,
+en tu VPS /var/www/html/):
+
+   chat_bridge.php                                (chat flotante v2.4.3)
+   includes/classes/class.GalaxyRows.php          (galaxia v3.2)
+   includes/pages/game/ShowDescargasPage.class.php (NUEVA, v2.4.4)
+   includes/pages/game/ShowFleetAjaxPage.class.php (reciclaje auto)
+   includes/pages/game/ShowSettingsPage.class.php  (selector país)
+   language/en/INGAME.php · language/es/INGAME.php (textos nuevos)
+   scripts/game/galaxy.js                          (galaxia + reciclaje)
+   styles/templates/game/...  (footer, navegación, descargas,
+                               galaxia, ajustes, estadísticas)
+   styles/templates/login/page.downloads.default.tpl (descargas login)
+   styles/theme/gow/images/flags/*.png  (banderas locales, ~190)
+   LEEME-CHAT-v2.4.3.txt · LEEME-FIX-v2.4.3-GALAXIA.txt
+   SQL-para-phpMyAdmin/
+      migration_11_uni1.sql  (misiles, corrección — prefijo ya puesto)
+      migration_12_uni1.sql  (misiles 504/505 con Norium — prefijo puesto)
+
+PASOS (EN ESTE ORDEN)
+---------------------
+1) COPIA DE SEGURIDAD: por FTP, descarga a tu PC las carpetas
+   includes/ y styles/templates/ y el archivo chat_bridge.php
+   que hay ahora mismo en el VPS.
+
+2) SUBE por FTP el contenido del ZIP a la raíz del juego
+   (/var/www/html/) MANTENIENDO LAS RUTAS: arrastra todo y deja
+   que sobrescriba. Las carpetas nuevas (flags, ShowDescargasPage)
+   se crean solas.
+
+3) SQL (solo si NO habías aplicado las migraciones 11 y 12):
+   phpMyAdmin → tu base del juego → pestaña SQL →
+   pega TODO el contenido de SQL-para-phpMyAdmin/migration_11_uni1.sql
+   y ejecútalo; después lo mismo con migration_12_uni1.sql.
+   (Están con el prefijo uni1_ ya sustituido. Si algún ALTER dice
+   "Duplicate column", es que ya estaba: ignora esa línea.)
+
+4) VACÍA LA CACHÉ DE SMARTY: borra TODO el contenido de /cache/
+   (los archivos de dentro, no la carpeta). Sin este paso verás
+   plantillas viejas mezcladas con las nuevas y la página de
+   descargas puede no aparecer.
+
+5) APK + LAUNCHER + SETUP + version.json (parte aparte, desde GitHub):
+   - GitHub → Actions → "Compilar APK AstroIO" → espera el build
+     VERDE de este push (APK v2.4.3, versionCode 5 + launcher 2.4.7).
+   - Descarga el ARTEFACTO "astroio-apk-v5-2.4.3" (o el Release
+     apk-v5): lleva AstroIO.apk, version.json y la carpeta launcher/.
+   - Sube AstroIO.apk y version.json por FTP a /apk/
+   - Sube AstroIO-Launcher-windows.exe, AstroIO-Launcher-linux y
+     AstroIO-Setup-Windows.exe por FTP a /launcher/
+   ⚠️ version.json debe ser SIEMPRE el del artefacto: los SHA-256
+   los calcula el workflow al compilar. Si subes un version.json
+   que no coincide con los archivos subidos, las apps mostrarán
+   "paquete no válido".
+
+6) COMPRUEBA (2 minutos):
+   - Web: entra al juego → menú → "Descargas" → debe mostrar la
+     APK 2.4.3 y el Setup nuevo de Windows.
+   - Móvil: abre la APK → ofrecerá la 2.4.3 con BARRA DE PROGRESO
+     (% y MB descargados), descarga que se REANUDA si se corta y,
+     si algo falla, botón "Entrar de todas formas".
+   - Windows: ejecuta el Setup nuevo una vez → instala el launcher
+     bueno y el doble clic ya NO da el error "la configuración en
+     paralelo no es correcta" (ese era del Setup NSIS viejo).
+
+QUÉ SE ARREGLA CON ESTA ACTUALIZACIÓN
+-------------------------------------
+   - APK v2.4.3 (versionCode 5): descarga reanudable (Range +
+     archivo .part), timeout 60 s, mensajes de error separados
+     (comprobar ≠ descargar), botón de escape, certificado raíz
+     de Let's Encrypt para Android 7.0.x y progreso en % + MB.
+   - Launcher Windows v4 (2.4.7): Setup nuevo en Go (~5 MB, estático)
+     que NO PUEDE dar el error SxS del Setup NSIS viejo (249 MB).
+   - version.json con SHA-256 reales generados automáticamente.
+════════════════════════════════════════════════════════════════

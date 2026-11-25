@@ -8,6 +8,7 @@
     <string name="s_check_err">No se pudo comprobar la actualización.\nRevisa tu conexión e inténtalo de nuevo.</string>
     <string name="s_update_available">Hay una nueva versión de AstroIO disponible.\nDebes actualizar para poder jugar.</string>
     <string name="s_downloading">Descargando actualización… %1$d%%</string>
+    <string name="s_downloading_mb">Descargando actualización… %1$d%%\n%2$d de %3$d MB</string>
     <string name="s_verifying">Verificando paquete…</string>
     <string name="s_bad_pkg">El paquete descargado no es válido.\nInténtalo de nuevo más tarde.</string>
     <string name="s_dl_err">No se pudo descargar la actualización.\nComprueba tu conexión e inténtalo de nuevo: se reanuda donde se cortó.</string>

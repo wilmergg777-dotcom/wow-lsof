@@ -18,6 +18,14 @@ GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-H=windowsgui -s -w" -o A
 echo "== Compilando launcher para Linux =="
 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o AstroIO-Launcher-linux .
 
+echo "== Compilando instalador Setup para Windows (Go, sin NSIS) =="
+# El Setup lleva el launcher embebido (go:embed): copiarlo junto a su
+# fuente y compilar. Exe 100% estático -> imposible el error Windows
+# "la configuración en paralelo no es correcta" (SxS) del NSIS viejo.
+cp AstroIO-Launcher-windows.exe setup/launcher.exe
+(cd setup && GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-H=windowsgui -s -w" -o ../AstroIO-Setup-Windows.exe .)
+rm -f setup/launcher.exe
+
 echo ""
 echo "== Archivos y SHA-256 para version.json =="
-sha256sum AstroIO-Launcher-windows.exe AstroIO-Launcher-linux
+sha256sum AstroIO-Launcher-windows.exe AstroIO-Launcher-linux AstroIO-Setup-Windows.exe

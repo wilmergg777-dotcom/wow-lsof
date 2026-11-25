@@ -55,9 +55,10 @@ jobs:
           SHA=$(sha256sum out/AstroIO.apk | cut -d' ' -f1)
           CODE=$(grep -oE 'versionCode[[:space:]]+[0-9]+' apk/android/app/build.gradle | grep -oE '[0-9]+' | head -1)
           VER=$(grep -oE 'versionName[[:space:]]+"[^"]+"' apk/android/app/build.gradle | sed 's/.*"\(.*\)"/\1/')
-          cp launcher/AstroIO-Launcher-windows.exe launcher/AstroIO-Launcher-linux out/launcher/
+          cp launcher/AstroIO-Launcher-windows.exe launcher/AstroIO-Launcher-linux launcher/AstroIO-Setup-Windows.exe out/launcher/
           SHA_W=$(sha256sum out/launcher/AstroIO-Launcher-windows.exe | cut -d' ' -f1)
           SHA_L=$(sha256sum out/launcher/AstroIO-Launcher-linux | cut -d' ' -f1)
+          SHA_S=$(sha256sum out/launcher/AstroIO-Setup-Windows.exe | cut -d' ' -f1)
           LCODE=$(grep -oE 'launcherVersionCode = [0-9]+' launcher/main.go | grep -oE '[0-9]+' | head -1)
           LVER=$(grep -oE 'launcherVersionName = "[^"]+"' launcher/main.go | sed 's/.*"\(.*\)"/\1/')
           echo "CODE=$CODE" >> "$GITHUB_ENV"
@@ -78,6 +79,10 @@ jobs:
               "linux": {
                 "url": "https://astroio.duckdns.org/launcher/AstroIO-Launcher-linux",
                 "sha256": "${SHA_L}"
+              },
+              "windowsInstaller": {
+                "url": "https://astroio.duckdns.org/launcher/AstroIO-Setup-Windows.exe",
+                "sha256": "${SHA_S}"
               }
             }
           }
@@ -100,15 +105,16 @@ jobs:
           tag_name: apk-v${{ env.CODE }}
           name: AstroIO APK v${{ env.VER }} (build ${{ env.CODE }})
           body: |
-            APK firmada de AstroIO v${{ env.VER }} (versionCode ${{ env.CODE }}) + launchers Windows/Linux.
+            APK firmada de AstroIO v${{ env.VER }} (versionCode ${{ env.CODE }}) + launcher Windows/Linux + Setup Windows (Go, sin error SxS).
 
             Para actualizar tu servidor:
             1) Descarga AstroIO.apk, version.json y la carpeta launcher/ de este Release.
             2) Sube AstroIO.apk y version.json por FTP a /apk/
-            3) Sube los launchers por FTP a /launcher/
+            3) Sube los launchers y AstroIO-Setup-Windows.exe por FTP a /launcher/
             (instrucciones completas en apk/server/LEEME-SERVIDOR.txt)
           files: |
             out/AstroIO.apk
             out/version.json
             out/launcher/AstroIO-Launcher-windows.exe
             out/launcher/AstroIO-Launcher-linux
+            out/launcher/AstroIO-Setup-Windows.exe

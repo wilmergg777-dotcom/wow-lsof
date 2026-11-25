@@ -1,5 +1,5 @@
 ════════════════════════════════════════════════════════════════
- ASTROIO LAUNCHER — PC Windows y Linux (v1, build 1)
+ ASTROIO LAUNCHER — PC Windows y Linux (v4, build 4 / versión 2.4.7)
 ════════════════════════════════════════════════════════════════
 
 QUÉ ES
@@ -17,31 +17,57 @@ SIN abrir el navegador a mano y SIN escribir la dirección:
    - La dirección del servidor va ofuscada dentro del programa
      (XOR, igual que en la APK): no aparece en texto plano.
 
+NUEVO EN LA v4 (2.4.7): SETUP DE WINDOWS EN GO
+----------------------------------------------
+El Setup antiguo (NSIS, 249 MB) instalaba un AstroIO.exe con el
+manifest SxS roto y Windows mostraba al hacer doble clic:
+
+   "No se pudo iniciar la aplicación: la configuración en
+    paralelo no es correcta" (sxstrace.exe)
+
+AHORA el instalador también es Go (launcher/setup/), 100% estático
+(sin ningún runtime de C++): ese error es IMPOSIBLE por
+construcción. Además pesa ~5 MB en vez de 249 MB y:
+
+   - No pide permisos de administrador (instala por usuario en
+     %LOCALAPPDATA%\Programs\AstroIO).
+   - Crea los accesos directos en el Escritorio y en el menú
+     Inicio, y pregunta si quieres abrir el juego al terminar.
+   - Instala el mismo launcher auto-actualizable de siempre.
+
+Si un jugador tiene la versión rota instalada: basta con ejecutar
+el Setup nuevo una vez; sobrescribe AstroIO.exe con el bueno.
+
 ARCHIVOS
 --------
-   main.go                  → código fuente (una sola fuente para
-                              Windows y Linux)
+   main.go                  → código fuente del launcher (una sola
+                              fuente para Windows y Linux)
    hidewindow_windows.go    → evita la ventana negra de consola
    hidewindow_other.go      → equivalente para Linux
    go.mod                   → módulo Go (sin dependencias externas)
-   build.sh                 → compila los 2 ejecutables y muestra
-                              los SHA-256 para version.json
+   build.sh                 → compila launcher Windows/Linux + Setup
+                              y muestra los SHA-256 para version.json
+   setup/                   → código del instalador Windows en Go
+                              (embebe el launcher con go:embed)
+   AstroIO-Setup-Windows.exe→ instalador de Windows (lo genera
+                              build.sh; se publica en /launcher/)
    instalar-linux.sh        → instalador para Linux (copia a
                               ~/.local/bin y crea el acceso "AstroIO"
                               en el menú de aplicaciones)
 
 CÓMO LO USA UN JUGADOR
 ----------------------
-WINDOWS:
-   1) Descarga AstroIO-Launcher-windows.exe
-   2) Guárdalo donde quiera (ej. Escritorio) y haz doble clic.
-      La primera vez, Windows puede mostrar el aviso azul de
-      SmartScreen ("Windows protegió tu PC") porque el .exe no
-      está firmado con certificado de pago: clic en
-      "Más información" → "Ejecutar de todas formas".
-      Solo sale la primera vez.
-   3) El launcher abre la ventana del juego solo.
-
+WINDOWS (instalador):
+   1) Descarga AstroIO-Setup-Windows.exe
+   2) Doble clic → instala solo (sin admin) y crea los accesos.
+      La primera vez puede salir el aviso azul de SmartScreen
+      ("Windows protegió tu PC") porque el .exe no está firmado
+      con certificado de pago: "Más información" →
+      "Ejecutar de todas formas". Solo sale la primera vez.
+   3) Desde entonces: doble clic en el icono "AstroIO".
+WINDOWS (sin instalar):
+   También puede descargarse AstroIO-Launcher-windows.exe y
+   ejecutarlo directamente donde quiera.
 LINUX:
    1) Descarga AstroIO-Launcher-linux
    2) Opción fácil:  bash instalar-linux.sh  → queda instalado
@@ -56,11 +82,13 @@ CÓMO PUBLICAR UNA VERSIÓN NUEVA (para el administrador)
 -------------------------------------------------------
 1) Edita launcher/main.go → sube launcherVersionCode (+1) y
    launcherVersionName si corresponde.
-2) bash launcher/build.sh  → genera los 2 archivos y te imprime
-   los SHA-256.
-3) Sube los 2 archivos por FTP a  /launcher/  del servidor.
-4) Actualiza el bloque "launcher" de  /apk/version.json  (urls +
-   sha256 + versionCode nuevo) y súbelo a /apk/.
+2) bash launcher/build.sh  → genera launcher Windows/Linux +
+   AstroIO-Setup-Windows.exe e imprime los 3 SHA-256.
+   (El workflow de GitHub Actions hace todo esto solo en cada
+   push que toque apk/ o launcher/.)
+3) Sube los 3 archivos por FTP a  /launcher/  del servidor.
+4) Sube /apk/version.json REGENERADO por el workflow (lleva los
+   SHA-256 reales de los 3 archivos; NUNCA lo edites a mano).
 5) Listo: los launchers viejos se actualizan solos al abrirse.
 
 NOTA IMPORTANTE
@@ -70,3 +98,4 @@ Si el jugador NO tiene Internet, el launcher abre el juego igual
 aviso). La actualización automática se salta en silencio y se
 reintentará la próxima vez que abra.
 ════════════════════════════════════════════════════════════════
+

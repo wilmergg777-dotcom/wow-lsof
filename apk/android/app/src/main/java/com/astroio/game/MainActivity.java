@@ -255,10 +255,18 @@ public class MainActivity extends Activity {
                         read += n;
                         if (total > 0) {
                             final int pct = (int) (read * 100 / total);
+                            final long doneMB = read / 1048576;
+                            final long totMB  = total / 1048576;
                             if (pct != lastPct) {
                                 lastPct = pct;
                                 ui.post(new Runnable() { @Override public void run() {
-                                    showStatus(getString(R.string.s_downloading, pct), null, true, pct, false, false, false);
+                                    // v2.4.3: % + MB descargados/restantes para que
+                                    // el jugador vea que avanza (no es un bucle).
+                                    if (totMB > 0) {
+                                        showStatus(getString(R.string.s_downloading_mb, pct, doneMB, totMB), null, true, pct, false, false, false);
+                                    } else {
+                                        showStatus(getString(R.string.s_downloading, pct), null, true, pct, false, false, false);
+                                    }
                                 }});
                             }
                         }
