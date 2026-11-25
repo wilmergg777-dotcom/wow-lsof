@@ -176,37 +176,53 @@ determina qué razas puede elegir el personaje y es narrativa/de identidad.
 
 ### Razas
 
-10 razas (5 por facción) con la matriz raza-clase de WoW 3.3.5a, filtrada a
-las 7 clases jugables. Cada raza tiene un **racial pasivo** que aplica
-modificadores de stats al crear el personaje (HP/maná/daño):
+10 razas (5 por facción) con la matriz raza-clase **COMPLETA** de WoW 3.3.5a
+(las **10 clases** jugables, incluido el Caballero de la Muerte, disponible
+para todas las razas). Cada raza lista **todos sus raciales** (activos +
+pasivos) fieles al 3.3.5a como catálogo; los raciales con efecto numérico
+directo se aplican al crear el personaje (ModHP/ModMana/ModDano) y los
+raciales de **bonus de profesión** (Cultivo, Especialización en Ingeniería,
+Tallar Gemas, Afinidad Arcana) hacen que el jugador arranque esa profesión
+con skill extra (Tauren +15 Herboristería, Gnomo +15 Ingeniería, Draenei +5
+Joyería, Elfo de Sangre +10 Encantamiento).
 
-| Facción  | Raza           | Clases permitidas (de las 7)                 | Racial               |
-|----------|----------------|----------------------------------------------|----------------------|
-| Alianza  | Humano         | guerrero, paladín, pícaro, sacerdote, mago, brujo | Voluntad Humana (+5% HP) |
-| Alianza  | Enano          | guerrero, paladín, cazador, pícaro, sacerdote | Forma de Piedra (+5% HP) |
-| Alianza  | Elfo Nocturno  | guerrero, cazador, pícaro, sacerdote         | Fusión en Sombras (+5% HP) |
-| Alianza  | Gnomo          | guerrero, pícaro, mago, brujo                | Intelecto Expansivo (+5% maná) |
-| Alianza  | Draenei        | guerrero, paladín, cazador, mago, sacerdote  | Toque Heroico (+5% daño) |
-| Horda    | Orco           | guerrero, cazador, pícaro, brujo             | Sangre de Furia (+5% daño) |
-| Horda    | Renegado       | guerrero, pícaro, sacerdote, mago, brujo     | Voluntad de los Renegados (+5% HP) |
-| Horda    | Tauren         | guerrero, cazador                             | Resistencia Total (+5% HP) |
-| Horda    | Troll          | guerrero, cazador, pícaro, sacerdote, mago   | Regeneración (+5% maná) |
-| Horda    | Elfo de Sangre | paladín, cazador, pícaro, sacerdote, mago, brujo | Torrente Arcano (+5% daño) |
+| Facción  | Raza           | Clases permitidas (de las 10)                                          | Raciales destacados |
+|----------|----------------|------------------------------------------------------------------------|---------------------|
+| Alianza  | Humano         | guerrero, paladín, pícaro, sacerdote, mago, brujo, **DK**              | Elusividad, Diplomacia, Espíritu Humano (+3% espíritu) |
+| Alianza  | Enano          | guerrero, pícaro, cazador, sacerdote, **DK**                           | Forma de Piedra, Buscador de Tesoros |
+| Alianza  | Elfo Nocturno  | guerrero, cazador, pícaro, sacerdote, **druida**, **DK**               | Fusión con las Sombras, Esquiva (+2%) |
+| Alianza  | Gnomo          | guerrero, pícaro, mago, brujo, **DK**                                  | Escape Artista, Mente Expansiva (+5% intelecto), +15 Ingeniería |
+| Alianza  | Draenei        | guerrero, paladín, cazador, sacerdote, **chamán**, mago, **DK**        | Don de los Naaru, Presencia Heroica, +5 Joyería |
+| Horda    | Orco           | guerrero, cazador, pícaro, **chamán**, brujo, **DK**                   | Furia Sangrienta (+5% daño), Dureza |
+| Horda    | Renegado       | guerrero, pícaro, sacerdote, mago, brujo, **DK**                       | Voluntad de los Renegados, Canibalizar |
+| Horda    | Tauren         | guerrero, cazador, **chamán**, **druida**, **DK**                      | Pisotón de Guerra, Aguante (+5% HP), +15 Herboristería |
+| Horda    | Troll          | guerrero, cazador, pícaro, sacerdote, **chamán**, mago, **druida**, **DK** | Berserker (+5% daño), Regeneración |
+| Horda    | Elfo de Sangre | paladín, cazador, pícaro, sacerdote, mago, brujo, **DK**               | Torrente Arcano, +10 Encantamiento |
+
+La coherencia raza-facción-clase la valida `Mundo.RazaPermiteClase(razaID,
+claseID)`, que comprueba `DefRaza.Clases` según la matriz de 3.3.5a.
 
 ### Roles y clases
 
 Cada clase tiene un rol derivado que el buscador usa para formar grupos PvE.
-7 clases cubren la trinidad de WoW LK:
+**10 clases** cubren la trinidad de WoW LK (3 tanques, 3 soportes, 4 dps):
 
-| Clase     | Rol       | Energía  | Función                       |
-|-----------|-----------|----------|-------------------------------|
-| Guerrero  | tanque    | ira      | Cuerpo a cuerpo, aguanta      |
-| Paladín   | tanque    | maná     | Tanque sagrado, buffs         |
-| Cazador   | dps       | maná     | Rango físico                  |
-| Pícaro    | dps       | energía  | Cuerpo a cuerpo, evasión      |
-| Mago      | dps       | maná     | Rango, daño AoE de escarcha   |
-| Brujo     | dps       | maná     | Rango, sombra                 |
-| Sacerdote | soporte   | maná     | Curación de aliados, buffs    |
+| Clase                 | Rol       | Energía  | Función                       |
+|-----------------------|-----------|----------|-------------------------------|
+| Guerrero              | tanque    | ira      | Cuerpo a cuerpo, aguanta      |
+| Paladín               | tanque    | maná     | Tanque sagrado, buffs         |
+| Caballero de la Muerte| tanque    | ira¹     | Tanque heroico WotLK, todas las razas |
+| Cazador               | dps       | maná     | Rango físico                  |
+| Pícaro                | dps       | energía  | Cuerpo a cuerpo, evasión      |
+| Mago                  | dps       | maná     | Rango, daño AoE de escarcha   |
+| Brujo                 | dps       | maná     | Rango, sombra                 |
+| Sacerdote             | soporte   | maná     | Curación de aliados, buffs    |
+| Chamán                | soporte   | maná     | Sanador híbrido, tótems       |
+| Druida                | soporte   | maná     | Flexible (tanque/sanador/DPS) |
+
+¹ El DK usa poder rúnico en WoW real; aquí se aproxima con "ira" (misma
+mecánica de recurso de combate). En WoW el DK empieza a nivel 55; aquí se
+crea a nivel 1 como el resto (no modelado).
 
 ### Profesiones, inventario y crafteo
 

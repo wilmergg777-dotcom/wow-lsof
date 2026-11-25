@@ -884,16 +884,29 @@ func (j *Jugador) AprenderProfesion(m *Mundo, profID string) ResultadoProfesion 
 	if rangoAprendiz == "" {
 		return ResultadoProfesion{Error: "la profesión no tiene rango aprendiz"}
 	}
+	// Bonus racial de profesión: si la raza del jugador tiene un bonus para
+	// esta profesión (p.ej. Tauren +15 Herboristería, Gnomo +15 Ingeniería),
+	// arranca con esa cantidad de skill en lugar de 0. Refleja los raciales
+	// pasivos de bonificación de profesión de WoW 3.3.5a. Se topea al
+	// skillMax del rango aprendiz para no saltarse el rango.
+	skillInicial := 0
+	if razaDef, ok := m.razas[j.raza]; ok && razaDef.BonusProfesionID == profID && razaDef.BonusProfesionPuntos > 0 {
+		skillInicial = razaDef.BonusProfesionPuntos
+	}
 	ep := &EstadoProfesion{
 		ProfesionID:      profID,
-		Skill:            0,
+		Skill:            skillInicial,
 		RangosAprendidos: []string{rangoAprendiz},
+	}
+	if max := ep.SkillMax(def); skillInicial > max {
+		ep.Skill = max
+		skillInicial = max
 	}
 	j.profesiones[profID] = ep
 	return ResultadoProfesion{
 		OK:          true,
 		ProfesionID: profID,
-		Skill:       0,
+		Skill:       skillInicial,
 		SkillMax:    ep.SkillMax(def),
 		RangoID:     rangoAprendiz,
 	}

@@ -203,6 +203,24 @@ func (m *Mundo) Raza(id string) (DefRaza, bool) {
 	return r, ok
 }
 
+// RazaPermiteClase comprueba que una raza puede ser de una clase dada, según
+// la matriz raza-clase de WoW 3.3.5a (DefRaza.Clases). Es la validación de
+// coherencia al crear un personaje: raza+facción+clase deben encajar.
+func (m *Mundo) RazaPermiteClase(razaID, claseID string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	r, ok := m.razas[razaID]
+	if !ok {
+		return false
+	}
+	for _, c := range r.Clases {
+		if c == claseID {
+			return true
+		}
+	}
+	return false
+}
+
 // Item devuelve la definición de un ítem por ID.
 func (m *Mundo) Item(id string) (DefItem, bool) {
 	m.mu.RLock()
