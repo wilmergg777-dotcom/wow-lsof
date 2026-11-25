@@ -41,12 +41,17 @@ servidor/
     │   ├── mundo.go      Mundo struct + Entidad interface + tick loop + zonas.
     │   ├── defs.go       Facciones, razas, clases, masmoras, arenas + spawns iniciales.
     │   ├── items.go      Catálogo de ítems (materiales + productos crafteados).
-    │   ├── profesiones.go Profesiones, rangos, recetas (Joyería 1-450).
+    │   ├── profesiones_alias.go Aliases de tipos del subpaquete interno/profesiones.
     │   ├── jugador.go    Jugador (entidad + combate + inventario + profesiones + guardar).
     │   ├── enemigo.go    Enemigo (IA patrulla/aggro/ataque/respawn).
     │   ├── combate.go    Resolución de habilidades + broadcast por zona.
     │   ├── instancia.go  Instancias aisladas (masmorras PvE + arenas PvP).
     │   └── buscador.go   Colas + matchmaking cross-faction (PvE y PvP).
+    ├── profesiones/      Catálogo de profesiones (subpaquete, 13 profesiones).
+    │   ├── tipos.go           Tipos base (DefProfesion, DefReceta, EstadoProfesion, ...).
+    │   ├── registro.go        Catalogo() — registro central de las 13 profesiones.
+    │   ├── profesion_*.go     Una profesión por archivo (herrería, alquimia, ...).
+    │   └── profesiones_test.go Tests del paquete aislado.
     └── conexion/         TCP listener + Sesión por conexión.
         ├── servidor.go   Accept loop + goroutine por sesión.
         └── sesion.go     State machine de sesión + escritor + handlers de cola.
@@ -386,8 +391,14 @@ mundo abierto (`instanciaID == ""`); los de masmora se limpian al finalizar
 ### Profesiones, inventario y crafteo
 
 El sistema de profesiones permite craftear ítems consumiendo materiales y
-subir la habilidad. Está diseñado para crecer "poco a poco": añadir una
-profesión nueva es solo añadir otra `DefProfesion` al registro.
+subir la habilidad. Vive en un **subpaquete dedicado** `interno/profesiones/`
+(tipos base en `tipos.go`, una profesión por archivo en `profesion_*.go`,
+registro central `Catalogo()` en `registro.go`). El paquete `mundo` los
+expone vía **type aliases** (`profesiones_alias.go`), así todo el código
+usa los nombres sin cualificar (`DefProfesion`, `EstadoProfesion`, ...) sin
+acoplamiento circular. Está diseñado para crecer "poco a poco": añadir una
+profesión nueva es solo añadir otro archivo `profesion_<nombre>.go` y
+registrarlo en `Catalogo()`.
 
 - **Inventario**: map `itemID → cantidad` (pilas) en el `Jugador`, persistido
   como `InventarioStacks`.
