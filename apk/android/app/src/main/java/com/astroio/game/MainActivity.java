@@ -80,6 +80,8 @@ public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQ = 4242;
     private static final int CONNECT_TIMEOUT  = 10000;
     private static final int READ_TIMEOUT     = 15000;
+    // v2.4.3: la APK es muy grande; 15 s de silencio cortaban la descarga.
+    private static final int DL_READ_TIMEOUT  = 60000;
 
     private WebView webView;
     private LinearLayout statusScreen;
@@ -87,6 +89,7 @@ public class MainActivity extends Activity {
     private TextView statusMsg;
     private ProgressBar statusProgress;
     private Button btnRetry;
+    private Button btnContinue;
     private Button btnInstallPerm;
 
     private final ExecutorService io = Executors.newSingleThreadExecutor();
@@ -165,10 +168,10 @@ public class MainActivity extends Activity {
 
     private void runVersionCheck() {
         if (!isOnline()) {
-            showStatus(getString(R.string.s_no_net), null, false, 0, true, false);
+            showStatus(getString(R.string.s_no_net), null, false, 0, true, false, true);
             return;
         }
-        showStatus(getString(R.string.s_checking), null, false, 0, false, false);
+        showStatus(getString(R.string.s_checking), null, false, 0, false, false, false);
         io.execute(new Runnable() {
             @Override public void run() {
                 try {
@@ -195,7 +198,7 @@ public class MainActivity extends Activity {
                     if (serverCode > BuildConfig.VERSION_CODE && !apkUrl.isEmpty()) {
                         // Todo lo que toca la UI va por ui.post (hilo principal)
                         ui.post(new Runnable() { @Override public void run() {
-                            showStatus(getString(R.string.s_update_available), null, false, 0, false, false);
+                            showStatus(getString(R.string.s_update_available), null, false, 0, false, false, false);
                             downloadUpdate(apkUrl, sha256);
                         }});
                     } else {
@@ -203,7 +206,7 @@ public class MainActivity extends Activity {
                     }
                 } catch (final Exception e) {
                     ui.post(new Runnable() { @Override public void run() {
-                        showStatus(getString(R.string.s_check_err), null, false, 0, true, false);
+                        showStatus(getString(R.string.s_check_err), null, false, 0, true, false, true);
                     }});
                 }
             }
@@ -211,25 +214,40 @@ public class MainActivity extends Activity {
     }
 
     private void downloadUpdate(final String apkUrl, final String sha256) {
-        showStatus(getString(R.string.s_downloading, 0), null, true, 0, false, false);
+        showStatus(getString(R.string.s_downloading, 0), null, true, 0, false, false, false);
         io.execute(new Runnable() {
             @Override public void run() {
-                File dst = new File(getFilesDir(), UpdateFileProvider.APK_FILE_NAME);
+                File dst  = new File(getFilesDir(), UpdateFileProvider.APK_FILE_NAME);
+                File part = new File(getFilesDir(), UpdateFileProvider.APK_FILE_NAME + ".part");
                 try {
+                    // v2.4.3: descarga con reanudación (Range). Antes, cualquier
+                    // corte de la conexión obligaba a empezar de cero y la app
+                    // quedaba bloqueada en "No se pudo comprobar…".
+                    long offset = part.exists() ? part.length() : 0L;
                     HttpURLConnection conn = (HttpURLConnection) new URL(apkUrl).openConnection();
                     conn.setConnectTimeout(CONNECT_TIMEOUT);
-                    conn.setReadTimeout(READ_TIMEOUT);
+                    conn.setReadTimeout(DL_READ_TIMEOUT);
                     conn.setInstanceFollowRedirects(true);
+                    if (offset > 0) {
+                        conn.setRequestProperty("Range", "bytes=" + offset + "-");
+                    }
                     int code = conn.getResponseCode();
-                    if (code != 200) {
+                    if (code == 416 && offset > 0) {
+                        // El .part ya está completo: pasar directo a verificar.
+                        conn.disconnect();
+                        finishDownload(part, dst, sha256);
+                        return;
+                    }
+                    if (code != 200 && code != 206) {
                         conn.disconnect();
                         throw new IOException("HTTP " + code);
                     }
-                    long total = conn.getContentLength();
+                    boolean resume = (code == 206 && offset > 0);
+                    long total = resume ? offset + conn.getContentLength() : conn.getContentLength();
                     InputStream in = conn.getInputStream();
-                    FileOutputStream out = new FileOutputStream(dst);
+                    FileOutputStream out = new FileOutputStream(part, resume);
                     byte[] buf = new byte[16384];
-                    long read = 0;
+                    long read = offset;
                     int n;
                     int lastPct = -1;
                     while ((n = in.read(buf)) > 0) {
@@ -240,7 +258,7 @@ public class MainActivity extends Activity {
                             if (pct != lastPct) {
                                 lastPct = pct;
                                 ui.post(new Runnable() { @Override public void run() {
-                                    showStatus(getString(R.string.s_downloading, pct), null, true, pct, false, false);
+                                    showStatus(getString(R.string.s_downloading, pct), null, true, pct, false, false, false);
                                 }});
                             }
                         }
@@ -249,38 +267,48 @@ public class MainActivity extends Activity {
                     out.close();
                     in.close();
                     conn.disconnect();
-
-                    // Verificación del paquete (SHA-256) si el servidor lo indica
-                    if (sha256 != null && sha256.length() == 64) {
-                        ui.post(new Runnable() { @Override public void run() {
-                            showStatus(getString(R.string.s_verifying), null, true, 100, false, false);
-                        }});
-                        String real = sha256OfFile(dst);
-                        if (!real.equalsIgnoreCase(sha256)) {
-                            dst.delete();
-                            ui.post(new Runnable() { @Override public void run() {
-                                showStatus(getString(R.string.s_bad_pkg), null, false, 0, true, false);
-                            }});
-                            return;
-                        }
-                    }
-                    ui.post(new Runnable() { @Override public void run() { promptInstall(); } });
+                    finishDownload(part, dst, sha256);
                 } catch (final Exception e) {
-                    dst.delete();
+                    // El .part se conserva: al reintentar, la descarga se
+                    // reanuda donde se cortó (solo se borra si el SHA falla).
                     ui.post(new Runnable() { @Override public void run() {
-                        showStatus(getString(R.string.s_check_err), null, false, 0, true, false);
+                        showStatus(getString(R.string.s_dl_err), null, false, 0, true, false, true);
                     }});
                 }
             }
         });
     }
 
+    /** Verificación SHA-256 y paso a instalación (hilo de trabajo). */
+    private void finishDownload(File part, File dst, String sha256) throws Exception {
+        if (sha256 != null && sha256.length() == 64) {
+            ui.post(new Runnable() { @Override public void run() {
+                showStatus(getString(R.string.s_verifying), null, true, 100, false, false, false);
+            }});
+            String real = sha256OfFile(part);
+            if (!real.equalsIgnoreCase(sha256)) {
+                part.delete(); // corrupto: el próximo reintento empieza de cero
+                ui.post(new Runnable() { @Override public void run() {
+                    showStatus(getString(R.string.s_bad_pkg), null, false, 0, true, false, true);
+                }});
+                return;
+            }
+        }
+        if (dst.exists()) {
+            dst.delete();
+        }
+        if (!part.renameTo(dst)) {
+            throw new IOException("No se pudo finalizar el archivo descargado");
+        }
+        ui.post(new Runnable() { @Override public void run() { promptInstall(); } });
+    }
+
     private void promptInstall() {
-        showStatus(getString(R.string.s_installing), null, false, 0, false, false);
+        showStatus(getString(R.string.s_installing), null, false, 0, false, false, false);
         if (Build.VERSION.SDK_INT >= 26) {
             boolean canInstall = getPackageManager().canRequestPackageInstalls();
             if (!canInstall) {
-                showStatus(getString(R.string.s_install_perm), null, false, 0, true, true);
+                showStatus(getString(R.string.s_install_perm), null, false, 0, true, true, false);
                 return;
             }
         }
@@ -296,7 +324,7 @@ public class MainActivity extends Activity {
             startActivity(intent);
             waitingInstall = true;
         } catch (Exception e) {
-            showStatus(getString(R.string.s_check_err), null, false, 0, true, false);
+            showStatus(getString(R.string.s_check_err), null, false, 0, true, false, true);
         }
     }
 
@@ -307,7 +335,7 @@ public class MainActivity extends Activity {
     @SuppressLint("SetJavaScriptEnabled")
     private void loadGame() {
         if (!isOnline()) {
-            showStatus(getString(R.string.s_no_net), null, false, 0, true, false);
+            showStatus(getString(R.string.s_no_net), null, false, 0, true, false, true);
             return;
         }
         gameLoaded = true;
@@ -357,7 +385,7 @@ public class MainActivity extends Activity {
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
                     gameLoaded = false;
-                    showStatus(getString(R.string.s_game_err), null, false, 0, true, false);
+                    showStatus(getString(R.string.s_game_err), null, false, 0, true, false, true);
                 }
             }
         });
@@ -503,6 +531,12 @@ public class MainActivity extends Activity {
         btnRetry = (Button) findViewById(R.id.btn_retry);
         btnInstallPerm = (Button) findViewById(R.id.btn_install_perm);
 
+        btnContinue = (Button) findViewById(R.id.btn_continue);
+        btnContinue.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                loadGame();
+            }
+        });
         btnRetry.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 if (!gameLoaded) {
@@ -529,7 +563,7 @@ public class MainActivity extends Activity {
     }
 
     private void showStatus(String title, String msg, boolean showProgress, int percent,
-                            boolean showRetry, boolean showInstallPerm) {
+                            boolean showRetry, boolean showInstallPerm, boolean showContinue) {
         gameLoaded = false;
         webView.setVisibility(View.GONE);
         statusScreen.setVisibility(View.VISIBLE);
@@ -545,6 +579,7 @@ public class MainActivity extends Activity {
         statusProgress.setProgress(percent);
         btnRetry.setVisibility(showRetry ? View.VISIBLE : View.GONE);
         btnRetry.setText(R.string.btn_retry);
+        btnContinue.setVisibility(showContinue ? View.VISIBLE : View.GONE);
         btnInstallPerm.setVisibility(showInstallPerm ? View.VISIBLE : View.GONE);
     }
 

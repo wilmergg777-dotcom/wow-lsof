@@ -1,6 +1,6 @@
 {
-  "versionCode": 3,
-  "versionName": "2.4.1",
+  "versionCode": 5,
+  "versionName": "2.4.3",
   "url": "https://astroio.duckdns.org/apk/AstroIO.apk",
   "sha256": "c6a444c0f1a8d96f3a865f53cf1a239de7f0ae9f69d7edda187cb11412024369",
   "launcher": {

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AstroIO — Android 7.0.x no trae la raíz ISRG Root X1 (Let's Encrypt):
+  sin esta ancla, la comprobación de versión y el juego fallan con
+  error SSL ("No se pudo comprobar la actualización") en esos equipos.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/isrgrootx1" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

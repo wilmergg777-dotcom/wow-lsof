@@ -155,3 +155,38 @@ NOTA: no necesita SQL ni tablas nuevas.
   (protección contra APK Editor) ni si detecta una app de
   edición de APK instalada.
 ════════════════════════════════════════════════════════════════
+ v2.4.3 — ARREGLO DE «NO SE PUEDE COMPROBAR LA ACTUALIZACIÓN»
+════════════════════════════════════════════════════════════════
+La APK v2.4.3 (versionCode 5) corrige las causas por las que la
+app se quedaba atascada en "No se pudo comprobar la
+actualización" (el servidor estaba bien; el fallo era de la app):
+
+   1. La descarga de la APK (≈137 MB) se cortaba con cualquier
+      pausa de la conexión (timeout de solo 15 s) y NO se
+      reanudaba: cada reintento empezaba de cero.
+      AHORA: timeout de 60 s + reanudación por Range — el
+      reintento continúa donde se cortó (archivo .part).
+   2. Los errores de DESCARGA mostraban el mismo mensaje que los
+      de comprobación. AHORA tienen mensaje propio: "No se pudo
+      descargar la actualización…" (y se distingue en claro).
+   3. La app se quedaba bloqueada sin salida. AHORA las pantallas
+      de error tienen el botón "Entrar de todas formas" (solo en
+      fallos de red; la obligación de actualizar se mantiene
+      mientras la actualización se descarga, verifica o instala).
+   4. Android 7.0.x no trae la raíz ISRG Root X1 de Let's
+      Encrypt → error SSL silencioso en esos equipos. AHORA la
+      APK incluye el certificado raíz (network_security_config +
+      res/raw/isrgrootx1.pem, huella verificada).
+
+IMPORTANTE AL PUBLICAR: sube por FTP SIEMPRE la AstroIO.apk Y el
+version.json que genera el workflow de GitHub Actions, JUNTOS y
+del MISMO build (los SHA256 se calculan al compilar). No edites
+version.json a mano: si el SHA256 no coincide exactamente con la
+APK subida, la app muestra "El paquete descargado no es válido"
+y el jugador no puede actualizar.
+
+Además, sube versionCode ANTES de compilar (build.gradle) y
+recuerda que versionCode debe ser SIEMPRE mayor que el que está
+publicado en version.json; si no, los jugadores no reciben la
+oferta de actualización.
+════════════════════════════════════════════════════════════════

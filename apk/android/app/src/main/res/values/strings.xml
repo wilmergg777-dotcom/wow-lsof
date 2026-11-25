@@ -10,6 +10,7 @@
     <string name="s_downloading">Descargando actualización… %1$d%%</string>
     <string name="s_verifying">Verificando paquete…</string>
     <string name="s_bad_pkg">El paquete descargado no es válido.\nInténtalo de nuevo más tarde.</string>
+    <string name="s_dl_err">No se pudo descargar la actualización.\nComprueba tu conexión e inténtalo de nuevo: se reanuda donde se cortó.</string>
     <string name="s_install_perm">Para instalar la actualización, permite a AstroIO instalar apps desconocidas y vuelve a intentarlo.</string>
     <string name="s_installing">Instalando actualización…\nCuando termines, la app se comprobará de nuevo.</string>
     <string name="s_game_err">No se pudo cargar el juego.\nRevisa tu conexión e inténtalo de nuevo.</string>
@@ -18,6 +19,7 @@
     <string name="s_editor">Se detectó una app de edición de APK.\nDesinstálala para poder jugar a AstroIO.</string>
 
     <string name="btn_retry">Reintentar</string>
+    <string name="btn_continue">Entrar de todas formas</string>
     <string name="btn_close">Cerrar</string>
     <string name="btn_install_perm">Permitir instalación</string>
     <string name="btn_download">Actualizar ahora</string>
