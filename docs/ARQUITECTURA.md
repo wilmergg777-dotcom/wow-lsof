@@ -348,6 +348,57 @@ profesión nueva es solo añadir otra `DefProfesion` al registro.
   = cobre+estaño y acero = hierro+carbón, que consumen BARRAS en vez de
   menas). Registra 14 menas nuevas y 5 barras que faltaban (estaño, hierro,
   oro, acero, korio) más el carbón. Sin especializaciones. 6 rangos.
+- **Desuello** (WoW 3.3.5): la tercera y última profesión de recolección
+  PURA (verbo `Recolectar`, sin consumo, sin recetas). Como Herboristería
+  usa solo `Nodos`. A diferencia de Minería no tiene fundición: lo que se
+  desuella ya es el material de crafteo. Cierra el **triángulo de
+  recolección** del juego: Herboristería (hierbas→Alquimia), Minería
+  (menas→lingotes→Herrería/Joyería/Ingeniería) y Desuello (cueros→Peletería).
+  Los cueros que produce son EXACTAMENTE los que Peletería consume (ligero,
+  fino, pesado, grueso, basto, pellejo nudoso, boreal) más las rarezas
+  escamas viles y pelaje ártico. 9 nodos cubren 0→450 de forma contigua.
+  Sin recetas ni especializaciones. 6 rangos.
+- **Inscripción** (WoW 3.3.5): profesión de producción introducida en WotLK.
+  Su rasgo distintivo es la **CADENA DE TRES PASOS**, la más larga del juego:
+  moler hierbas → pigmento, combinar pigmento → tinta, fabricar tinta →
+  glifo/pergamino. Los tres pasos usan el verbo `Craftear` (moler = craftear
+  hierbas→pigmento; no hace falta un verbo nuevo), igual que las cadenas de
+  intermedios de Ingeniería (pólvora→tornillo→gadget) o Encantamiento
+  (vara→encantar), pero con un eslabón más. Segundo rasgo: la **Investigación
+  de inscripción de Rasganorte**, receta que "descubre" un glifo (modelada
+  como receta que produce `glifo_descubierto`; el cooldown diario real no se
+  modela). Consume las hierbas de Herboristería (eslabón
+  recolección→producción, como Alquimia). 43 recetas (8 moliendas + 13 tintas
+  + 8 glifos + 11 pergaminos + 2 vitelas + 1 tarot + 1 investigación) cubren
+  0→450 de forma contigua. Sin especializaciones. 6 rangos.
+- **Cocina** (WoW 3.3.5): la PRIMERA profesión **SECUNDARIA** del juego
+  (`Primaria=false`, no cuenta contra el límite de `MaxProfesionesPrimarias`).
+  Todo jugador puede aprenderla además de sus dos primarias. Es de producción
+  pura: consume pescado/carne/especias y produce comidas con buff de
+  atributo. Requiere una fuente de calor (lumbre/estufa — no modelado). Los
+  WotLK 400-450 usan `northern_spice` (recompensa de misiones diarias — el
+  cooldown diario real no se modela). 13 recetas cubren 0→450. Sin
+  especializaciones. 6 rangos. Eslabón: consume el pescado de Pesca.
+- **Pesca** (WoW 3.3.5): la SEGUNDA profesión **SECUNDARIA**
+  (`Primaria=false`). Recolección como Herboristería/Desuello (verbo
+  `Recolectar`, sin consumo, sin recetas), pero **sin nodos fijos** en el
+  mundo — se pesca en cualquier masa de agua, modelado aquí como un "nodo"
+  por banda/zona de pesca. El equipo (caña con +habilidad y cebos
+  consumibles) mejora la pesca — no modelado. Rangos experto (libro),
+  artesano (misión de 4 peces raros) y maestro (libro) están quest-gated —
+  simplificado: se aprenden normalmente al alcanzar el skill. 10 nodos
+  cubren 0→450 de forma contigua. Eslabón: los pescados que produce son
+  EXACTAMENTE los que Cocina consume — cierra el **bucle de las dos
+  secundarias** (pescar → cocinar). Sin especializaciones. 6 rangos.
+
+Con esto el sistema de profesiones cubre las **13 profesiones** de WotLK:
+9 primarias (Joyería, Peletería, Sastrería, Encantamiento, Alquimia,
+Herrería, Ingeniería, Inscripción, + 3 de recolección: Herboristería,
+Minería, Desuello) y 2 secundarias (Cocina, Pesca). Total: ~340 recetas +
+49 nodos, 16 especializaciones, 6 rangos por profesión. Los tres eslabones
+cross-profesión están cerrados: recolección→crafteo (hierbas, lingotes,
+cueros), recolección→producción (Herboristería→Alquimia/Inscripción) y el
+bucle de secundarias (Pesca→Cocina).
 
 El cliente abre el panel de profesiones con la tecla **P**; muestra las
 profesiones conocidas (barra de habilidad + botón para aprender el

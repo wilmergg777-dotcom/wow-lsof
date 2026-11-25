@@ -137,6 +137,10 @@ func profesionesPredefinidas() map[string]DefProfesion {
 		"ingenieria":    profesionIngenieria(),
 		"herboristeria": profesionHerboristeria(),
 		"minería":       profesionMineria(),
+		"desuello":      profesionDesuello(),
+		"inscripción":   profesionInscripcion(),
+		"cocina":        profesionCocina(),
+		"pesca":         profesionPesca(),
 	}
 }
 
@@ -1073,6 +1077,297 @@ func profesionMineria() DefProfesion {
 		MaxSkill: 450,
 		Rangos:   rangos,
 		Recetas:  recetas,
+		Nodos:    nodos,
+	}
+}
+
+// profesionDesuello construye Desuello (WoW 3.3.5, 1-450), la tercera y
+// última profesión de recolección pura (verbo Recolectar, sin consumo, sin
+// recetas). Como Herboristería, usa solo Nodos. A diferencia de Minería no
+// tiene fundición: lo que se desuella es ya el material de crafteo.
+//
+// Cierra el triángulo de recolección del juego: Herboristería (hierbas →
+// Alquimia), Minería (menas → lingotes → Herrería/Joyería/Ingeniería) y
+// Desuello (cueros → Peletería). Los cueros que produce son EXACTAMENTE los
+// que Peletería consume (cuero ligero, fino, pesado, grueso, basto, pellejo
+// nudoso, boreal) más las rarezas escamas viles y pelaje ártico. Sin
+// recetas ni especializaciones. Requiere cuchillo para desollar (no modelado:
+// pertenece al sistema de herramientas, no al de profesiones).
+//
+// 9 nodos cubren 0→450 de forma contigua siguiendo las zonas/criaturas de
+// la guía: zonas iniciales (1-75 cuero ligero), El Cruce/Loch Modan
+// (75-130 fino), Campamento Taurajo/Humedales/Trabalomas (130-205 pesado),
+// Vega de Tuercespina (205-260 grueso), Isla Jaguero/Un'Goro (260-300
+// basto), Península de Fuego Infernal/Nagrand (300-355 pellejo nudoso +
+// escamas viles raras), Tundra Boreal/Cuenca de Sholazar (355-450 boreal +
+// pelaje ártico raro). 6 rangos.
+func profesionDesuello() DefProfesion {
+	rangos := []DefRango{
+		{ID: "aprendiz", Nombre: "Aprendiz desollador", SkillReq: 0, SkillMax: 75},
+		{ID: "oficial", Nombre: "Oficial desollador", SkillReq: 50, SkillMax: 150},
+		{ID: "experto", Nombre: "Experto desollador", SkillReq: 125, SkillMax: 225},
+		{ID: "artesano", Nombre: "Desollador artesanal", SkillReq: 200, SkillMax: 300},
+		{ID: "maestro", Nombre: "Maestro desollador", SkillReq: 275, SkillMax: 375},
+		{ID: "gran_maestro", Nombre: "Gran Maestro desollador", SkillReq: 350, SkillMax: 450},
+	}
+	n := func(id, nombre, resultado, zona string, req, hasta int) DefNodo {
+		return DefNodo{
+			ID: id, Nombre: nombre, ProfesionID: "desuello",
+			Zona: zona, ResultadoID: resultado, ResultadoCantidad: 1,
+			SkillReq: req, SkillHasta: hasta,
+		}
+	}
+	nodos := []DefNodo{
+		// ─── Classic 1-300 ───
+		// 1-75: jabalíes, escórpidos, lobos, osos en zonas iniciales.
+		n("nodo_cuero_ligero", "Bestia de cuero ligero", "cuero_ligero", "Mulgore / Bosque de Elwynn / Dun Morogh (zonas iniciales)", 0, 75),
+		// 75-130: crocoliscos, osos, jabalíes (El Cruce, Loch Modan, Humedales).
+		n("nodo_cuero_fino", "Bestia de cuero fino", "cuero_fino", "El Cruce / Loch Modan / Páramos de Poniente", 75, 130),
+		// 130-205: Tronatesta, raptor, osos, yetis (Campamento Taurajo, Humedales, Trabalomas).
+		n("nodo_cuero_pesado", "Bestia de cuero pesado", "cuero_pesado", "Campamento Taurajo / Humedales / Laderas de Trabalomas (yetis de Colinas de Darrow)", 130, 205),
+		// 205-260: tigres, panteras, raptor, gorilas (Vega de Tuercespina).
+		n("nodo_cuero_grueso", "Bestia de cuero grueso", "cuero_grueso", "Vega de Tuercespina (Expedición Nesingwary / Arena Gurabashi)", 205, 260),
+		// 260-300: panteras, gorilas, hienas, dinosaurios.
+		n("nodo_cuero_basto", "Bestia de cuero basto", "cuero_basto", "Isla Jaguero / Tierras Devastadas / Cráter de Un'Goro", 260, 300),
+		// ─── TBC 300-375 ───
+		// 300-355: Jabinferno, Devastadores, talbuks, uñagrietas (Fuego Infernal, Nagrand).
+		n("nodo_pellejo_nodoso", "Bestia de pellejo nudoso", "cuero_pellejo_nodoso", "Península del Fuego Infernal / Nagrand", 300, 355),
+		// 340-355: escamas viles (rarezas de dragones en Nagrand).
+		n("nodo_escamas_viles", "Dragón de escamas viles", "escamas_viles", "Nagrand (Uñagrieta dominante)", 340, 355),
+		// ─── WotLK 350-450 ───
+		// 355-450: rinocerontes (Tundra Boreal), primates (Cuenca de Sholazar).
+		n("nodo_cuero_boreal", "Bestia de cuero boreal", "cuero_boreal", "Tundra Boreal (rinocerontes) / Cuenca de Sholazar (primates)", 355, 450),
+		// 390-450: pelaje ártico (rareza de bestias de Rasganorte).
+		n("nodo_pelaje_artico", "Bestia de pelaje ártico", "pelaje_artico", "Cuenca de Sholazar / Corona de Hielo", 390, 450),
+	}
+	return DefProfesion{
+		ID:       "desuello",
+		Nombre:   "Desuello",
+		Primaria: true,
+		MaxSkill: 450,
+		Rangos:   rangos,
+		Nodos:    nodos,
+	}
+}
+
+// profesionInscripcion construye Inscripción (WoW 3.3.5, 1-450), profesión de
+// producción introducida en WotLK. Su rasgo distintivo es la CADENA DE TRES
+// PASOS, la más larga del juego: moler hierbas → pigmento, combinar pigmento
+// → tinta, fabricar tinta → glifo/pergamino. Los tres pasos usan el verbo
+// Craftear (moler = craftear hierbas→pigmento; no hace falta un verbo nuevo),
+// igual que las cadenas de intermedios de Ingeniería (pólvora→tornillo→gadget)
+// o Encantamiento (vara→encantar), pero con un eslabón más.
+//
+// Segundo rasgo: la Investigación de inscripción de Rasganorte, una receta
+// que "descubre" un glifo (aquí modelada como receta que produce
+// glifo_descubierto y da skill; el cooldown diario real no se modela).
+//
+// Inscripción consume las hierbas de Herboristería (el eslabón cross-profesión
+// recolección→producción, igual que Alquimia). Sin especializaciones. 6 rangos.
+// 43 recetas (8 moliendas + 13 tintas + 8 glifos + 11 pergaminos + 2 vitelas
+// + 1 tarot + 1 investigación) cubren 0→450 de forma contigua.
+func profesionInscripcion() DefProfesion {
+	rangos := []DefRango{
+		{ID: "aprendiz", Nombre: "Aprendiz escribano", SkillReq: 0, SkillMax: 75},
+		{ID: "oficial", Nombre: "Oficial escribano", SkillReq: 50, SkillMax: 150},
+		{ID: "experto", Nombre: "Experto escribano", SkillReq: 125, SkillMax: 225},
+		{ID: "artesano", Nombre: "Escribano artesano", SkillReq: 200, SkillMax: 300},
+		{ID: "maestro", Nombre: "Maestro escribano", SkillReq: 275, SkillMax: 375},
+		{ID: "gran_maestro", Nombre: "Gran Maestro escribano", SkillReq: 350, SkillMax: 450},
+	}
+	// r construye una receta con materiales en pares (id, cantidad).
+	r := func(id, nombre, resultado string, req, hasta int, materiales ...interface{}) DefReceta {
+		mats := make([]MaterialRec, 0, len(materiales)/2)
+		for i := 0; i+1 < len(materiales); i += 2 {
+			mats = append(mats, MaterialRec{ItemID: materiales[i].(string), Cantidad: materiales[i+1].(int)})
+		}
+		return DefReceta{
+			ID: id, Nombre: nombre, ResultadoID: resultado, ResultadoCantidad: 1,
+			SkillReq: req, SkillHasta: hasta, Materiales: mats,
+		}
+	}
+	recetas := []DefReceta{
+		// ─── Paso 1: MOLER hierbas → pigmento (8 moliendas, una por tier).
+		r("moler_alabastro", "Moler hierbas (pigmento alabastro)", "pigmento_alabastro", 0, 75, "flor_de_paz", 5),
+		r("moler_oscurecido", "Moler hierbas (pigmento oscurecido)", "pigmento_oscurecido", 75, 150, "brezospina", 5),
+		r("moler_dorado", "Moler hierbas (pigmento dorado)", "pigmento_dorado", 125, 200, "sangrerregia", 5),
+		r("moler_esmeralda", "Moler hierbas (pigmento esmeralda)", "pigmento_esmeralda", 150, 225, "espina_de_oro", 5),
+		r("moler_violeta", "Moler hierbas (pigmento violeta)", "pigmento_violeta", 175, 250, "carolina", 5),
+		r("moler_plata", "Moler hierbas (pigmento de plata)", "pigmento_plata", 200, 275, "sansam_dorado", 5),
+		r("moler_abisal", "Moler hierbas (pigmento abisal)", "pigmento_abisal", 275, 350, "hierba_vil", 5),
+		r("moler_azur", "Moler hierbas (pigmento azur)", "pigmento_azur", 350, 450, "espina_de_hielo", 5),
+		// ─── Paso 2: COMBINAR pigmento → tinta (13 tintas).
+		r("tinta_marfil", "Tinta de marfil", "tinta_marfil", 0, 75, "pigmento_alabastro", 1),
+		r("tinta_resplandor_lunar", "Tinta de resplandor lunar", "tinta_resplandor_lunar", 35, 130, "pigmento_oscurecido", 2),
+		r("tinta_medianoche", "Tinta de medianoche", "tinta_medianoche", 75, 130, "pigmento_verdeante", 1),
+		r("tinta_león", "Tinta de león", "tinta_león", 100, 150, "pigmento_dorado", 1),
+		r("tinta_estrella_alba", "Tinta Estrella del Alba", "tinta_estrella_alba", 125, 175, "pigmento_esmeralda", 1),
+		r("tinta_fuego_jade", "Tinta de fuego de jade", "tinta_fuego_jade", 150, 200, "pigmento_violeta", 1),
+		r("tinta_real", "Tinta real", "tinta_real", 175, 225, "pigmento_rubí", 1),
+		r("tinta_celestial", "Tinta celestial", "tinta_celestial", 200, 250, "pigmento_plata", 1),
+		r("tinta_fulgurante", "Tinta fulgurante", "tinta_fulgurante", 250, 300, "pigmento_zafiro", 1),
+		r("tinta_cielo", "Tinta del cielo", "tinta_cielo", 275, 350, "pigmento_abisal", 1),
+		r("tinta_etérea", "Tinta etérea", "tinta_etérea", 290, 350, "pigmento_ébano", 1),
+		r("tinta_mar", "Tinta del mar", "tinta_mar", 350, 400, "pigmento_azur", 1),
+		r("tinta_avalancha", "Tinta de avalancha", "tinta_avalancha", 375, 400, "pigmento_helado", 1),
+		// ─── Paso 3: FABRICAR tinta → glifo/pergamino/vitela/tarot.
+		// Glifos (consumen tinta).
+		r("glifo_inicial", "Glifo menor (inicial)", "glifo_inicial", 80, 130, "tinta_marfil", 1),
+		r("glifo_porrazo", "Glifo de Porrazo", "glifo_porrazo", 185, 225, "tinta_celestial", 1),
+		r("glifo_revancha", "Glifo de Revancha", "glifo_revancha", 190, 225, "tinta_celestial", 1),
+		r("glifo_mayor", "Glifo mayor", "glifo_mayor", 205, 250, "tinta_celestial", 1),
+		r("glifo_tbc", "Glifo de Terrallende", "glifo_tbc", 305, 350, "tinta_etérea", 1),
+		r("glifo_wotlk", "Glifo de Rasganorte", "glifo_wotlk", 380, 400, "tinta_mar", 1),
+		r("glifo_final", "Glifo mayor (avanzado)", "glifo_final", 430, 450, "tinta_avalancha", 1),
+		// Pergaminos de atributo (consumen tinta).
+		r("pergamino_aguante", "Pergamino de aguante", "pergamino_aguante", 19, 100, "tinta_marfil", 1),
+		r("pergamino_espiritu_v", "Pergamino de espíritu V", "pergamino_espiritu_v", 255, 300, "tinta_fulgurante", 1),
+		r("pergamino_espiritu_vii", "Pergamino de espíritu VII", "pergamino_espiritu_vii", 355, 375, "tinta_mar", 1),
+		r("pergamino_intelecto_vii", "Pergamino de intelecto VII", "pergamino_intelecto_vii", 360, 375, "tinta_mar", 1),
+		r("pergamino_fuerza_vii", "Pergamino de fuerza VII", "pergamino_fuerza_vii", 365, 375, "tinta_mar", 1),
+		r("pergamino_agilidad_vii", "Pergamino de agilidad VII", "pergamino_agilidad_vii", 370, 375, "tinta_mar", 1),
+		r("pergamino_aguante_viii", "Pergamino de aguante VIII", "pergamino_aguante_viii", 400, 450, "tinta_avalancha", 1),
+		r("pergamino_espiritu_viii", "Pergamino de espíritu VIII", "pergamino_espiritu_viii", 405, 450, "tinta_avalancha", 1),
+		r("pergamino_intelecto_viii", "Pergamino de intelecto VIII", "pergamino_intelecto_viii", 410, 450, "tinta_avalancha", 1),
+		r("pergamino_fuerza_viii", "Pergamino de fuerza VIII", "pergamino_fuerza_viii", 415, 450, "tinta_avalancha", 1),
+		r("pergamino_agilidad_viii", "Pergamino de agilidad VIII", "pergamino_agilidad_viii", 420, 450, "tinta_avalancha", 1),
+		// Vitelas (consumen tinta).
+		r("vitela_armadura", "Vitela de armadura", "vitela_armadura", 53, 130, "tinta_marfil", 1),
+		r("vitela_arma_ii", "Vitela de arma II", "vitela_arma_ii", 245, 275, "tinta_celestial", 1),
+		// Tarot (consume tinta).
+		r("tarot_extrano", "Tarot extraño", "tarot_extrano", 147, 175, "tinta_resplandor_lunar", 1),
+		// Investigación de Rasganorte: descubre un glifo (cooldown diario real
+		// no modelado; aquí es una receta que produce glifo_descubierto).
+		r("investigacion_rasganorte", "Investigación de inscripción de Rasganorte", "glifo_descubierto", 385, 400, "tinta_avalancha", 1),
+	}
+	return DefProfesion{
+		ID:       "inscripción",
+		Nombre:   "Inscripción",
+		Primaria: true,
+		MaxSkill: 450,
+		Rangos:   rangos,
+		Recetas:  recetas,
+	}
+}
+
+// profesionCocina construye Cocina (WoW 3.3.5, 1-450), la PRIMERA profesión
+// SECUNDARIA del juego: Primaria=false, así no cuenta contra el límite de
+// MaxProfesionesPrimarias (2). Todo jugador puede aprenderla además de sus
+// dos primarias. Es de producción pura (verbo Craftear, recetas que
+// consumen pescado/carne/especias y producen comidas con buff de atributo).
+//
+// Requiere una fuente de calor (lumbre/estufa) — no modelado (pertenece al
+// sistema de mundo/posición, no al de profesiones). Rangos experto y maestro
+// requieren comprar un libro, y artesano una misión — simplificado: se
+// aprenden normalmente al alcanzar el skill. Los WotLK 400-450 usan
+// northern_spice (recompensa de misiones diarias — el cooldown diario real
+// no se modela). 13 recetas cubren 0→450 de forma contigua. Sin
+// especializaciones. 6 rangos.
+//
+// Eslabón cross-profesión: consume el pescado de Pesca (la otra secundaria).
+func profesionCocina() DefProfesion {
+	rangos := []DefRango{
+		{ID: "aprendiz", Nombre: "Aprendiz cocinero", SkillReq: 0, SkillMax: 75},
+		{ID: "oficial", Nombre: "Oficial cocinero", SkillReq: 50, SkillMax: 150},
+		{ID: "experto", Nombre: "Experto cocinero", SkillReq: 125, SkillMax: 225},
+		{ID: "artesano", Nombre: "Cocinero artesano", SkillReq: 200, SkillMax: 300},
+		{ID: "maestro", Nombre: "Maestro cocinero", SkillReq: 275, SkillMax: 375},
+		{ID: "gran_maestro", Nombre: "Gran Maestro cocinero", SkillReq: 350, SkillMax: 450},
+	}
+	r := func(id, nombre, resultado string, req, hasta int, materiales ...interface{}) DefReceta {
+		mats := make([]MaterialRec, 0, len(materiales)/2)
+		for i := 0; i+1 < len(materiales); i += 2 {
+			mats = append(mats, MaterialRec{ItemID: materiales[i].(string), Cantidad: materiales[i+1].(int)})
+		}
+		return DefReceta{
+			ID: id, Nombre: nombre, ResultadoID: resultado, ResultadoCantidad: 1,
+			SkillReq: req, SkillHasta: hasta, Materiales: mats,
+		}
+	}
+	recetas := []DefReceta{
+		// ─── Classic 1-300 ───
+		r("pececito_luminoso", "Pececito luminoso", "pececito_luminoso", 0, 50, "pececito_luminoso_crudo", 1),
+		r("pargo_lodo_boquilargo", "Pargo de lodo boquilargo", "pargo_lodo_boquilargo", 50, 100, "pargo_loco_boquilargo_crudo", 1),
+		r("siluro_mostacherizo", "Siluro mostacherizo", "siluro_mostacherizo", 100, 175, "siluro_mostacherizo_crudo", 1),
+		r("trucha_cabeza_mitril", "Trucha de cabeza de mitril", "trucha_cabeza_mitril", 175, 225, "trucha_cabeza_mitril_crudo", 1),
+		r("serviola_moteada", "Serviola moteada", "serviola_moteada", 225, 250, "serviola_moteada_crudo", 1),
+		r("salmon_escama_sol_pochado", "Salmón escama de sol pochado", "salmon_escama_sol_pochado", 250, 275, "salmon_escama_sol_crudo", 1),
+		r("filete_vigorpez", "Filete de vigorpez", "filete_vigorpez", 275, 315, "vigorpez_crudo_grande", 1),
+		// ─── TBC 300-375 ───
+		r("pescado_esporas_ennegrecido", "Pescado con esporas ennegrecido", "pescado_esporas_ennegrecido", 315, 340, "pecespora_zangar", 1),
+		r("palitos_pez_dorado", "Palitos de pez dorado", "palitos_pez_dorado", 340, 360, "dardo_dorado", 1),
+		r("trucha_mantequilla_caliente", "Trucha con mantequilla caliente", "trucha_mantequilla_caliente", 360, 375, "trucha_branquias_barbadas_enorme", 1),
+		// ─── WotLK 375-450 ───
+		r("kungaloosh", "Kungaloosh", "kungaloosh", 375, 400, "bayas_tundra", 2, "ciruela_blanca_sabrosa", 1),
+		r("guiso_pecespora", "Guiso de pecespora", "guiso_pecespora", 400, 425, "pecespora_zangar", 2, "northern_spice", 1),
+		r("filete_dardo_picante", "Filete de dardo dorado picante", "filete_dardo_picante", 425, 450, "dardo_dorado", 2, "northern_spice", 1),
+	}
+	return DefProfesion{
+		ID:       "cocina",
+		Nombre:   "Cocina",
+		Primaria: false, // SECUNDARIA: no cuenta contra el límite de 2 primarias.
+		MaxSkill: 450,
+		Rangos:   rangos,
+		Recetas:  recetas,
+	}
+}
+
+// profesionPesca construye Pesca (WoW 3.3.5, 1-450), la SEGUNDA profesión
+// SECUNDARIA (Primaria=false). Es recolección como Herboristería/Desuello
+// (verbo Recolectar, sin consumo, sin recetas), pero con dos diferencias:
+// no hay nodos fijos en el mundo (se pesca en cualquier masa de agua — aquí
+// modelado como un "nodo" por banda/zona de pesca) y el equipo (caña con
+// +habilidad y cebos consumibles) mejora la pesca — no modelado.
+//
+// Rangos experto (libro), artesano (misión de 4 peces raros) y maestro
+// (libro) están quest-gated — simplificado: se aprenden normalmente al
+// alcanzar el skill. 10 nodos cubren 0→450 de forma contigua siguiendo las
+// zonas de la guía: capitales (0-50), Vallefresno/Trabalomas (50-100),
+// Marjal/Desolace (100-175), Azshara/Feralas (175-225), Tanaris/Un'Goro
+// (225-275), Cuna del Invierno (275-315), Marisma de Zangar (315-375),
+// Rasganorte (375-450).
+//
+// Eslabón cross-profesión: los pescados que produce son EXACTAMENTE los que
+// Cocina consume (pececito_luminoso_crudo, siluro_mostacherizo_crudo, etc.).
+// Cierra el bucle de las dos secundarias: pescar → cocinar. Sin
+// especializaciones. 6 rangos.
+func profesionPesca() DefProfesion {
+	rangos := []DefRango{
+		{ID: "aprendiz", Nombre: "Aprendiz pescador", SkillReq: 0, SkillMax: 75},
+		{ID: "oficial", Nombre: "Oficial pescador", SkillReq: 50, SkillMax: 150},
+		{ID: "experto", Nombre: "Experto pescador", SkillReq: 125, SkillMax: 225},
+		{ID: "artesano", Nombre: "Pescador artesano", SkillReq: 200, SkillMax: 300},
+		{ID: "maestro", Nombre: "Maestro pescador", SkillReq: 275, SkillMax: 375},
+		{ID: "gran_maestro", Nombre: "Gran Maestro pescador", SkillReq: 350, SkillMax: 450},
+	}
+	n := func(id, nombre, resultado, zona string, req, hasta int) DefNodo {
+		return DefNodo{
+			ID: id, Nombre: nombre, ProfesionID: "pesca",
+			Zona: zona, ResultadoID: resultado, ResultadoCantidad: 1,
+			SkillReq: req, SkillHasta: hasta,
+		}
+	}
+	nodos := []DefNodo{
+		// ─── Classic 1-300 ───
+		n("nodo_pececito_luminoso", "Pesca de Pececito luminoso", "pececito_luminoso_crudo", "Capitales y zonas iniciales", 0, 50),
+		n("nodo_pargo_boquilargo", "Pesca de Pargo boquilargo", "pargo_loco_boquilargo_crudo", "Vallefresno / Laderas de Trabalomas / Humedales", 50, 100),
+		n("nodo_siluro_mostacherizo", "Pesca de Siluro mostacherizo", "siluro_mostacherizo_crudo", "Marjal Revolcafango / Desolace / Vega de Tuercespina", 100, 175),
+		n("nodo_trucha_cabeza_mitril", "Pesca de Trucha cabeza de mitril", "trucha_cabeza_mitril_crudo", "Azshara / Frondavil / Feralas / Tanaris", 175, 225),
+		n("nodo_serviola_moteada", "Pesca de Serviola moteada", "serviola_moteada_crudo", "Tanaris / Cráter de Un'Goro", 225, 250),
+		n("nodo_salmon_escama_sol", "Pesca de Salmón escama de sol", "salmon_escama_sol_crudo", "Río del Veneno (Frondavil) / Cuna del Invierno", 250, 275),
+		n("nodo_vigorpez", "Pesca de Vigorpez", "vigorpez_crudo_grande", "Cueva Barbaescama (Azshara) / Paso de la Muerte", 275, 315),
+		// ─── TBC 300-375 ───
+		n("nodo_pecespora_zangar", "Pesca de Pecespora de Zangar", "pecespora_zangar", "Marisma de Zangar (Refugio Cenarion)", 315, 375),
+		// ─── WotLK 375-450 ───
+		n("nodo_dardo_dorado", "Pesca de Dardo dorado", "dardo_dorado", "Tundra Boreal / Fiordo Aquilonal", 375, 400),
+		n("nodo_trucha_branquias", "Pesca de Trucha de branquias barbadas", "trucha_branquias_barbadas_enorme", "Cuenca de Sholazar / Corona de Hielo", 400, 450),
+	}
+	return DefProfesion{
+		ID:       "pesca",
+		Nombre:   "Pesca",
+		Primaria: false, // SECUNDARIA: no cuenta contra el límite de 2 primarias.
+		MaxSkill: 450,
+		Rangos:   rangos,
 		Nodos:    nodos,
 	}
 }

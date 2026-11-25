@@ -144,6 +144,110 @@ func itemsPredefinidos() map[string]DefItem {
 		m[id] = def(id, n, TipoMaterial, CalidadComun)
 	}
 
+	// ─── Materiales y productos de Inscripción (Classic→WotLK) ───
+	// Inscripción introduce una cadena de 3 pasos: moler hierbas → pigmento,
+	// combinar pigmento → tinta, fabricar tinta → glifo/pergamino. Los
+	// pigmentos y tintas son intermedios; los glifos, pergaminos, vitelas y
+	// tarots son los productos finales.
+	for id, n := range map[string]string{
+		// Pigmentos (de moler hierbas; el "raro" de cada par es subproducto).
+		"pigmento_alabastro":  "Pigmento de alabastro",
+		"pigmento_oscurecido": "Pigmento oscurecido",
+		"pigmento_verdeante":  "Pigmento verdeante",
+		"pigmento_dorado":     "Pigmento dorado",
+		"pigmento_quemado":    "Pigmento quemado",
+		"pigmento_esmeralda":  "Pigmento esmeralda",
+		"pigmento_índigo":     "Pigmento índigo",
+		"pigmento_violeta":    "Pigmento violeta",
+		"pigmento_rubí":       "Pigmento de rubí",
+		"pigmento_plata":      "Pigmento de plata",
+		"pigmento_zafiro":     "Pigmento de zafiro",
+		"pigmento_abisal":     "Pigmento abisal",
+		"pigmento_ébano":      "Pigmento de ébano",
+		"pigmento_azur":       "Pigmento azur",
+		"pigmento_helado":     "Pigmento helado",
+		// Tintas (de combinar pigmentos).
+		"tinta_marfil":            "Tinta de marfil",
+		"tinta_resplandor_lunar":  "Tinta de resplandor lunar",
+		"tinta_medianoche":        "Tinta de medianoche",
+		"tinta_león":              "Tinta de león",
+		"tinta_estrella_alba":     "Tinta Estrella del Alba",
+		"tinta_fuego_jade":        "Tinta de fuego de jade",
+		"tinta_real":              "Tinta real",
+		"tinta_celestial":         "Tinta celestial",
+		"tinta_fulgurante":        "Tinta fulgurante",
+		"tinta_cielo":             "Tinta del cielo",
+		"tinta_etérea":            "Tinta etérea",
+		"tinta_mar":               "Tinta del mar",
+		"tinta_avalancha":         "Tinta de avalancha",
+		// Glifos (productos finales, consumen tinta).
+		"glifo_inicial":     "Glifo menor (inicial)",
+		"glifo_porrazo":     "Glifo de Porrazo",
+		"glifo_revancha":    "Glifo de Revancha",
+		"glifo_mayor":       "Glifo mayor",
+		"glifo_tbc":         "Glifo de Terrallende",
+		"glifo_wotlk":       "Glifo de Rasganorte",
+		"glifo_descubierto": "Glifo descubierto (Investigación)",
+		"glifo_final":       "Glifo mayor (avanzado)",
+		// Pergaminos (buffs de atributo, consumen tinta).
+		"pergamino_aguante":         "Pergamino de aguante",
+		"pergamino_aguante_viii":    "Pergamino de aguante VIII",
+		"pergamino_espiritu_v":      "Pergamino de espíritu V",
+		"pergamino_espiritu_vii":    "Pergamino de espíritu VII",
+		"pergamino_espiritu_viii":   "Pergamino de espíritu VIII",
+		"pergamino_intelecto_vii":   "Pergamino de intelecto VII",
+		"pergamino_intelecto_viii":  "Pergamino de intelecto VIII",
+		"pergamino_fuerza_vii":      "Pergamino de fuerza VII",
+		"pergamino_fuerza_viii":     "Pergamino de fuerza VIII",
+		"pergamino_agilidad_vii":    "Pergamino de agilidad VII",
+		"pergamino_agilidad_viii":   "Pergamino de agilidad VIII",
+		// Vitelas y tarots.
+		"vitela_armadura": "Vitela de armadura",
+		"vitela_arma_ii":  "Vitela de arma II",
+		"tarot_extrano":   "Tarot extraño",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+
+	// ─── Pescados y comidas de Cocina (Classic→WotLK) ───
+	// Cocina es profesión SECUNDARIA. Consume pescado crudo (que en el juego
+	// se obtiene con Pesca) y especias (WotLK: northern_spice de misiones
+	// diarias) para producir comidas que restauran salud y otorgan buffs de
+	// atributo. Requiere una fuente de calor (lumbre/estufa — no modelado).
+	for id, n := range map[string]string{
+		// Pescados crudos (materia prima, producto de Pesca).
+		"pececito_luminoso_crudo":         "Pececito luminoso crudo",
+		"pargo_loco_boquilargo_crudo":     "Pargo de loco boquilargo crudo",
+		"siluro_mostacherizo_crudo":       "Siluro mostacherizo crudo",
+		"trucha_cabeza_mitril_crudo":      "Trucha cabeza de mitril cruda",
+		"serviola_moteada_crudo":          "Serviola moteada cruda",
+		"salmon_escama_sol_crudo":         "Salmón escama de sol crudo",
+		"vigorpez_crudo_grande":           "Vigorpez crudo grande",
+		"pecespora_zangar":                "Pecespora de Zangar",
+		"dardo_dorado":                    "Dardo dorado",
+		"trucha_branquias_barbadas_enorme": "Trucha de branquias barbadas enorme",
+		// Especias y componentes WotLK.
+		"bayas_tundra":          "Bayas de la tundra",
+		"ciruela_blanca_sabrosa": "Ciruela blanca sabrosa",
+		"northern_spice":        "Especia del norte",
+		// Comidas cocinadas (productos finales, dan buffs de atributo).
+		"pececito_luminoso":            "Pececito luminoso",
+		"pargo_lodo_boquilargo":        "Pargo de lodo boquilargo",
+		"siluro_mostacherizo":          "Siluro mostacherizo",
+		"trucha_cabeza_mitril":         "Trucha de cabeza de mitril",
+		"serviola_moteada":             "Serviola moteada",
+		"salmon_escama_sol_pochado":    "Salmón escama de sol pochado",
+		"filete_vigorpez":              "Filete de vigorpez",
+		"pescado_esporas_ennegrecido":  "Pescado con esporas ennegrecido",
+		"palitos_pez_dorado":           "Palitos de pez dorado",
+		"trucha_mantequilla_caliente":  "Trucha con mantequilla caliente",
+		"kungaloosh":                   "Kungaloosh",
+		"guiso_pecespora":              "Guiso de pecespora",
+		"filete_dardo_picante":         "Filete de dardo dorado picante",
+	} {
+		m[id] = def(id, n, TipoMaterial, CalidadComun)
+	}
+
 	// ─── Materiales Burning Crusade ───
 	for id, n := range map[string]string{
 		"granate_sangre":      "Granate de sangre",
