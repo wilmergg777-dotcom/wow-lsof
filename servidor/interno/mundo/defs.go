@@ -378,14 +378,16 @@ func clasesPredefinidas() map[string]DefClase {
 // HPBase/HPPorNivel/DanoBase permiten stats explícitos (estilo wocc);
 // si HPBase == 0 se usa la fórmula por defecto (40 + nivel*15).
 type DefSpawnMob struct {
-	Nombre     string     `json:"nombre"`
-	Tipo       string     `json:"tipo"` // familia: "undead"|"humanoid"|"beast"|"elemental"|"dragonkin"
-	Nivel      int        `json:"nivel"`
-	Pos        proto.Vec3 `json:"pos"`
-	EsBoss     bool       `json:"es_boss"`
-	HPBase     int        `json:"hp_base,omitempty"`
-	HPPorNivel int        `json:"hp_por_nivel,omitempty"`
-	DanoBase   int        `json:"dano_base,omitempty"`
+	Nombre     string       `json:"nombre"`
+	Tipo       string       `json:"tipo"` // familia: "undead"|"humanoid"|"beast"|"elemental"|"dragonkin"
+	Nivel      int          `json:"nivel"`
+	Pos        proto.Vec3   `json:"pos"`
+	EsBoss     bool         `json:"es_boss"`
+	EsElite    bool         `json:"es_elite,omitempty"`            // élite: HP x3, daño x2
+	Waypoints  []proto.Vec3 `json:"waypoints,omitempty"`           // ruta de patrulla (absoluta); vacío = aleatoria
+	HPBase     int          `json:"hp_base,omitempty"`
+	HPPorNivel int          `json:"hp_por_nivel,omitempty"`
+	DanoBase   int          `json:"dano_base,omitempty"`
 }
 
 // DefMasmora define una masmora jugable.
@@ -449,6 +451,13 @@ func (m *Mundo) spawnEnemigosIniciales() {
 		for _, s := range z.Spawns {
 			e := nuevoEnemigo(s.Nombre, s.Familia, s.Nivel, s.Pos)
 			e.spawnPos = s.Pos
+			e.waypoints = s.Waypoints
+			if s.EsElite {
+				e.esElite = true
+				e.aplicarEscaladoElite()
+			}
+			// Bestias/humanoides no élite huyen a HP bajo (mundo abierto sin bosses).
+			e.huyeAPHPBajo = !e.esElite && familiaEsCobarde(s.Familia)
 			e.id = sprintID("mob_", i+1)
 			m.entidades[e.id] = e
 			m.enemigos[e.id] = e

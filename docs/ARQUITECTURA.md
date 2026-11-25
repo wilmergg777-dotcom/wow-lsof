@@ -43,7 +43,8 @@ servidor/
     │   ├── items.go      Catálogo de ítems (materiales + productos crafteados).
     │   ├── profesiones_alias.go Aliases de tipos del subpaquete interno/profesiones.
     │   ├── jugador.go    Jugador (entidad + combate + inventario + profesiones + guardar).
-    │   ├── enemigo.go    Enemigo (IA patrulla/aggro/ataque/respawn).
+    │   ├── enemigo.go    Enemigo (IA patrulla/aggro/ataque/respawn + estados evade/huida).
+    │   ├── ia_mobs.go    IA avanzada: waypoints, agro social, leash+evade, élites, huida.
     │   ├── combate.go    Resolución de habilidades + broadcast por zona.
     │   ├── instancia.go  Instancias aisladas (masmorras PvE + arenas PvP).
     │   └── buscador.go   Colas + matchmaking cross-faction (PvE y PvP).
@@ -262,6 +263,34 @@ items) e instructores (de clase o de profesión).
 
 Las coordenadas de región evitan el carril de masmorras (X∈[1000,5000], Z≈0)
 y la arena PvP (X=9000, Z≈0) para no mezclar open world con instancias.
+
+### IA de mobs
+
+Los `Enemigo` tienen una máquina de estados por tick (`actualizar`):
+**patrullando → persiguiendo → atacando**, más los estados **huyendo** y
+**evade**. La IA avanzada (Fase 8, `ia_mobs.go`) añade:
+
+- **Patrulla por waypoints**: si `DefSpawnMob.Waypoints` / `DefSpawnZona.Waypoints`
+  no está vacío, el mob sigue la ruta en ciclo (avanzando al siguiente punto
+  al llegar y pausando `PausaWaypointMs`). Sin waypoints, conserva la
+  patrulla aleatoria dentro de `RangoPatrullaMetros` del MVP.
+- **Agro social (chain pull)**: al agroar por proximidad o al recibir el
+  primer daño (body pull), los mobs en patrulla dentro de
+  `RangoSocialAgroMetros` (10 m) le asisten y toman el mismo objetivo. Los
+  mobs ya en combate se ignoran (no se re-asigna objetivo).
+- **Leash + evade**: si un mob en combate se aleja más de `LeashMetros`
+  (40 m) de su `spawnPos`, entra en **evade**: suelta el objetivo, sale de
+  combate, se cura a full y limpia sus debuffs; luego camina al spawn y
+  vuelve a patrullar. Modela el reset de WoW al kitear lejos.
+- **Huida en HP bajo**: los mobs cobardes (bestias/humanoides no élite ni
+  boss, vía `familiaEsCobarde`) con HP < 20 % entran en **huyendo**: se
+  alejan del objetivo a 1.2× velocidad y piden auxilio (agro social);
+  tras `FleeDuracionMs` sueltan y evaden al spawn.
+- **Escalado de élites**: `DefSpawnMob.EsElite` / `DefSpawnZona.EsElite`
+  escala HP ×3 (`MultiplicadorEliteHP`) y daño ×2
+  (`MultiplicadorEliteDano`). Los bosses siguen usando
+  `MultiplicadorBossHP` en `poblarMobs`; élite y boss son mutuamente
+  excluyentes (boss prevalece).
 
 ### Experiencia, niveles y misiones
 

@@ -24,6 +24,26 @@ const RangoPatrullaMetros = 5.0
 // VelocidadEnemigoMps velocidad de persecución.
 const VelocidadEnemigoMps = 4.0
 
+// ─── IA avanzada (Fase 8) ───
+// RangoSocialAgroMetros: mobs dentro de este radio del mob agroado le
+// asisten (agro social, "chain pull").
+const RangoSocialAgroMetros = 10.0
+
+// LeashMetros: si un mob en combate se aleja más de esto de su spawnPos,
+// entra en evade (suelta objetivo, cura a full y vuelve al spawn).
+const LeashMetros = 40.0
+
+// MultiplicadorEliteHP / MultiplicadorEliteDano: escalado de mobs élite
+// (los boss ya usan MultiplicadorBossHP en instancia.go).
+const MultiplicadorEliteHP = 3
+const MultiplicadorEliteDano = 2
+
+// FleeDuracionMs: tiempo que un mob cobarde huye antes de soltar y evadir.
+const FleeDuracionMs int64 = 5_000
+
+// PausaWaypointMs: pausa del mob al llegar a cada waypoint de patrulla.
+const PausaWaypointMs int64 = 2_000
+
 // Enemigo es una entidad hostil controlada por IA.
 type Enemigo struct {
 	id            string
@@ -47,6 +67,13 @@ type Enemigo struct {
 	direccionPatrulla proto.Vec3 // dirección actual de patrulla
 	ultimoCambioDirMs int64
 	auras []*auras.AuraActiva // debuffs/DoT activos sobre el mob
+	// ─── IA avanzada (Fase 8) ───
+	esElite             bool          // mob élite (HP x3, daño x2)
+	waypoints           []proto.Vec3  // ruta de patrulla (vacío = patrulla aleatoria)
+	waypointIdx         int           // índice del waypoint actual
+	waypointPausaHastaMs int64         // ms hasta los que el mob espera en el waypoint
+	huyeAPHPBajo        bool          // el mob huye al quedar con HP < 20%
+	huyeHastaMs         int64         // fin de la huida (ms)
 }
 
 // ─── Implementación de Entidad ──────────────────────────────────────────
@@ -101,6 +128,15 @@ func nuevoEnemigoMasmora(sm DefSpawnMob) *Enemigo {
 	e.hpMax = hpMax
 	e.hpActual = hpMax
 	e.danoBase = sm.DanoBase
+	e.waypoints = sm.Waypoints
+	// Éite: HP x3, daño x2 (los boss se escalan aparte en poblarMobs; si
+	// un mob fuera ambos, boss prevalece y no se aplica élite aquí).
+	if sm.EsElite && !sm.EsBoss {
+		e.esElite = true
+		e.aplicarEscaladoElite()
+	}
+	// Cobardía: bestias/humanoides no élite ni boss huyen a HP bajo.
+	e.huyeAPHPBajo = !sm.EsBoss && !e.esElite && familiaEsCobarde(sm.Tipo)
 	return e
 }
 
@@ -119,6 +155,21 @@ func (e *Enemigo) actualizar(m *Mundo, t time.Time) {
 		return
 	}
 
+	// Leash: si un mob en combate se aleja demasiado de su spawnPos, evade
+	// (suelta objetivo, cura a full y vuelve al spawn). No aplica a mobs en
+	// patrulla o ya en evade/huida.
+	if e.objetivoID != "" && e.estado != "evade" && e.estado != "huyendo" {
+		if distancia2D(e.pos, e.spawnPos) > LeashMetros {
+			e.evadir(m, ahora)
+			return
+		}
+	}
+	// Huida: mobs cobardes (no élite/boss) con HP < 20% huyen y piden ayuda.
+	if e.huyeAPHPBajo && e.hpMax > 0 && e.hpActual*5 < e.hpMax &&
+		(e.estado == "atacando" || e.estado == "persiguiendo") {
+		e.iniciarHuida(m, ahora)
+	}
+
 	switch e.estado {
 	case "patrullando":
 		e.aiPatrullar(m, ahora)
@@ -126,6 +177,10 @@ func (e *Enemigo) actualizar(m *Mundo, t time.Time) {
 		e.aiPerseguir(m, ahora)
 	case "atacando":
 		e.aiAtacar(m, ahora, t)
+	case "huyendo":
+		e.aiHuir(m, ahora)
+	case "evade":
+		e.aiEvade(m, ahora)
 	}
 
 	// Limpieza de objetivo si desapareció o murió.
@@ -159,8 +214,16 @@ func (e *Enemigo) aiPatrullar(m *Mundo, ahora int64) {
 			e.objetivoID = j.id
 			e.estado = "persiguiendo"
 			e.enCombate = true
+			e.agroSocial(m, j.id, ahora) // agro social: vecinos en patrulla asisten
 			return
 		}
+	}
+
+	// Patrulla: si el mob tiene waypoints definidos, sigue la ruta en bucle;
+	// si no, usa dirección aleatoria dentro del radio de patrulla (MVP).
+	if len(e.waypoints) > 0 {
+		e.patrolWaypoint(ahora)
+		return
 	}
 
 	// Cambiar dirección de patrulla cada ~5s.
@@ -277,6 +340,7 @@ func (e *Enemigo) recibirDaño(origenID string, cantidad int, critico bool, m *M
 		return
 	}
 	e.hpActual -= cantidad
+	eraPacifico := !e.enCombate // social pull solo al primer impacto
 	e.enCombate = true
 
 	// Track último atacante para crédito de muerte (XP + misiones).
@@ -290,6 +354,12 @@ func (e *Enemigo) recibirDaño(origenID string, cantidad int, critico bool, m *M
 			e.objetivoID = origenID
 			e.estado = "persiguiendo"
 		}
+	}
+
+	// Agro social al recibir daño (body pull): si era pacífico, los mobs
+	// cercanos en patrulla le asisten. Solo al primer impacto.
+	if eraPacifico && e.objetivoID != "" {
+		e.agroSocial(m, e.objetivoID, ahora)
 	}
 
 	// Broadcast del evento de daño a jugadores cercanos en la misma zona.

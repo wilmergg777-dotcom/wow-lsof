@@ -56,10 +56,12 @@ type DefZona struct {
 
 // DefSpawnZona describe un mob del open world dentro de una zona.
 type DefSpawnZona struct {
-	Nombre  string     `json:"nombre"`
-	Familia string     `json:"familia"` // label cosmético: "lobo"|"jabali"|"murloc"|...
-	Nivel   int        `json:"nivel"`
-	Pos     proto.Vec3 `json:"pos"` // posición absoluta
+	Nombre    string       `json:"nombre"`
+	Familia   string       `json:"familia"`               // label cosmético: "lobo"|"jabali"|"murloc"|...
+	Nivel     int          `json:"nivel"`
+	Pos       proto.Vec3   `json:"pos"`                   // posición absoluta
+	EsElite   bool         `json:"es_elite,omitempty"`    // élite: HP x3, daño x2
+	Waypoints []proto.Vec3 `json:"waypoints,omitempty"`   // ruta de patrulla (absoluta); vacío = aleatoria
 }
 
 // DefCiudad describe una capital racial con sus NPCs.
