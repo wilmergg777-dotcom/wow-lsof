@@ -347,6 +347,13 @@ func lootTablePorFamilia(familia string) DefLootTable {
 				{ItemID: "tela_lunar_primigenia", Probabilidad: 0.45, CantidadMin: 1, CantidadMax: 2},
 			},
 		}
+	case "dragon":
+		return DefLootTable{
+			OroMin: 3, OroMax: 9,
+			Entradas: []DefLootEntry{
+				{ItemID: "escamas_dragon_desgastadas", Probabilidad: 0.55, CantidadMin: 1, CantidadMax: 3},
+			},
+		}
 	default:
 		return DefLootTable{OroMin: 1, OroMax: 3}
 	}
@@ -354,33 +361,47 @@ func lootTablePorFamilia(familia string) DefLootTable {
 
 // otorgarLootMuerte suelta el botín de un mob al último atacante (si es
 // jugador): oro escalado por nivel, materiales por familia, y una pequeña
-// probabilidad (~3%) de un ítem equipable adecuado al nivel. Llamado desde
-// Enemigo.morir (tick, m.mu ya Lock).
-func (m *Mundo) otorgarLootMuerte(jugadorID string, nivelMob int, familiaMob string) {
+// probabilidad (~3%) de un ítem equipable adecuado al nivel. Los bosses
+// (e.esBoss) sueltan MUCHO más: oro ×5, materiales garantizados (2-3) y un
+// drop de equipo GARANTIZADO. Llamado desde Enemigo.morir (tick, m.mu Lock).
+func (m *Mundo) otorgarLootMuerte(jugadorID string, e *Enemigo) {
 	j, ok := m.jugadores[jugadorID]
 	if !ok {
 		return
 	}
+	nivelMob := e.nivel
+	familiaMob := e.clase
 	tabla := lootTablePorFamilia(familiaMob)
-	// Oro escalado por nivel del mob.
-	oroMin := tabla.OroMin + nivelMob*2
-	oroMax := tabla.OroMax + nivelMob*4
+	// Oro escalado por nivel del mob (×5 si es boss).
+	multOro := 1
+	if e.esBoss {
+		multOro = 5
+	}
+	oroMin := (tabla.OroMin + nivelMob*2) * multOro
+	oroMax := (tabla.OroMax + nivelMob*4) * multOro
 	if oroMax < oroMin {
 		oroMax = oroMin
 	}
 	j.oro += oroMin + rand.Intn(oroMax-oroMin+1)
-	// Materiales.
-	for _, e := range tabla.Entradas {
-		if rand.Float64() < e.Probabilidad {
-			cant := e.CantidadMin
-			if e.CantidadMax > e.CantidadMin {
-				cant += rand.Intn(e.CantidadMax - e.CantidadMin + 1)
+	// Materiales: boss garantiza 2-3; trash con probabilidad de la tabla.
+	for _, ent := range tabla.Entradas {
+		if e.esBoss {
+			// Boss: drop garantizado de 2-3 unidades.
+			cant := 2
+			if rand.Intn(2) == 0 {
+				cant = 3
 			}
-			j.AgregarItem(e.ItemID, cant)
+			j.AgregarItem(ent.ItemID, cant)
+		} else if rand.Float64() < ent.Probabilidad {
+			cant := ent.CantidadMin
+			if ent.CantidadMax > ent.CantidadMin {
+				cant += rand.Intn(ent.CantidadMax - ent.CantidadMin + 1)
+			}
+			j.AgregarItem(ent.ItemID, cant)
 		}
 	}
-	// Drop de equipo: 3% de un ítem equipable con NivelReq <= nivelMob.
-	if rand.Float64() < 0.03 {
+	// Drop de equipo: trash 3% de chance; boss GARANTIZADO.
+	if e.esBoss || rand.Float64() < 0.03 {
 		if itemID := m.dropEquipoAleatorio(nivelMob); itemID != "" {
 			j.AgregarItem(itemID, 1)
 		}

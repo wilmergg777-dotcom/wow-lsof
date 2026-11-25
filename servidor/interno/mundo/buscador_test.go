@@ -40,31 +40,30 @@ func crearJugadorTest(t *testing.T, m *Mundo, nombre, clase, faccion, raza strin
 func TestBuscadorPvEMatchCrossFaction(t *testing.T) {
 	m := nuevoMundoTest(t)
 
-	// Tres jugadores de facciones Y roles distintos: guerrero/alianza/humano
-	// (tanque), sacerdote/horda/no_muerto (soporte), mago/alianza/gnomo (dps).
-	// Nivel 6 para cumplir NivelMin=5 de hollow_crypt (masmora lvl 7-10).
+	// Cinco jugadores de facciones y roles distintos (trinidad 5-man):
+	// guerrero/alianza (tanque), sacerdote/horda (soporte), + 3 dps.
+	// Nivel 18 para cumplir NivelMin=17 de las_minas_de_la_muerte (Deadmines).
 	tanque := crearJugadorTest(t, m, "Tanque", "guerrero", FaccionAlianza, "humano")
 	soporte := crearJugadorTest(t, m, "Curandero", "sacerdote", FaccionHorda, "no_muerto")
-	dps := crearJugadorTest(t, m, "Dannador", "mago", FaccionAlianza, "gnomo")
-	for _, j := range []*Jugador{tanque, soporte, dps} {
-		j.nivel = 6
+	dps1 := crearJugadorTest(t, m, "Dannador", "mago", FaccionAlianza, "gnomo")
+	dps2 := crearJugadorTest(t, m, "Tirador", "cazador", FaccionHorda, "troll")
+	dps3 := crearJugadorTest(t, m, "Sombra", "picaro", FaccionAlianza, "elfo_noche")
+	jugadores := []*Jugador{tanque, soporte, dps1, dps2, dps3}
+	for _, j := range jugadores {
+		j.nivel = 18
 	}
 
-	// Los tres a la cola de la misma masmora (cross-faction).
-	if err := m.Buscador().EntrarColaPvE(tanque, "hollow_crypt"); err != nil {
-		t.Fatalf("entrar tanque: %v", err)
-	}
-	if err := m.Buscador().EntrarColaPvE(soporte, "hollow_crypt"); err != nil {
-		t.Fatalf("entrar soporte: %v", err)
-	}
-	if err := m.Buscador().EntrarColaPvE(dps, "hollow_crypt"); err != nil {
-		t.Fatalf("entrar dps: %v", err)
+	// Los cinco a la cola de la misma masmora (cross-faction).
+	for _, j := range jugadores {
+		if err := m.Buscador().EntrarColaPvE(j, "las_minas_de_la_muerte"); err != nil {
+			t.Fatalf("entrar %s: %v", j.nombre, err)
+		}
 	}
 
 	// Procesar el buscador (simula un tick de step()).
 	m.Buscador().procesar(time.Now())
 
-	// Debe existir exactamente una instancia con los 3 jugadores.
+	// Debe existir exactamente una instancia con los 5 jugadores.
 	m.mu.RLock()
 	instCount := len(m.instancias)
 	m.mu.RUnlock()
@@ -72,27 +71,26 @@ func TestBuscadorPvEMatchCrossFaction(t *testing.T) {
 		t.Fatalf("esperaba 1 instancia, hay %d", instCount)
 	}
 
-	// Validar que los 3 están en la instancia con equipo -1 (PvE).
-	for _, j := range []*Jugador{tanque, soporte, dps} {
+	// Validar que los 5 están en la instancia con equipo -1 (PvE).
+	for _, j := range jugadores {
 		if j.instanciaID == "" {
 			t.Errorf("jugador %s no entró en instancia", j.nombre)
 		}
 		if j.equipo != -1 {
 			t.Errorf("jugador %s debería tener equipo -1 (PvE), tiene %d", j.nombre, j.equipo)
 		}
-		t.Logf("%s (%s/%s, %s) en instancia %s", j.nombre, j.faccion, j.raza, j.rol, j.instanciaID)
 	}
 
 	// Validar que facciones distintas coexisten (cross-faction real).
 	facciones := map[string]bool{}
-	for _, j := range []*Jugador{tanque, soporte, dps} {
+	for _, j := range jugadores {
 		facciones[j.faccion] = true
 	}
 	if len(facciones) < 2 {
 		t.Errorf("esperaba al menos 2 facciones en el grupo (cross-faction), hay %d", len(facciones))
 	}
 
-	// Validar que la masmora tiene su boss (HP boosteado).
+	// Validar que la masmora tiene su boss (HP boosteado ×3).
 	m.mu.RLock()
 	var boss *Enemigo
 	bossCount := 0
@@ -100,12 +98,8 @@ func TestBuscadorPvEMatchCrossFaction(t *testing.T) {
 	for _, e := range m.enemigos {
 		if e.instanciaID == tanque.instanciaID {
 			mobCount++
-		}
-	}
-	for _, inst := range m.instancias {
-		if inst.bossID != "" {
-			if b, ok := m.enemigos[inst.bossID]; ok {
-				boss = b
+			if e.esBoss {
+				boss = e
 				bossCount++
 			}
 		}
@@ -117,9 +111,10 @@ func TestBuscadorPvEMatchCrossFaction(t *testing.T) {
 	if boss == nil {
 		t.Fatalf("boss no encontrado")
 	}
-	// hollow_crypt boss: Morthen, hpBase 100 + 22*10 = 320, ×3 = 960.
-	if boss.hpMax < 300 {
-		t.Errorf("boss debería tener HP boosteado (~960), tiene %d", boss.hpMax)
+	// Deadmines boss lvl 23: HP = (40 + 23*15) * 3 = 1155.
+	hpEsperado := (40+boss.nivel*15) * MultiplicadorBossHP
+	if boss.hpMax != hpEsperado {
+		t.Errorf("boss HP=%d, esperaba %d (×3)", boss.hpMax, hpEsperado)
 	}
 	t.Logf("boss %s (HP %d, danoBase %d) + %d mobs en la instancia", boss.nombre, boss.hpMax, boss.danoBase, mobCount)
 }

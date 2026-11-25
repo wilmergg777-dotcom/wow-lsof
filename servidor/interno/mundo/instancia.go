@@ -168,9 +168,10 @@ func (in *Instancia) poblarMobs(m *Mundo) {
 		e.id = "inst_" + in.id + "_mob_" + itoaSimple(i+1)
 		e.instanciaID = in.id
 		if sm.EsBoss {
-			// Boss: más HP y marca para condición de victoria.
+			// Boss: más HP y marca para condición de victoria + loot mejorado.
 			e.hpMax = e.hpMax * MultiplicadorBossHP
 			e.hpActual = e.hpMax
+			e.esBoss = true
 			in.bossID = e.id
 		}
 		m.entidades[e.id] = e
@@ -295,10 +296,14 @@ func (in *Instancia) contarVivosPorEquipo() (int, int) {
 // ─── Finalización ────────────────────────────────────────────────────────
 
 // finalizar termina la instancia dando el mismo resultado a todos los
-// jugadores (caso masmora: victoria o derrota colectiva).
+// jugadores (caso masmora: victoria o derrota colectiva). En victoria de
+// masmora otorga una recompensa de completar (XP + oro) a cada miembro.
 func (in *Instancia) finalizar(m *Mundo, resultado, razon string) {
 	in.estado = InstanciaFinalizada
 	in.razonFin = razon
+	if in.tipo == InstanciaMasmora && resultado == ResultadoVictoria {
+		in.otorgarRecompensaCompletar(m)
+	}
 	for _, j := range in.jugadores {
 		j.enviarNoBloqueante(proto.MensajeServidor{
 			Tipo:        "instancia_fin",
@@ -309,6 +314,22 @@ func (in *Instancia) finalizar(m *Mundo, resultado, razon string) {
 	}
 	in.devolverJugadoresAlMundo(m)
 	in.limpiarEntidades(m)
+}
+
+// otorgarRecompensaCompletar da a cada jugador de la masmora un bonus de XP
+// + oro por derrotar al boss. XP = nivelBoss*40, oro = nivelBoss*15. Llamado
+// desde finalizar (m.mu Lock).
+func (in *Instancia) otorgarRecompensaCompletar(m *Mundo) {
+	nivelBoss := nivelBossMasmora(*in.defMasmora)
+	if nivelBoss == 0 {
+		nivelBoss = in.defMasmora.NivelMax
+	}
+	xpBonus := nivelBoss * 40
+	oroBonus := nivelBoss * 15
+	for _, j := range in.jugadores {
+		j.ganarXP(xpBonus, m)
+		j.oro += oroBonus
+	}
 }
 
 // finalizarEquipos termina una arena declarando ganador al equipoGanador.

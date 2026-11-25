@@ -392,79 +392,19 @@ type DefSpawnMob struct {
 type DefMasmora struct {
 	ID          string        `json:"id"`
 	Nombre      string        `json:"nombre"`
-	NivelMin    int           `json:"nivel_min"`
-	TamanoGrupo int           `json:"tamano_grupo"`
+	NivelMin    int           `json:"nivel_min"`     // nivel mínimo para entrar (desbloqueo)
+	NivelMax    int           `json:"nivel_max"`     // nivel máximo recomendado (rango de leveo)
+	TamanoGrupo int           `json:"tamano_grupo"`  // 5 (estándar) o 10 (Cumbre de Roca Negra Superior)
 	PosSpawn    proto.Vec3    `json:"pos_spawn"`
 	Mobs        []DefSpawnMob `json:"mobs"`
 	BossID      string        `json:"boss_id"`
 }
 
-// masmorasPredefinidas devuelve las masmoras disponibles, adaptadas de
-// world-of-claudecraft (hollow_crypt, sunken_bastion, gravewyrm_sanctum,
-// drowned_temple, wildheart_basin). Niveles y bosses siguen los de wocc.
+// masmorasPredefinidas devuelve el catálogo completo de masmorras
+// (Classic, TBC y WotLK) con desbloqueo progresivo por nivel. El
+// catálogo se define en masmorras_catalogo.go.
 func masmorasPredefinidas() map[string]DefMasmora {
-	return map[string]DefMasmora{
-		// 1. La Cripta Hueca (hollow_crypt) — lvl 7-10
-		"hollow_crypt": {
-			ID: "hollow_crypt", Nombre: "La Cripta Hueca",
-			NivelMin: 5, TamanoGrupo: 3,
-			PosSpawn: proto.Vec3{X: 1000, Y: 0, Z: 0},
-			Mobs: []DefSpawnMob{
-				{Nombre: "Arrastrador de Cripta", Tipo: "undead", Nivel: 7, Pos: proto.Vec3{X: 1005, Y: 0, Z: 6}, HPBase: 30, HPPorNivel: 10, DanoBase: 4},
-				{Nombre: "Acólito Hueco", Tipo: "humanoid", Nivel: 7, Pos: proto.Vec3{X: 1005, Y: 0, Z: -6}, HPBase: 30, HPPorNivel: 10, DanoBase: 4},
-				{Nombre: "Viuda Huésped", Tipo: "beast", Nivel: 8, Pos: proto.Vec3{X: 1012, Y: 0, Z: 0}, HPBase: 35, HPPorNivel: 11, DanoBase: 5},
-				{Nombre: "Morthen el Convocador de Tumbas", Tipo: "undead", Nivel: 10, Pos: proto.Vec3{X: 1025, Y: 0, Z: 0}, EsBoss: true, HPBase: 100, HPPorNivel: 22, DanoBase: 9},
-			},
-		},
-		// 2. El Bastión Hundido (sunken_bastion) — lvl 12-13
-		"sunken_bastion": {
-			ID: "sunken_bastion", Nombre: "El Bastión Hundido",
-			NivelMin: 10, TamanoGrupo: 3,
-			PosSpawn: proto.Vec3{X: 2000, Y: 0, Z: 0},
-			Mobs: []DefSpawnMob{
-				{Nombre: "Revenante del Bastión", Tipo: "undead", Nivel: 12, Pos: proto.Vec3{X: 2005, Y: 0, Z: 8}, HPBase: 45, HPPorNivel: 13, DanoBase: 6},
-				{Nombre: "Acólito Atado al Mar", Tipo: "humanoid", Nivel: 12, Pos: proto.Vec3{X: 2005, Y: 0, Z: -8}, HPBase: 45, HPPorNivel: 13, DanoBase: 6},
-				{Nombre: "Thrall Anegado", Tipo: "undead", Nivel: 13, Pos: proto.Vec3{X: 2015, Y: 0, Z: 0}, HPBase: 50, HPPorNivel: 14, DanoBase: 7},
-				{Nombre: "Vael el Llamador de Niebla", Tipo: "humanoid", Nivel: 13, Pos: proto.Vec3{X: 2030, Y: 0, Z: 0}, EsBoss: true, HPBase: 110, HPPorNivel: 24, DanoBase: 10},
-			},
-		},
-		// 3. El Templo Anegado (drowned_temple) — lvl 14
-		"drowned_temple": {
-			ID: "drowned_temple", Nombre: "El Templo Anegado",
-			NivelMin: 12, TamanoGrupo: 3,
-			PosSpawn: proto.Vec3{X: 3000, Y: 0, Z: 0},
-			Mobs: []DefSpawnMob{
-				{Nombre: "Mordedor de Laguna", Tipo: "beast", Nivel: 14, Pos: proto.Vec3{X: 3005, Y: 0, Z: 8}, HPBase: 55, HPPorNivel: 15, DanoBase: 7},
-				{Nombre: "Espectro de Hielo", Tipo: "elemental", Nivel: 14, Pos: proto.Vec3{X: 3005, Y: 0, Z: -8}, HPBase: 50, HPPorNivel: 14, DanoBase: 8},
-				{Nombre: "Sirena Lunar", Tipo: "humanoid", Nivel: 14, Pos: proto.Vec3{X: 3015, Y: 0, Z: 0}, HPBase: 55, HPPorNivel: 15, DanoBase: 7},
-				{Nombre: "Madre del Coro Selthe", Tipo: "humanoid", Nivel: 15, Pos: proto.Vec3{X: 3030, Y: 0, Z: 0}, EsBoss: true, HPBase: 120, HPPorNivel: 26, DanoBase: 11},
-			},
-		},
-		// 4. Cuenca Corazón Salvaje (wildheart_basin) — lvl 16-18
-		"wildheart_basin": {
-			ID: "wildheart_basin", Nombre: "Cuenca Corazón Salvaje",
-			NivelMin: 14, TamanoGrupo: 3,
-			PosSpawn: proto.Vec3{X: 4000, Y: 0, Z: 0},
-			Mobs: []DefSpawnMob{
-				{Nombre: "Acechador Zarpa Vidriosa", Tipo: "beast", Nivel: 16, Pos: proto.Vec3{X: 4005, Y: 0, Z: 8}, HPBase: 60, HPPorNivel: 16, DanoBase: 8},
-				{Nombre: "Despedazador Corazón Salvaje", Tipo: "beast", Nivel: 16, Pos: proto.Vec3{X: 4005, Y: 0, Z: -8}, HPBase: 60, HPPorNivel: 16, DanoBase: 8},
-				{Nombre: "Brujo Corazón Salvaje", Tipo: "humanoid", Nivel: 17, Pos: proto.Vec3{X: 4015, Y: 0, Z: 0}, HPBase: 55, HPPorNivel: 16, DanoBase: 9},
-				{Nombre: "Bestiarca Corazón Salvaje", Tipo: "humanoid", Nivel: 18, Pos: proto.Vec3{X: 4030, Y: 0, Z: 0}, EsBoss: true, HPBase: 130, HPPorNivel: 28, DanoBase: 12},
-			},
-		},
-		// 5. Santuario Gusanoso (gravewyrm_sanctum) — lvl 18-20
-		"gravewyrm_sanctum": {
-			ID: "gravewyrm_sanctum", Nombre: "Santuario Gusanoso",
-			NivelMin: 16, TamanoGrupo: 3,
-			PosSpawn: proto.Vec3{X: 5000, Y: 0, Z: 0},
-			Mobs: []DefSpawnMob{
-				{Nombre: "Guardia de Hueso del Santuario", Tipo: "undead", Nivel: 18, Pos: proto.Vec3{X: 5005, Y: 0, Z: 8}, HPBase: 70, HPPorNivel: 18, DanoBase: 9},
-				{Nombre: "Dracónido del Santuario", Tipo: "dragonkin", Nivel: 18, Pos: proto.Vec3{X: 5005, Y: 0, Z: -8}, HPBase: 70, HPPorNivel: 18, DanoBase: 9},
-				{Nombre: "Guardia de Hueso del Santuario", Tipo: "undead", Nivel: 19, Pos: proto.Vec3{X: 5015, Y: 0, Z: 0}, HPBase: 75, HPPorNivel: 19, DanoBase: 10},
-				{Nombre: "Korzul el Gusanoso", Tipo: "dragonkin", Nivel: 20, Pos: proto.Vec3{X: 5030, Y: 0, Z: 0}, EsBoss: true, HPBase: 150, HPPorNivel: 30, DanoBase: 13},
-			},
-		},
-	}
+	return catalogoMasmorras()
 }
 
 // ─── Arenas PvP ──────────────────────────────────────────────────────────

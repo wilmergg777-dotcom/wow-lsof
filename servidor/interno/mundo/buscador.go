@@ -19,6 +19,7 @@
 package mundo
 
 import (
+	"sort"
 	"time"
 
 	"aethelgard/servidor/interno/proto"
@@ -97,6 +98,22 @@ func (b *Buscador) EntrarColaPvE(j *Jugador, masmoraID string) error {
 	}
 	b.enviarEstadoColaPvE(j, masmoraID)
 	return nil
+}
+
+// MasmorrasDisponibles devuelve las masmorras desbloqueadas para un nivel
+// dado (NivelMin <= nivel), ordenadas por NivelMin. Es la vista de
+// "desbloqueo progresivo": a medida que el jugador sube de nivel, más
+// masmorras aparecen en la lista. No requiere lock (lee el catálogo, que es
+// inmutable tras el arranque).
+func (b *Buscador) MasmorrasDisponibles(nivel int) []DefMasmora {
+	out := make([]DefMasmora, 0, len(b.m.masmoras))
+	for _, def := range b.m.masmoras {
+		if def.NivelMin <= nivel {
+			out = append(out, def)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].NivelMin < out[j].NivelMin })
+	return out
 }
 
 // SalirColaPvE saca a un jugador de la cola PvE (si estaba).

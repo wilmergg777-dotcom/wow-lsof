@@ -6,6 +6,8 @@ package mundo
 
 import (
 	"testing"
+
+	"aethelgard/servidor/interno/proto"
 )
 
 // TestCatalogoEquipo valida los ítems equipables del catálogo.
@@ -206,8 +208,9 @@ func TestLootMateriales(t *testing.T) {
 	j := crearJugadorTest(t, m, "Peller", "cazador", FaccionAlianza, "humano")
 	// Simular 100 muertes de lobo (prob. 0.5 de cuero_ligero c/u).
 	m.mu.Lock()
+	loboFake := nuevoEnemigo("lobo test", "lobo", 2, proto.Vec3{})
 	for i := 0; i < 100; i++ {
-		m.otorgarLootMuerte(j.id, 2, "lobo")
+		m.otorgarLootMuerte(j.id, loboFake)
 	}
 	m.mu.Unlock()
 	if j.CantidadItem("cuero_ligero") <= 0 {

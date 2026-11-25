@@ -42,6 +42,7 @@ type Enemigo struct {
 	ultimoAtaqueMs int64
 	muertoDesdeMs int64
 	enCombate     bool
+	esBoss        bool // mob es el boss de una masmora (mejor loot + condición de victoria)
 	direccionPatrulla proto.Vec3 // dirección actual de patrulla
 	ultimoCambioDirMs int64
 }
@@ -108,7 +109,9 @@ func nuevoEnemigoMasmora(sm DefSpawnMob) *Enemigo {
 func (e *Enemigo) actualizar(m *Mundo, t time.Time) {
 	ahora := t.UnixMilli()
 	if !e.EstaVivo() {
-		if (ahora - e.muertoDesdeMs) >= RespawnEnemigoMs {
+		// Los mobs de instancia (masmorra) NO respawnean: se limpian al
+		// finalizar la instancia. Solo el mundo abierto respawnea.
+		if e.instanciaID == "" && (ahora-e.muertoDesdeMs) >= RespawnEnemigoMs {
 			e.respawn()
 		}
 		return
@@ -313,7 +316,7 @@ func (e *Enemigo) morir(m *Mundo, ahora int64) {
 	// locks porque step ya tiene m.mu.Lock.
 	if e.ultimoAtacanteID != "" {
 		m.otorgarXPMuerte(e.ultimoAtacanteID, e.nivel, e.clase)
-		m.otorgarLootMuerte(e.ultimoAtacanteID, e.nivel, e.clase)
+		m.otorgarLootMuerte(e.ultimoAtacanteID, e)
 		e.ultimoAtacanteID = ""
 	}
 }

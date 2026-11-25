@@ -336,6 +336,53 @@ de capital venden equipo básico lvl 1 (tela) además de comida/pergaminos.
 **Persistencia**: `Personaje.Equipado []EquipSlot` (slot+itemID) guarda el
 equipo equipado; al cargar se reconstruye `equipado` y se recalculan stats.
 
+### Mazmorras con desbloqueo progresivo
+
+El catálogo de mazmorras cubre las tres expansiones de WoW 3.3.5 con
+**desbloqueo progresivo por nivel**: cada masmora se abre al alcanzar su
+`NivelMin` y abarca un rango de leveo `[NivelMin, NivelMax]`.
+
+**Catálogo** (`masmorras_catalogo.go`): **47 mazmorras** generadas desde una
+tabla compacta (`catalogoSpecs`), cada una con 3 trash + 1 boss temático:
+- **Classic (Azeroth, 13-60)**: Sima Ígnea, Cuevas de los Lamentos, Las Minas
+  de la Muerte, Castillo de Colmillo Oscuro, Cavernas de Brazanegra, Las
+  Mazmorras, Horado/Zahurda Rajacieno, Gnomeregan, Monasterio Escarlata,
+  Uldaman, Zul'Farrak, Maraudon, Templo de Atal'Hakkar, Profundidades/Cumbre
+  de Roca Negra (inferior y superior, 10-man), La Masacre, Stratholme,
+  Scholomance.
+- **TBC (Terralliende, 60-70)**: Murallas del Fuego Infernal, Forja de
+  Sangre, Recinto de los Esclavos, La Sotiénaga, Tumbas de Maná, Fuga de
+  Durnholde, Salas Sethekk, El Invernadero/Mechanar/Arcatraz, Laberinto de
+  las Sombras, Cámara de Vapor, Apertura del Portal Oscuro, Salas Arrasadas,
+  Bancal del Magister.
+- **WotLK (Rasganorte, 70-80)**: Fortaleza/Cumbre de Utgarde, El Nexo,
+  Azjol-Nerub, El Antiguo Reino, Fortaleza de Drak'Tharon, El Bastión
+  Violeta, Gundrak, Salas de Piedra, El Oculus, Salas de Relámpagos, El
+  Exterminio de Stratholme.
+
+`TamanoGrupo` es 5 (estándar) o 10 (Cumbre de Roca Negra Superior). Las
+coordenadas viven en un plano aislado `X >= 10000` (`OffsetXPlanoMasmorras`),
+separado del mundo abierto (`|X| < 6000`) y de las arenas (`X = 9000`).
+
+**Desbloqueo**: `Buscador.MasmorrasDisponibles(nivel)` devuelve las
+mazmorras con `NivelMin <= nivel`, ordenadas por nivel. La lista crece
+monótonamente: a lvl 1 no hay ninguna (la mínima es Sima Ígnea, lvl 13), a
+lvl 80 están las 47. `EntrarColaPvE` valida `j.nivel >= NivelMin` (gate de
+desbloqueo).
+
+**Bosses y loot**: `Enemigo.esBoss` marca al boss. `otorgarLootMuerte` da a
+los bosses loot **muy mejorado**: oro ×5, materiales garantizados (2-3) y
+**drop de equipo garantizado** (vs. 3% de los trash). Familia "dragon"
+añadida a las tablas de loot (escamas).
+
+**Recompensa de completar**: al morir el boss, `Instancia.tick` finaliza con
+`ResultadoVictoria` y `otorgarRecompensaCompletar` da a cada miembro del
+grupo XP (`nivelBoss*40`) + oro (`nivelBoss*15`) como bonus de completar.
+
+**No-respawn en instancias**: `Enemigo.actualizar` solo respawnea mobs del
+mundo abierto (`instanciaID == ""`); los de masmora se limpian al finalizar
+(la masmora se "limpia una vez", no es un farm infinito).
+
 ### Profesiones, inventario y crafteo
 
 El sistema de profesiones permite craftear ítems consumiendo materiales y
