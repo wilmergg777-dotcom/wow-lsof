@@ -55,7 +55,7 @@ jobs:
           SHA=$(sha256sum out/AstroIO.apk | cut -d' ' -f1)
           CODE=$(grep -oE 'versionCode[[:space:]]+[0-9]+' apk/android/app/build.gradle | grep -oE '[0-9]+' | head -1)
           VER=$(grep -oE 'versionName[[:space:]]+"[^"]+"' apk/android/app/build.gradle | sed 's/.*"\(.*\)"/\1/')
-          cp launcher/AstroIO-Launcher-windows.exe launcher/AstroIO-Launcher-linux launcher/AstroIO-Setup-Windows.exe out/launcher/
+          cp launcher/AstroIO-Launcher-windows.exe launcher/AstroIO-Launcher-linux launcher/AstroIO-Setup-Windows.exe launcher/instalar-linux.sh out/launcher/
           SHA_W=$(sha256sum out/launcher/AstroIO-Launcher-windows.exe | cut -d' ' -f1)
           SHA_L=$(sha256sum out/launcher/AstroIO-Launcher-linux | cut -d' ' -f1)
           SHA_S=$(sha256sum out/launcher/AstroIO-Setup-Windows.exe | cut -d' ' -f1)
@@ -111,6 +111,7 @@ jobs:
             1) Descarga AstroIO.apk, version.json y la carpeta launcher/ de este Release.
             2) Sube AstroIO.apk y version.json por FTP a /apk/
             3) Sube los launchers y AstroIO-Setup-Windows.exe por FTP a /launcher/
+            (Para Linux: descargar tambien instalar-linux.sh y ejecutar "bash instalar-linux.sh")
             (instrucciones completas en apk/server/LEEME-SERVIDOR.txt)
           files: |
             out/AstroIO.apk
@@ -118,3 +119,4 @@ jobs:
             out/launcher/AstroIO-Launcher-windows.exe
             out/launcher/AstroIO-Launcher-linux
             out/launcher/AstroIO-Setup-Windows.exe
+            out/launcher/instalar-linux.sh

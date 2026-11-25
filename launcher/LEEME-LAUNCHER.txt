@@ -1,5 +1,5 @@
 ════════════════════════════════════════════════════════════════
- ASTROIO LAUNCHER — PC Windows y Linux (v4, build 4 / versión 2.4.7)
+ ASTROIO LAUNCHER — PC Windows y Linux (v5, build 5 / versión 2.4.8)
 ════════════════════════════════════════════════════════════════
 
 QUÉ ES
@@ -47,6 +47,8 @@ ARCHIVOS
    go.mod                   → módulo Go (sin dependencias externas)
    build.sh                 → compila launcher Windows/Linux + Setup
                               y muestra los SHA-256 para version.json
+   assets/astroio.ico       → icono del juego que se incrusta en
+                              los exes de Windows (vía rsrc)
    setup/                   → código del instalador Windows en Go
                               (embebe el launcher con go:embed)
    AstroIO-Setup-Windows.exe→ instalador de Windows (lo genera
@@ -69,14 +71,18 @@ WINDOWS (sin instalar):
    También puede descargarse AstroIO-Launcher-windows.exe y
    ejecutarlo directamente donde quiera.
 LINUX:
-   1) Descarga AstroIO-Launcher-linux
-   2) Opción fácil:  bash instalar-linux.sh  → queda instalado
-      como app "AstroIO" en el menú.
-      Opción directa: dar permiso de ejecución y abrirlo:
-         chmod +x AstroIO-Launcher-linux
-         ./AstroIO-Launcher-linux
-   3) Requiere algún navegador (Chromium/Chrome/Brave/Edge para
-      la ventana en modo app; con Firefox abre en ventana normal).
+   1) Del Release de GitHub descarga LOS 2 archivos y guárdalos en
+      la MISMA carpeta (ej. Descargas):
+         AstroIO-Launcher-linux   y   instalar-linux.sh
+   2) Abre una terminal EN ESA CARPETA y ejecuta:
+         bash instalar-linux.sh
+      (no necesita permisos de administrador: instala por usuario)
+   3) Listo: abre "AstroIO" desde el menú de aplicaciones del
+      sistema, o con:  ~/.local/bin/AstroIO-Launcher
+      El launcher se auto-actualiza solo al abrirse.
+   Nota: no intentes dar doble clic al binario descargado: siempre
+   pasa por instalar-linux.sh, que es el que crea el icono y la
+   entrada del menú.
 
 CÓMO PUBLICAR UNA VERSIÓN NUEVA (para el administrador)
 -------------------------------------------------------
