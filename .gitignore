@@ -1,0 +1,13 @@
+# Violetero PHP — archivos que nunca se suben al repositorio
+# La configuración real va aparte (usa includes/config.dist.php como plantilla)
+includes/config.php
+
+# Base de datos SQLite solo local (en el VPS se usa MySQL)
+db/*.sqlite
+db/*.sqlite-*
+
+# Fotos subidas por los usuarios (cada servidor tiene las suyas)
+uploads/products/*
+uploads/stores/*
+!uploads/products/.gitkeep
+!uploads/stores/.gitkeep
