@@ -255,7 +255,7 @@ func sqrtF(x float64) float64 {
 func clasesPredefinidas() map[string]DefClase {
 	return map[string]DefClase{
 		"guerrero": {
-			ID: "guerrero", Nombre: "Guerrero", Rol: RolTanque,
+			ID: "guerrero", Nombre: "Guerrero", Rol: RolTanque, StatPrincipal: StatFuerza,
 			HPBase: 120, HPPorNivel: 18, EnergiaBase: 100, EnergiaPorNivel: 0,
 			TipoEnergia: "ira", RegenEnergia: 0,
 			DañoAutoAtaque: 8, IntervaloAutoAtaqueMs: 2000, RangoCuerpoACuerpo: 2.0,
@@ -265,7 +265,7 @@ func clasesPredefinidas() map[string]DefClase {
 			},
 		},
 		"paladin": {
-			ID: "paladin", Nombre: "Paladín", Rol: RolTanque,
+			ID: "paladin", Nombre: "Paladín", Rol: RolTanque, StatPrincipal: StatFuerza,
 			HPBase: 115, HPPorNivel: 17, EnergiaBase: 100, EnergiaPorNivel: 5,
 			TipoEnergia: "mana", RegenEnergia: 5,
 			DañoAutoAtaque: 7, IntervaloAutoAtaqueMs: 2000, RangoCuerpoACuerpo: 2.0,
@@ -275,7 +275,7 @@ func clasesPredefinidas() map[string]DefClase {
 			},
 		},
 		"cazador": {
-			ID: "cazador", Nombre: "Cazador", Rol: RolDPS,
+			ID: "cazador", Nombre: "Cazador", Rol: RolDPS, StatPrincipal: StatAgilidad,
 			HPBase: 85, HPPorNivel: 12, EnergiaBase: 100, EnergiaPorNivel: 5,
 			TipoEnergia: "mana", RegenEnergia: 5,
 			DañoAutoAtaque: 6, IntervaloAutoAtaqueMs: 2000, RangoCuerpoACuerpo: 5.0,
@@ -285,7 +285,7 @@ func clasesPredefinidas() map[string]DefClase {
 			},
 		},
 		"picaro": {
-			ID: "picaro", Nombre: "Pícaro", Rol: RolDPS,
+			ID: "picaro", Nombre: "Pícaro", Rol: RolDPS, StatPrincipal: StatAgilidad,
 			HPBase: 90, HPPorNivel: 13, EnergiaBase: 100, EnergiaPorNivel: 0,
 			TipoEnergia: "energia", RegenEnergia: 20,
 			DañoAutoAtaque: 7, IntervaloAutoAtaqueMs: 1800, RangoCuerpoACuerpo: 2.0,
@@ -295,7 +295,7 @@ func clasesPredefinidas() map[string]DefClase {
 			},
 		},
 		"mago": {
-			ID: "mago", Nombre: "Mago", Rol: RolDPS,
+			ID: "mago", Nombre: "Mago", Rol: RolDPS, StatPrincipal: StatIntelecto,
 			HPBase: 70, HPPorNivel: 10, EnergiaBase: 100, EnergiaPorNivel: 5,
 			TipoEnergia: "mana", RegenEnergia: 5,
 			DañoAutoAtaque: 4, IntervaloAutoAtaqueMs: 2000, RangoCuerpoACuerpo: 1.5,
@@ -305,7 +305,7 @@ func clasesPredefinidas() map[string]DefClase {
 			},
 		},
 		"brujo": {
-			ID: "brujo", Nombre: "Brujo", Rol: RolDPS,
+			ID: "brujo", Nombre: "Brujo", Rol: RolDPS, StatPrincipal: StatIntelecto,
 			HPBase: 75, HPPorNivel: 11, EnergiaBase: 100, EnergiaPorNivel: 5,
 			TipoEnergia: "mana", RegenEnergia: 5,
 			DañoAutoAtaque: 4, IntervaloAutoAtaqueMs: 2000, RangoCuerpoACuerpo: 1.5,
@@ -315,7 +315,7 @@ func clasesPredefinidas() map[string]DefClase {
 			},
 		},
 		"sacerdote": {
-			ID: "sacerdote", Nombre: "Sacerdote", Rol: RolSoporte,
+			ID: "sacerdote", Nombre: "Sacerdote", Rol: RolSoporte, StatPrincipal: StatIntelecto,
 			HPBase: 80, HPPorNivel: 12, EnergiaBase: 100, EnergiaPorNivel: 5,
 			TipoEnergia: "mana", RegenEnergia: 5,
 			DañoAutoAtaque: 3, IntervaloAutoAtaqueMs: 2000, RangoCuerpoACuerpo: 1.5,
@@ -328,7 +328,7 @@ func clasesPredefinidas() map[string]DefClase {
 		// cuerpo a cuerpo (Mejora); aquí rol soporte por su capacidad de
 		// sanación. Disponible para draenei, orco, tauren y troll.
 		"chaman": {
-			ID: "chaman", Nombre: "Chamán", Rol: RolSoporte,
+			ID: "chaman", Nombre: "Chamán", Rol: RolSoporte, StatPrincipal: StatIntelecto,
 			HPBase: 90, HPPorNivel: 13, EnergiaBase: 100, EnergiaPorNivel: 5,
 			TipoEnergia: "mana", RegenEnergia: 5,
 			DañoAutoAtaque: 6, IntervaloAutoAtaqueMs: 2000, RangoCuerpoACuerpo: 2.0,
@@ -341,7 +341,7 @@ func clasesPredefinidas() map[string]DefClase {
 		// DPS Feral/Equilibrio). Aquí rol soporte por su sanación. Disponible
 		// para elfo de la noche, tauren y troll.
 		"druida": {
-			ID: "druida", Nombre: "Druida", Rol: RolSoporte,
+			ID: "druida", Nombre: "Druida", Rol: RolSoporte, StatPrincipal: StatIntelecto,
 			HPBase: 85, HPPorNivel: 12, EnergiaBase: 100, EnergiaPorNivel: 5,
 			TipoEnergia: "mana", RegenEnergia: 5,
 			DañoAutoAtaque: 6, IntervaloAutoAtaqueMs: 2000, RangoCuerpoACuerpo: 2.0,
@@ -355,7 +355,7 @@ func clasesPredefinidas() map[string]DefClase {
 		// "ira" en este modelo). Empieza a nivel 55 en WoW real (no modelado
 		// aquí: se crea a nivel 1 como el resto).
 		"caballero_muerte": {
-			ID: "caballero_muerte", Nombre: "Caballero de la Muerte", Rol: RolTanque,
+			ID: "caballero_muerte", Nombre: "Caballero de la Muerte", Rol: RolTanque, StatPrincipal: StatFuerza,
 			HPBase: 130, HPPorNivel: 19, EnergiaBase: 100, EnergiaPorNivel: 0,
 			TipoEnergia: "ira", RegenEnergia: 0,
 			DañoAutoAtaque: 9, IntervaloAutoAtaqueMs: 2000, RangoCuerpoACuerpo: 2.5,

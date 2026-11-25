@@ -106,6 +106,7 @@ type DefClase struct {
 	EnergiaPorNivel int           `json:"energia_por_nivel"`
 	TipoEnergia     string        `json:"tipo_energia"` // "ira" | "mana" | "energia"
 	RegenEnergia    int           `json:"regen_energia"` // % por segundo
+	StatPrincipal   string        `json:"stat_principal"` // StatFuerza|StatAgilidad|StatIntelecto: escala el daño
 	Habilidades     []DefHabilidad `json:"habilidades"`
 	DañoAutoAtaque  int           `json:"dano_auto_ataque"`
 	IntervaloAutoAtaqueMs int     `json:"intervalo_auto_ataque_ms"`

@@ -110,25 +110,17 @@ func (j *Jugador) ganarXP(cantidad int, m *Mundo) {
 	}
 }
 
-// subirNivel incrementa el nivel (hasta NivelMax) y recalcula HP/energía
-// máximos con la fórmula de la clase más el racial pasivo, curando al
-// completo. El código base no recalculaba stats al subir; este lo añade.
+// subirNivel incrementa el nivel (hasta NivelMax), recalcula HP/energía
+// máximos (fórmula de clase + racial + bonus de aguante del equipo) y cura
+// al completo. El código base no recalculaba stats al subir; este lo añade.
 func (j *Jugador) subirNivel(m *Mundo) {
 	if j.nivel >= NivelMax {
 		return
 	}
 	j.nivel++
-	def := j.claseDef
-	hpMax := def.HPBase + def.HPPorNivel*(j.nivel-1)
-	energiaMax := def.EnergiaBase + def.EnergiaPorNivel*(j.nivel-1)
-	if razaDef, ok := m.razas[j.raza]; ok {
-		hpMax = int(float64(hpMax) * (1 + razaDef.ModHP))
-		energiaMax = int(float64(energiaMax) * (1 + razaDef.ModMana))
-	}
-	j.hpMax = hpMax
-	j.energiaMax = energiaMax
-	j.hpActual = hpMax
-	j.energiaActual = energiaMax
+	j.recalcularStatsMaximos(m)
+	j.hpActual = j.hpMax
+	j.energiaActual = j.energiaMax
 }
 
 // XP devuelve la experiencia actual del jugador.

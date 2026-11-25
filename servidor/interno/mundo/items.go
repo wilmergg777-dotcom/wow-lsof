@@ -44,9 +44,37 @@ const (
 
 // Calidades.
 const (
-	CalidadComun = "comun"
-	CalidadRaro  = "raro"
-	CalidadEpico = "epico"
+	CalidadPocoComun = "poco_comun"
+	CalidadRaro      = "raro"
+	CalidadEpico     = "epico"
+	CalidadLegendario = "legendario"
+	CalidadComun     = "comun"
+)
+
+// ─── Ranuras de equipamiento ─────────────────────────────────────────────
+const (
+	SlotCabeza    = "cabeza"
+	SlotHombros   = "hombros"
+	SlotPecho     = "pecho"
+	SlotMuñecas   = "muñecas"
+	SlotManos     = "manos"
+	SlotCintura   = "cintura"
+	SlotPiernas   = "piernas"
+	SlotPies      = "pies"
+	SlotCapa      = "capa"
+	SlotCuello    = "cuello"
+	SlotDedo      = "dedo"
+	SlotArma      = "arma"
+	SlotArmaSecun = "arma_secundaria" // escudo / off-hand
+)
+
+// StatsPrimarios son los atributos que un ítem equipable puede bonusar.
+const (
+	StatFuerza    = "fuerza"
+	StatAgilidad  = "agilidad"
+	StatIntelecto = "intelecto"
+	StatEspiritu  = "espiritu"
+	StatAguante   = "aguante"
 )
 
 // DefItem define un ítem del juego.
@@ -57,6 +85,19 @@ type DefItem struct {
 	Calidad string `json:"calidad"`
 	Stack   int    `json:"stack"` // tamaño máximo de pila
 	Icono   string `json:"icono"`
+
+	// Equipo (solo ítems equipables; el resto deja estos campos a cero).
+	Equipable bool   `json:"equipable,omitempty"`
+	Slot      string `json:"slot,omitempty"`       // ranura (SlotCabeza, ...)
+	NivelReq  int    `json:"nivel_req,omitempty"`  // nivel mínimo para equipar
+	Precio    int    `json:"precio,omitempty"`     // valor de venta/compra en cobre
+	// Bloque de stats bonus al equipar.
+	Fuerza    int    `json:"fuerza,omitempty"`
+	Agilidad  int    `json:"agilidad,omitempty"`
+	Intelecto int    `json:"intelecto,omitempty"`
+	Espiritu  int    `json:"espiritu,omitempty"`
+	Aguante   int    `json:"aguante,omitempty"`
+	Armadura  int    `json:"armadura,omitempty"`
 }
 
 // itemsPredefinidos devuelve el registro de todos los ítems del juego.
@@ -911,6 +952,10 @@ func itemsPredefinidos() map[string]DefItem {
 		"muñeco_diana_avanzado": "Muñeco-diana avanzado",
 	} {
 		m[id] = def(id, n, TipoMaterial, CalidadRaro)
+	}
+	// Mezclar los ítems equipables (armas/armadura con stats por ranura).
+	for k, v := range itemsEquipoPredefinidos() {
+		m[k] = v
 	}
 	return m
 }

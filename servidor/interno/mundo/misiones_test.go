@@ -5,6 +5,7 @@
 package mundo
 
 import (
+	"sort"
 	"testing"
 
 	"aethelgard/servidor/interno/proto"
@@ -23,17 +24,52 @@ func matarMobTest(t *testing.T, m *Mundo, mobID, jugadorID string) {
 	e.recibirDaño(jugadorID, e.hpActual, false, m, 0)
 }
 
-// mobDeFamiliaZona encuentra el ID del primer mob del open world con la
-// familia dada (en cualquier zona).
+// mobDeFamiliaZona encuentra el ID del primer mob VIVO del open world con
+// la familia dada, recorriendo los IDs en orden determinista (ordenado) para
+// evitar la aleatoriedad del map de Go. Excluye instancias.
 func mobDeFamiliaZona(t *testing.T, m *Mundo, familia string) string {
 	t.Helper()
-	for id, e := range m.enemigos {
-		if e.instanciaID == "" && e.clase == familia {
-			return id
-		}
+	return mobDeFamiliaFiltro(t, m, familia, 0, false)
+}
+
+// mobDeFamiliaNivelMax encuentra el primer mob vivo de la familia con
+// nivel <= nivelMax (útil para tests de XP que necesitan un mob concreto,
+// p. ej. gris o de bajo nivel). nivelMax 0 = sin filtro.
+func mobDeFamiliaNivelMax(t *testing.T, m *Mundo, familia string, nivelMax int) string {
+	t.Helper()
+	return mobDeFamiliaFiltro(t, m, familia, nivelMax, true)
+}
+
+func mobDeFamiliaFiltro(t *testing.T, m *Mundo, familia string, nivelMax int, filtrarNivel bool) string {
+	t.Helper()
+	ids := make([]string, 0, len(m.enemigos))
+	for id := range m.enemigos {
+		ids = append(ids, id)
 	}
-	t.Fatalf("no hay mob de familia %q en el open world", familia)
+	sort.Strings(ids)
+	for _, id := range ids {
+		e := m.enemigos[id]
+		if e.instanciaID != "" || e.clase != familia || !e.EstaVivo() {
+			continue
+		}
+		if filtrarNivel && e.nivel > nivelMax {
+			continue
+		}
+		return id
+	}
+	t.Fatalf("no hay mob vivo de familia %q (nivelMax=%d filtrar=%v) en el open world", familia, nivelMax, filtrarNivel)
 	return ""
+}
+
+// xpTotalJugador devuelve el XP total acumulado por el jugador contando los
+// umbrales de los niveles ya cruzados: sum(xpParaNivel(n) para n=1..nivel-1)
+// + xp actual. Robusto a subidas de nivel para aserciones de recompensas.
+func xpTotalJugador(j *Jugador) int {
+	total := 0
+	for n := 1; n < j.nivel; n++ {
+		total += xpParaNivel(n)
+	}
+	return total + j.XP()
 }
 
 // TestCurvaXP valida la curva de XP y la regla de mob gris.
@@ -99,7 +135,7 @@ func TestKillOtorgaXP(t *testing.T) {
 	m := nuevoMundoTest(t)
 	j := crearJugadorTest(t, m, "Cazador", "cazador", FaccionAlianza, "humano")
 	xpIni := j.XP()
-	mobID := mobDeFamiliaZona(t, m, "lobo")
+	mobID := mobDeFamiliaNivelMax(t, m, "lobo", 5) // lobo bajo (lvl 2-3): XP < 50, sin subida de nivel
 	mobNivel := m.enemigos[mobID].nivel
 	esperado := xpPorMob(mobNivel, j.nivel)
 	matarMobTest(t, m, mobID, j.id)
@@ -119,8 +155,8 @@ func TestKillMobGrisSinXP(t *testing.T) {
 	}
 	m.mu.Unlock()
 	xpIni := j.XP()
-	// Matar un mob lvl 1-2 (gris para un lvl 20).
-	mobID := mobDeFamiliaZona(t, m, "lobo")
+	// Matar un mob gris (nivel <= 13 = 20-7): un lobo bajo.
+	mobID := mobDeFamiliaNivelMax(t, m, "lobo", 13)
 	matarMobTest(t, m, mobID, j.id)
 	if j.XP() != xpIni {
 		t.Errorf("mob gris dio XP: %d → %d, esperaba sin cambio", xpIni, j.XP())
@@ -307,14 +343,17 @@ func TestMisionMatarCompleta(t *testing.T) {
 		t.Errorf("misión no completada tras matar 5 lobos: %+v", est.Progreso)
 	}
 	// Entregar (jugador sigue junto a mis_ventormenta en Ventormenta).
-	xpIni := j.XP()
+	// Usamos XP total (incluye umbrales de niveles cruzados) porque matar
+	// 5 lobos de nivel variable puede provocar subidas de nivel que
+	// consumen XP y rompen una aserción de XP puntual.
+	xpTotalIni := xpTotalJugador(j)
 	oroIni := j.Oro()
 	mi, _ := m.Mision("m_ventormenta_2")
 	if _, err := m.EntregarMision(j.id, "m_ventormenta_2"); err != nil {
 		t.Fatalf("entregar: %v", err)
 	}
-	if j.XP() != xpIni+mi.XPRecompensa {
-		t.Errorf("XP tras entregar=%d, esperaba %d", j.XP(), xpIni+mi.XPRecompensa)
+	if xpTotalJugador(j) != xpTotalIni+mi.XPRecompensa {
+		t.Errorf("XP total tras entregar=%d, esperaba %d", xpTotalJugador(j), xpTotalIni+mi.XPRecompensa)
 	}
 	if j.Oro() != oroIni+mi.OroRecompensa {
 		t.Errorf("oro tras entregar=%d, esperaba %d", j.Oro(), oroIni+mi.OroRecompensa)

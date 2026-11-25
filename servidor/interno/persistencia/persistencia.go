@@ -37,6 +37,7 @@ type Personaje struct {
 	Oro          int     `json:"oro"`
 	MisionesActivas     []MisionPersist `json:"misiones_activas,omitempty"`
 	MisionesCompletadas []string        `json:"misiones_completadas,omitempty"`
+	Equipado            []EquipSlot     `json:"equipado,omitempty"`
 	CreadoUnixMs int64    `json:"creado_unix_ms"`
 	UltimoGuardadoUnixMs int64 `json:"ultimo_guardado_unix_ms"`
 }
@@ -46,6 +47,12 @@ type MisionPersist struct {
 	MisionID   string         `json:"mision_id"`
 	Progreso   map[string]int `json:"progreso,omitempty"`
 	Completada bool           `json:"completada"`
+}
+
+// EquipSlot es una ranura de equipo equipado persistida.
+type EquipSlot struct {
+	Slot    string `json:"slot"`
+	ItemID  string `json:"item_id"`
 }
 
 // ItemStack es una pila de un ítem en el inventario.

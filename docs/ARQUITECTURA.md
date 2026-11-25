@@ -296,6 +296,46 @@ estado de misiones (`MisionesActivas []MisionPersist` con progreso +
 `MisionesCompletadas []string`). El `guardar` anterior escribía XP=0 y
 round-trip; ahora escribe el estado real.
 
+### Equipamiento, stats, loot y comercio
+
+El sistema de equipo cierra el bucle RPG: matar mobs → loot → equipar →
+stats suben → más fuerte → matar mobs más duros.
+
+**Ítems equipables** (`DefItem`): cada ítem tiene `Equipable`, `Slot`
+(cabeza/hombros/pecho/muñecas/manos/cintura/piernas/pies/capa/cuello/dedo/
+arma), `NivelReq`, `Precio`, y un bloque de stats (`Fuerza`/`Agilidad`/
+`Intelecto`/`Espiritu`/`Aguante`/`Armadura`). Calidades: común, poco_común,
+raro, épico, legendario. El catálogo añade **~40 ítems equipables**: 8 bandas
+de nivel (1/10/20/30/40/50/60/70) × 4 piezas (arma/pecho/pies/anillo) con
+stats escalados + 8 piezas starter lvl 1 (una por ranura).
+
+**Stats y escalado**: `DefClase.StatPrincipal` (guerrero/paladín/DK=fuerza,
+cazador/pícaro=agilidad, mago/brujo/sacerdote/chamán/druida=intelecto). El
+stat principal total (base 10 + nivel·3 + bonus de equipo) escala el daño:
+`calcularDaño` añade `stat/200` al multiplicador. El aguante del equipo
+añade HP (+10 c/u) vía `recalcularStatsMaximos`. La armadura mitiga daño
+físico en `recibirDaño`: `armadura/(armadura+200+nivel·50)`.
+
+**Equipar/quitar**: `Mundo.EquiparItem` valida nivel, quita del inventario,
+ocupa la ranura (desplazando el ítem viejo al inventario) y recalcula
+stats. `QuitarItemEquipo` lo revierte. `recalcularStatsMaximos` se llama al
+equipar/quitar y al subir de nivel, clampeando HP/energía actuales al nuevo
+máximo (no cura al equipar; sí al subir nivel).
+
+**Loot**: `DefLootTable` por familia de mob (lobo→cuero, jabalí→comida,
+zombi→tela, etc.). `Enemigo.morir` llama a `otorgarLootMuerte` junto al
+XP: oro escalado por nivel (siempre), materiales con probabilidad por
+familia, y 3% de chance de un ítem equipable adecuado al nivel
+(`dropEquipoAleatorio`).
+
+**Comercio**: `Mundo.ComprarItem(jugadorID, npcID, itemID, cantidad)` gasta
+`precio·cantidad` de oro y añade al inventario (solo ítems del catálogo del
+vendedor). `VenderItem` retira ítems y paga `precio/4` c/u. Los vendedores
+de capital venden equipo básico lvl 1 (tela) además de comida/pergaminos.
+
+**Persistencia**: `Personaje.Equipado []EquipSlot` (slot+itemID) guarda el
+equipo equipado; al cargar se reconstruye `equipado` y se recalculan stats.
+
 ### Profesiones, inventario y crafteo
 
 El sistema de profesiones permite craftear ítems consumiendo materiales y

@@ -308,11 +308,12 @@ func (e *Enemigo) morir(m *Mundo, ahora int64) {
 		EntidadID: e.id,
 	}, e.pos, e.instanciaID)
 
-	// Otorgar XP y progresar misiones de "matar" al último atacante
-	// (si es jugador). otorgarXPMuerte accede directo a j/m sin locks
-	// porque step ya tiene m.mu.Lock.
+	// Otorgar XP, progresar misiones de "matar" y soltar botín al último
+	// atacante (si es jugador). Estas funciones acceden directo a j/m sin
+	// locks porque step ya tiene m.mu.Lock.
 	if e.ultimoAtacanteID != "" {
 		m.otorgarXPMuerte(e.ultimoAtacanteID, e.nivel, e.clase)
+		m.otorgarLootMuerte(e.ultimoAtacanteID, e.nivel, e.clase)
 		e.ultimoAtacanteID = ""
 	}
 }

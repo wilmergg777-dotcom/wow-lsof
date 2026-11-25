@@ -143,6 +143,10 @@ var venderGeneral = []string{
 	"pergamino_agilidad_viii",
 	"pergamino_intelecto_viii",
 	"pergamino_fuerza_viii",
+	// Equipo básico lvl 1 (tela) para empezar.
+	"arma_tela", "yelmo_tela", "hombreras_tela", "brazales_tela",
+	"guantes_tela", "cinturon_tela", "pantalones_tela", "capa_tela",
+	"amuleto_tela", "anillo_tela", "pies_tela", "pecho_tela",
 }
 
 // zonasPredefinidas devuelve el catálogo de zonas del mundo (1-80).

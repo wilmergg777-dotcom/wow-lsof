@@ -84,6 +84,9 @@ type Jugador struct {
 	misionesActivas     map[string]*EstadoMision  // misionID → estado
 	misionesCompletadas map[string]bool           // misionID → entregada
 
+	// Equipo equipado: slot → itemID (un ítem por ranura).
+	equipado map[string]string
+
 	// Spawn
 	spawnPos proto.Vec3
 
@@ -95,6 +98,7 @@ type Jugador struct {
 	persist     *persistencia.Gestor
 	authGestor  *auth.Gestor
 	claseDef    DefClase
+	items       map[string]DefItem // catálogo de ítems (para stats de equipo)
 }
 
 // ─── Implementación de Entidad ──────────────────────────────────────────
@@ -207,6 +211,7 @@ func NuevoJugadorDesdePersistencia(
 		profesiones:       make(map[string]*EstadoProfesion),
 		misionesActivas:     make(map[string]*EstadoMision),
 		misionesCompletadas: make(map[string]bool),
+		equipado:            make(map[string]string),
 		cooldowns:         make(map[string]int64),
 		buffs:             make(map[string]int64),
 		colaIntents:       make(chan proto.MensajeCliente, TamañoColaIntents),
@@ -214,6 +219,7 @@ func NuevoJugadorDesdePersistencia(
 		persist:           m.persist,
 		authGestor:        m.authGestor,
 		claseDef:          def,
+		items:             m.items,
 	}
 	// Si la posición guardada es (0,0,0), lo dejamos en el spawn default.
 	if p.PosMundo == (proto.Vec3{}) {
@@ -250,6 +256,13 @@ func NuevoJugadorDesdePersistencia(
 	for _, mid := range p.MisionesCompletadas {
 		j.misionesCompletadas[mid] = true
 	}
+	// Cargar equipo equipado y recalcular stats con los bonus de equipo.
+	for _, es := range p.Equipado {
+		if es.Slot != "" && es.ItemID != "" {
+			j.equipado[es.Slot] = es.ItemID
+		}
+	}
+	j.recalcularStatsMaximos(m)
 	return j
 }
 
@@ -305,6 +318,7 @@ func NuevoJugadorCreado(
 		profesiones:       make(map[string]*EstadoProfesion),
 		misionesActivas:     make(map[string]*EstadoMision),
 		misionesCompletadas: make(map[string]bool),
+		equipado:            make(map[string]string),
 		cooldowns:         make(map[string]int64),
 		buffs:             make(map[string]int64),
 		colaIntents:       make(chan proto.MensajeCliente, TamañoColaIntents),
@@ -312,6 +326,7 @@ func NuevoJugadorCreado(
 		persist:           m.persist,
 		authGestor:        m.authGestor,
 		claseDef:          def,
+		items:             m.items,
 	}
 	return j
 }
@@ -591,21 +606,31 @@ func (j *Jugador) postDañoAnotado(dano int, ahora int64) {
 	}
 }
 
-// calcularDaño aplica multiplicador de buffs activos y racial al daño base.
+// calcularDaño aplica multiplicador de buffs activos, racial y stat
+// principal al daño base. El stat principal de la clase (base por nivel +
+// equipo) escala el daño: +1% por cada 2 puntos (stat/200).
 func (j *Jugador) calcularDaño(base int) int {
 	mult := 1.0 + j.modDano // racial pasivo (p. ej. orco/draenei +5%)
 	if _, ok := j.buffs["grito_guerra"]; ok {
 		mult += 0.10
 	}
+	mult += float64(j.statPrincipalTotal()) / 200.0
 	return int(float64(base) * mult)
 }
 
-// recibirDaño es llamado cuando un mob hiere al jugador.
+// recibirDaño es llamado cuando un mob hiere al jugador. La armadura
+// equipada mitiga el daño físico: armadura/(armadura+200+nivel·50).
 func (j *Jugador) recibirDaño(origenID string, cantidad int, critico bool, m *Mundo, ahora int64) {
 	if !j.EstaVivo() {
 		return
 	}
-	j.hpActual -= cantidad
+	armadura := j.armaduraTotal()
+	mitigacion := float64(armadura) / (float64(armadura) + 200.0 + float64(j.nivel)*50.0)
+	cantidadFinal := int(float64(cantidad) * (1.0 - mitigacion))
+	if cantidadFinal < 1 {
+		cantidadFinal = 1 // mínimo 1 de daño
+	}
+	j.hpActual -= cantidadFinal
 	j.ultimoDanoMs = ahora
 	j.enCombate = true
 
@@ -614,7 +639,7 @@ func (j *Jugador) recibirDaño(origenID string, cantidad int, critico bool, m *M
 		Tipo:       "dano",
 		OrigenID:   origenID,
 		ObjetivoID: j.id,
-		Cantidad:   cantidad,
+		Cantidad:   cantidadFinal,
 		Critico:    critico,
 	})
 
@@ -769,6 +794,7 @@ func (j *Jugador) guardar(p *persistencia.Gestor) error {
 		Oro:         j.oro,
 		MisionesActivas:     j.misionesActivasParaPersist(),
 		MisionesCompletadas: j.misionesCompletadasParaPersist(),
+		Equipado:            j.equipadoParaPersist(),
 		CreadoUnixMs: 0, // se preserva al cargar; al crear nuevo se pone al guardar la primera vez
 	}
 	// Si ya existe en disco, preservar creado y otros campos no modificados.
@@ -804,6 +830,15 @@ func (j *Jugador) misionesCompletadasParaPersist() []string {
 	out := make([]string, 0, len(j.misionesCompletadas))
 	for id := range j.misionesCompletadas {
 		out = append(out, id)
+	}
+	return out
+}
+
+// equipadoParaPersist serializa las ranuras de equipo equipadas.
+func (j *Jugador) equipadoParaPersist() []persistencia.EquipSlot {
+	out := make([]persistencia.EquipSlot, 0, len(j.equipado))
+	for slot, itemID := range j.equipado {
+		out = append(out, persistencia.EquipSlot{Slot: slot, ItemID: itemID})
 	}
 	return out
 }
