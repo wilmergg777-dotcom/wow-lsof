@@ -86,6 +86,8 @@ type Mundo struct {
 	arenas      map[string]DefArena
 	items       map[string]DefItem
 	profesiones map[string]DefProfesion
+	zonas       map[string]DefZona
+	ciudades    map[string]DefCiudad
 	tick        uint64
 	tickInterval time.Duration
 	parar       chan struct{}
@@ -153,6 +155,8 @@ func NuevoMundo(cfg ConfigMundo) *Mundo {
 		arenas:        arenasPredefinidas(),
 		items:         itemsPredefinidos(),
 		profesiones:   profesionesPredefinidas(),
+		zonas:         zonasPredefinidas(),
+		ciudades:      ciudadesPredefinidas(),
 		tickInterval:  time.Duration(1000/hz) * time.Millisecond,
 		parar:         make(chan struct{}),
 		hecho:         make(chan struct{}),

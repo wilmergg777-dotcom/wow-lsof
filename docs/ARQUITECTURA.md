@@ -224,6 +224,36 @@ Cada clase tiene un rol derivado que el buscador usa para formar grupos PvE.
 mecánica de recurso de combate). En WoW el DK empieza a nivel 55; aquí se
 crea a nivel 1 como el resto (no modelado).
 
+### Mundo abierto y zonas
+
+El mundo abierto es un catálogo de **29 zonas por nivel (1-80)** con un
+**grafo de conexiones** entre zonas adyacentes, **10 capitales raciales**
+(una por raza) con NPCs vendedores e instructores, y un **spawn de mobs por
+zona** (en lugar de los mobs de prueba hardcodeados del MVP inicial). El
+camino de leveo va de las zonas iniciales 1-10 hasta la zona final
+Corona de Hielo (77-80), pasando por Terrallende (58-70) y Rasganorte
+(70-80).
+
+Cada zona (`DefZona`) define: banda de nivel, facción (alianza/horda/neutral),
+tipo (inicial/medio/final), capital racial alojada (si la hay), zonas
+adyacentes (`Conexiones`, el grafo), un centro de región y un punto de
+entrada, y un pool de mobs con familia y nivel. Las **capitales**
+(`DefCiudad`) definen la raza asociada, el punto de aparición racial
+(`SpawnPoint`) y una lista de **NPCs** (`DefNPC`): vendedores (catálogo de
+items) e instructores (de clase o de profesión).
+
+| Concepto | Cómo se modela |
+|----------|----------------|
+| Separación entre zonas | Coordenadas de región: cada zona ocupa un bloque centrado en `Region`, a ≥3000m de cualquier otra. El radio de interés (60m) hace que zonas distintas nunca se vean, sin tocar el motor de visibilidad. |
+| Spawn racial | `NuevoJugadorCreado` coloca al PJ en `SpawnRacial(raza)` = la capital de su raza (un Humano en Ventormenta, un Tauren en Cima de Trueno...). El `spawnPos` (respawn al morir) también es la capital racial. |
+| Mobs del open world | `spawnEnemigosIniciales` itera el catálogo de zonas y crea los `DefZona.Spawns` (familia + nivel apropiados a la zona), reemplazando los 5 mobs de prueba. |
+| Viaje entre zonas | `Mundo.ViajarZona(jugador, destino)` valida adyacencia en el grafo y teletransporta al punto de entrada de la zona destino. |
+| NPCs | `Mundo.InteractuarNPC(jugador, npc)` valida proximidad (≤5m) y devuelve el catálogo del vendedor / la oferta del instructor. Los NPCs son datos estacionarios, sin tick de IA. |
+| Zona actual | `Mundo.ZonaEnPos(pos)` deriva la zona de la posición (a ≤1000m del centro de región). |
+
+Las coordenadas de región evitan el carril de masmorras (X∈[1000,5000], Z≈0)
+y la arena PvP (X=9000, Z≈0) para no mezclar open world con instancias.
+
 ### Profesiones, inventario y crafteo
 
 El sistema de profesiones permite craftear ítems consumiendo materiales y
@@ -543,11 +573,12 @@ MessagePack o un schema custom).
 - **PvP solo en arenas**: el combate entre jugadores está habilitado
   únicamente dentro de instancias de arena (equipos 2v2 cross-faction). En
   el mundo abierto no hay PvP.
-- **Mundo abierto + instancias**: el mundo abierto es un plano reducido con
-  5 mobs fijos; 5 masmorras PvE (adaptadas de world-of-claudecraft: La
-  Cripta Hueca, El Bastión Hundido, El Templo Anegado, Cuenca Corazón
-  Salvaje, Santuario Gusanoso) y 1 arena PvP (Arena de Skolm) son
-  instancias aisladas creadas por el buscador.
+- **Mundo abierto + instancias**: el mundo abierto es un catálogo de 29 zonas
+  por nivel (1-80) con grafo de conexiones y 10 capitales raciales (una por
+  raza) con NPCs vendedores/instructores; 5 masmorras PvE (adaptadas de
+  world-of-claudecraft: La Cripta Hueca, El Bastión Hundido, El Templo
+  Anegado, Cuenca Corazón Salvaje, Santuario Gusanoso) y 1 arena PvP (Arena
+  de Skolm) son instancias aisladas creadas por el buscador.
 - **Sin loot ni experiencia formal**: los mobs no dropean items ni otorgan
   XP trackeada (placeholder para futuro).
 - **Matchmaking simple**: la fase relajada del buscador PvE se activa a los

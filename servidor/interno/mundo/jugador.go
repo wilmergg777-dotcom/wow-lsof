@@ -173,6 +173,8 @@ func NuevoJugadorDesdePersistencia(
 		energiaMax = int(float64(energiaMax) * (1 + razaDef.ModMana))
 		modDano = razaDef.ModDano
 	}
+	// Spawn racial: el punto de reaparición al morir es la capital de la raza.
+	spawnRacial := m.SpawnRacial(razaID)
 
 	j := &Jugador{
 		id:                "pj_" + p.Nombre,
@@ -192,7 +194,7 @@ func NuevoJugadorDesdePersistencia(
 		hpMax:             hpMax,
 		energiaActual:     energiaMax,
 		energiaMax:        energiaMax,
-		spawnPos:          proto.Vec3{X: 0, Y: 0, Z: 0},
+		spawnPos:          spawnRacial,
 		inventario:        make(map[string]int),
 		profesiones:       make(map[string]*EstadoProfesion),
 		cooldowns:         make(map[string]int64),
@@ -252,6 +254,9 @@ func NuevoJugadorCreado(
 		energiaMax = int(float64(energiaMax) * (1 + razaDef.ModMana))
 		modDano = razaDef.ModDano
 	}
+	// Spawn racial: el personaje aparece en la capital de su raza (p.ej. un
+	// Humano en Ventormenta, un Tauren en Cima de Trueno), no en el origen.
+	spawnRacial := m.SpawnRacial(razaID)
 	j := &Jugador{
 		id:                "pj_" + nombre,
 		cuenta:            cuenta,
@@ -264,13 +269,13 @@ func NuevoJugadorCreado(
 		modDano:           modDano,
 		instanciaID:       "",
 		equipo:            -1,
-		pos:               proto.Vec3{X: 0, Y: 0, Z: 0},
+		pos:               spawnRacial,
 		rot:               proto.Vec4{X: 0, Y: 0, Z: 0, W: 1},
 		hpActual:          hpMax,
 		hpMax:             hpMax,
 		energiaActual:     energiaMax,
 		energiaMax:        energiaMax,
-		spawnPos:          proto.Vec3{X: 0, Y: 0, Z: 0},
+		spawnPos:          spawnRacial,
 		inventario:        make(map[string]int),
 		profesiones:       make(map[string]*EstadoProfesion),
 		cooldowns:         make(map[string]int64),

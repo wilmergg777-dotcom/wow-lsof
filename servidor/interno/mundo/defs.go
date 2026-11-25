@@ -498,26 +498,22 @@ func arenasPredefinidas() map[string]DefArena {
 
 // ─── Spawn del mundo abierto ─────────────────────────────────────────────
 
-// spawnEnemigosIniciales puebla el mundo abierto con mobs de prueba.
-// Los mobs del mundo abierto tienen instanciaID = "" (cadena vacía).
+// spawnEnemigosIniciales puebla el mundo abierto con los mobs definidos en
+// el catálogo de zonas (DefZona.Spawns). Cada zona define su pool de mobs
+// por nivel; los mobs del open world tienen instanciaID = "" (cadena vacía)
+// y se separan de otras zonas por coordenadas de región (≥3000 entre sí).
+// Sustituye a los 5 mobs de prueba hardcodeados del MVP inicial.
 func (m *Mundo) spawnEnemigosIniciales() {
-	spawns := []struct {
-		nombre string
-		pos    proto.Vec3
-		nivel  int
-	}{
-		{"Lobo Salvaje", proto.Vec3{X: 15, Y: 0, Z: 5}, 1},
-		{"Lobo Salvaje", proto.Vec3{X: -12, Y: 0, Z: 18}, 1},
-		{"Lobo Alfa", proto.Vec3{X: 25, Y: 0, Z: -20}, 2},
-		{"Jabalí Huraño", proto.Vec3{X: -25, Y: 0, Z: -8}, 1},
-		{"Jabalí Huraño", proto.Vec3{X: 8, Y: 0, Z: -22}, 1},
-	}
-	for i, s := range spawns {
-		e := nuevoEnemigo(s.nombre, "lobo", s.nivel, s.pos)
-		e.spawnPos = s.pos
-		e.id = sprintID("mob_", i+1)
-		m.entidades[e.id] = e
-		m.enemigos[e.id] = e
+	i := 0
+	for _, z := range m.zonas {
+		for _, s := range z.Spawns {
+			e := nuevoEnemigo(s.Nombre, s.Familia, s.Nivel, s.Pos)
+			e.spawnPos = s.Pos
+			e.id = sprintID("mob_", i+1)
+			m.entidades[e.id] = e
+			m.enemigos[e.id] = e
+			i++
+		}
 	}
 }
 
