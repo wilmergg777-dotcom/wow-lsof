@@ -78,6 +78,12 @@ type Jugador struct {
 	inventario map[string]int            // itemID → cantidad (pila)
 	profesiones map[string]*EstadoProfesion // profID → estado
 
+	// Experiencia, oro y misiones
+	xp                  int                       // experiencia acumulada
+	oro                 int                       // moneda
+	misionesActivas     map[string]*EstadoMision  // misionID → estado
+	misionesCompletadas map[string]bool           // misionID → entregada
+
 	// Spawn
 	spawnPos proto.Vec3
 
@@ -182,6 +188,8 @@ func NuevoJugadorDesdePersistencia(
 		nombre:            p.Nombre,
 		clase:             p.Clase,
 		nivel:             p.Nivel,
+		xp:                p.Experiencia,
+		oro:               p.Oro,
 		faccion:           fac,
 		raza:              razaID,
 		rol:               def.Rol,
@@ -197,6 +205,8 @@ func NuevoJugadorDesdePersistencia(
 		spawnPos:          spawnRacial,
 		inventario:        make(map[string]int),
 		profesiones:       make(map[string]*EstadoProfesion),
+		misionesActivas:     make(map[string]*EstadoMision),
+		misionesCompletadas: make(map[string]bool),
 		cooldowns:         make(map[string]int64),
 		buffs:             make(map[string]int64),
 		colaIntents:       make(chan proto.MensajeCliente, TamañoColaIntents),
@@ -224,6 +234,21 @@ func NuevoJugadorDesdePersistencia(
 			Especializacion:  pe.Especializacion,
 		}
 		j.profesiones[ep.ProfesionID] = ep
+	}
+	// Cargar misiones activas y completadas desde la persistencia.
+	for _, mp := range p.MisionesActivas {
+		est := &EstadoMision{
+			MisionID:   mp.MisionID,
+			Progreso:   make(map[string]int, len(mp.Progreso)),
+			Completada: mp.Completada,
+		}
+		for k, v := range mp.Progreso {
+			est.Progreso[k] = v
+		}
+		j.misionesActivas[mp.MisionID] = est
+	}
+	for _, mid := range p.MisionesCompletadas {
+		j.misionesCompletadas[mid] = true
 	}
 	return j
 }
@@ -278,6 +303,8 @@ func NuevoJugadorCreado(
 		spawnPos:          spawnRacial,
 		inventario:        make(map[string]int),
 		profesiones:       make(map[string]*EstadoProfesion),
+		misionesActivas:     make(map[string]*EstadoMision),
+		misionesCompletadas: make(map[string]bool),
 		cooldowns:         make(map[string]int64),
 		buffs:             make(map[string]int64),
 		colaIntents:       make(chan proto.MensajeCliente, TamañoColaIntents),
@@ -732,27 +759,53 @@ func (j *Jugador) guardar(p *persistencia.Gestor) error {
 		Faccion:     j.faccion,
 		Raza:        j.raza,
 		Nivel:       j.nivel,
-		Experiencia: 0,
+		Experiencia: j.xp,
 		PosMundo:    posAGuardar,
 		RotMundo:    j.rot,
 		Habilidad:   idsHabilidades(j.claseDef),
 		Inventario:  []string{},
 		InventarioStacks: j.stacksParaPersist(),
 		Profesiones: j.profesionesParaPersist(),
-		Oro:         0,
+		Oro:         j.oro,
+		MisionesActivas:     j.misionesActivasParaPersist(),
+		MisionesCompletadas: j.misionesCompletadasParaPersist(),
 		CreadoUnixMs: 0, // se preserva al cargar; al crear nuevo se pone al guardar la primera vez
 	}
 	// Si ya existe en disco, preservar creado y otros campos no modificados.
 	existente, err := p.Cargar(j.nombre)
 	if err == nil && existente != nil {
 		pj.CreadoUnixMs = existente.CreadoUnixMs
-		pj.Oro = existente.Oro
 		pj.Inventario = existente.Inventario
-		pj.Experiencia = existente.Experiencia
 	} else {
 		pj.CreadoUnixMs = time.Now().UnixMilli()
 	}
 	return p.Guardar(pj)
+}
+
+// misionesActivasParaPersist serializa las misiones activas para guardar.
+func (j *Jugador) misionesActivasParaPersist() []persistencia.MisionPersist {
+	out := make([]persistencia.MisionPersist, 0, len(j.misionesActivas))
+	for _, est := range j.misionesActivas {
+		mp := persistencia.MisionPersist{
+			MisionID:   est.MisionID,
+			Completada: est.Completada,
+			Progreso:   make(map[string]int, len(est.Progreso)),
+		}
+		for k, v := range est.Progreso {
+			mp.Progreso[k] = v
+		}
+		out = append(out, mp)
+	}
+	return out
+}
+
+// misionesCompletadasParaPersist serializa los IDs de misiones completadas.
+func (j *Jugador) misionesCompletadasParaPersist() []string {
+	out := make([]string, 0, len(j.misionesCompletadas))
+	for id := range j.misionesCompletadas {
+		out = append(out, id)
+	}
+	return out
 }
 
 // idsHabilidades extrae los IDs de habilidades de una DefClase.

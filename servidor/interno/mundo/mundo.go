@@ -88,6 +88,7 @@ type Mundo struct {
 	profesiones map[string]DefProfesion
 	zonas       map[string]DefZona
 	ciudades    map[string]DefCiudad
+	misiones    map[string]DefMision
 	tick        uint64
 	tickInterval time.Duration
 	parar       chan struct{}
@@ -157,6 +158,7 @@ func NuevoMundo(cfg ConfigMundo) *Mundo {
 		profesiones:   profesionesPredefinidas(),
 		zonas:         zonasPredefinidas(),
 		ciudades:      ciudadesPredefinidas(),
+		misiones:      misionesPredefinidas(),
 		tickInterval:  time.Duration(1000/hz) * time.Millisecond,
 		parar:         make(chan struct{}),
 		hecho:         make(chan struct{}),

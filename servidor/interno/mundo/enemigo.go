@@ -38,6 +38,7 @@ type Enemigo struct {
 	danoBase      int    // 0 = usar fórmula (5 + nivel*2); >0 = explícito
 	estado        string // "patrullando" | "persiguiendo" | "atacando" | "muerto"
 	objetivoID    string
+	ultimoAtacanteID string // último jugador que dañó al mob (crédito de muerte/XP)
 	ultimoAtaqueMs int64
 	muertoDesdeMs int64
 	enCombate     bool
@@ -268,6 +269,11 @@ func (e *Enemigo) recibirDaño(origenID string, cantidad int, critico bool, m *M
 	e.hpActual -= cantidad
 	e.enCombate = true
 
+	// Track último atacante para crédito de muerte (XP + misiones).
+	if _, ok := m.jugadores[origenID]; ok {
+		e.ultimoAtacanteID = origenID
+	}
+
 	// Si no tiene objetivo, el atacante se vuelve su objetivo.
 	if e.objetivoID == "" {
 		if j, ok := m.jugadores[origenID]; ok && j.EstaVivo() {
@@ -302,10 +308,13 @@ func (e *Enemigo) morir(m *Mundo, ahora int64) {
 		EntidadID: e.id,
 	}, e.pos, e.instanciaID)
 
-	// Otorgar experiencia al último atacante si es jugador.
-	// MVP simplificado: dar experiencia a quien fuera el objetivo del mob
-	// cuando murió (que normalmente es quien lo estaba peleando).
-	// Para MVP no trackeamos "último atacante" formalmente.
+	// Otorgar XP y progresar misiones de "matar" al último atacante
+	// (si es jugador). otorgarXPMuerte accede directo a j/m sin locks
+	// porque step ya tiene m.mu.Lock.
+	if e.ultimoAtacanteID != "" {
+		m.otorgarXPMuerte(e.ultimoAtacanteID, e.nivel, e.clase)
+		e.ultimoAtacanteID = ""
+	}
 }
 
 // respawn revive al mob en su spawnPos.

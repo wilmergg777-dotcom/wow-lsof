@@ -96,7 +96,7 @@ func TestDiezCapitalesUnaPorRaza(t *testing.T) {
 			if n.Tipo == "vendedor" {
 				tieneVend = true
 			}
-			if n.Tipo != "vendedor" && n.Tipo != "instructor" {
+			if n.Tipo != "vendedor" && n.Tipo != "instructor" && n.Tipo != "misionero" {
 				t.Errorf("capital %s NPC %s tipo inválido %q", c.ID, n.ID, n.Tipo)
 			}
 		}

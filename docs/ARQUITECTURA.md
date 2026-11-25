@@ -254,6 +254,48 @@ items) e instructores (de clase o de profesión).
 Las coordenadas de región evitan el carril de masmorras (X∈[1000,5000], Z≈0)
 y la arena PvP (X=9000, Z≈0) para no mezclar open world con instancias.
 
+### Experiencia, niveles y misiones
+
+El sistema de progresión lleva al personaje de nivel 1 a 80 (tope
+Rasganorte/WoW 3.3.5a) mediante XP por matar mobs y por completar misiones.
+
+**Curva de XP** (`xpParaNivel(n) = 50·n²`): nivel 1→2 = 50 XP, 10→11 = 5000,
+40→41 = 80000, 79→80 = 312050 (total 1→80 ≈ 8,37M). Los mobs otorgan
+`xpPorMob(nivelMob, nivelJugador)` (8 + nivelMob·3, con bonificación si el
+mob supera al jugador); un mob "gris" (≥7 niveles por debajo) no da XP. Las
+misiones dan ~30% del XP de su nivel objetivo (`xpRecompensa`).
+
+**Subida de nivel**: `Jugador.ganarXP` acumula XP y sube de nivel cuantas
+veces corresponda. `subirNivel` recalcula HP/energía máximos con la fórmula
+de la clase (`HPBase + HPPorNivel·(nivel-1)`) más el racial pasivo, y cura
+al completo (el código base no recalculaba stats al subir; este lo añade).
+
+**Crédito de muerte**: `Enemigo.ultimoAtacanteID` se fija en `recibirDaño`;
+al morir el mob, `otorgarXPMuerte` da XP al último atacante y progresa sus
+misiones de "matar". `morir` corre dentro del tick (que ya tiene
+`m.mu.Lock`), así que el crédito no toma locks.
+
+**Misiones** (`DefMision`): cada una tiene nivel mínimo, zona, NPC inicial
+(quest giver) y NPC de entrega, objetivos (`matar` N mobs de una familia /
+`hablar` con un NPC), recompensas (XP, oro, items) y un prerrequisito de
+cadena (`RequiereMision`). El catálogo tiene **48 misiones**: 2 por capital
+racial (una de hablar lvl 1 + una de matar lvl 2) y 4 por banda de nivel
+(10-20, 20-30, 30-40, 40-50, 50-60, 58-70 Terrallende, 70-80 Rasganorte),
+cada banda con 3 de matar + 1 de cadena.
+
+**NPCs misioneros** (`DefNPC.Tipo = "misionero"`, campo `Misiones []string`):
+17 quest givers (uno por capital racial + uno por zona representativa de
+cada banda). `Mundo.AceptarMision` valida proximidad al NPC inicial, nivel,
+cadena y no duplicidad; `Mundo.EntregarMision` valida objetivos completos y
+proximidad al NPC de entrega, y otorga recompensas. Los objetivos "hablar"
+se progresan al `InteractuarNPC` con el destino; los "matar" al matar mobs
+de la familia correspondiente.
+
+**Persistencia**: `Personaje` guarda `Experiencia`, `Nivel`, `Oro` y el
+estado de misiones (`MisionesActivas []MisionPersist` con progreso +
+`MisionesCompletadas []string`). El `guardar` anterior escribía XP=0 y
+round-trip; ahora escribe el estado real.
+
 ### Profesiones, inventario y crafteo
 
 El sistema de profesiones permite craftear ítems consumiendo materiales y

@@ -35,8 +35,17 @@ type Personaje struct {
 	InventarioStacks []ItemStack `json:"inventario_stacks,omitempty"` // inventario con pilas
 	Profesiones  []ProfesionPersist `json:"profesiones,omitempty"`
 	Oro          int     `json:"oro"`
+	MisionesActivas     []MisionPersist `json:"misiones_activas,omitempty"`
+	MisionesCompletadas []string        `json:"misiones_completadas,omitempty"`
 	CreadoUnixMs int64    `json:"creado_unix_ms"`
 	UltimoGuardadoUnixMs int64 `json:"ultimo_guardado_unix_ms"`
+}
+
+// MisionPersist es el estado persistente de una misión activa.
+type MisionPersist struct {
+	MisionID   string         `json:"mision_id"`
+	Progreso   map[string]int `json:"progreso,omitempty"`
+	Completada bool           `json:"completada"`
 }
 
 // ItemStack es una pila de un ítem en el inventario.

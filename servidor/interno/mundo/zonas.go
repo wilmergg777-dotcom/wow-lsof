@@ -51,6 +51,7 @@ type DefZona struct {
 	Region       proto.Vec3     `json:"region"`     // centro de región (separación ≥3000)
 	PuntoEntrada proto.Vec3     `json:"punto_entrada"`
 	Spawns       []DefSpawnZona `json:"spawns"`
+	NPCs         []DefNPC       `json:"npcs,omitempty"` // NPCs de la zona (misioneros, etc.)
 }
 
 // DefSpawnZona describe un mob del open world dentro de una zona.
@@ -72,14 +73,15 @@ type DefCiudad struct {
 	NPCs       []DefNPC  `json:"npcs"`
 }
 
-// DefNPC describe un NPC amistoso (vendedor o instructor).
+// DefNPC describe un NPC amistoso (vendedor, instructor o misionero).
 type DefNPC struct {
 	ID          string   `json:"id"`
 	Nombre      string   `json:"nombre"`
-	Tipo        string   `json:"tipo"` // "vendedor" | "instructor"
+	Tipo        string   `json:"tipo"` // "vendedor" | "instructor" | "misionero"
 	VendeItems  []string `json:"vende_items,omitempty"`
 	EnsenyaTipo string   `json:"ensenya_tipo,omitempty"` // "clase" | "profesion"
 	Ensenya     string   `json:"ensenya,omitempty"`      // claseID o profID
+	Misiones    []string `json:"misiones,omitempty"`     // IDs que ofrece (misionero)
 	Pos         proto.Vec3 `json:"pos"`
 }
 
@@ -362,6 +364,8 @@ func zonasPredefinidas() map[string]DefZona {
 	}
 	m := make(map[string]DefZona, len(zs))
 	for _, z := range zs {
+		// Añadir NPCs misioneros de banda (quest givers en zonas representativas).
+		z.NPCs = append(z.NPCs, npcsMisioneroZona(z.ID)...)
 		m[z.ID] = z
 	}
 	return m
@@ -478,6 +482,8 @@ func ciudadesPredefinidas() map[string]DefCiudad {
 	}
 	m := make(map[string]DefCiudad, len(cs))
 	for _, c := range cs {
+		// Añadir el NPC misionero racial (quest giver de la capital).
+		c.NPCs = append(c.NPCs, npcsMisioneroCapital(c.ID)...)
 		m[c.ID] = c
 	}
 	return m
@@ -575,36 +581,34 @@ func (m *Mundo) NPCsDeCiudad(ciudadID string) []DefNPC {
 func (m *Mundo) NPC(npcID string) (DefNPC, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	for _, c := range m.ciudades {
-		for _, n := range c.NPCs {
-			if n.ID == npcID {
-				return n, true
-			}
-		}
-	}
-	return DefNPC{}, false
+	return m.npcPorID(npcID)
 }
 
 // InteractuarNPC valida que el jugador está a distancia de interacción de un
-// NPC y devuelve su definición (catálogo de venta / enseñanza). Requiere
-// estar en el mundo abierto (no en instancia).
+// NPC y devuelve su definición (catálogo de venta / enseñanza / misiones).
+// Además, si el jugador tiene una misión activa con un objetivo "hablar"
+// cuyo NPCDestino es este NPC, lo marca cumplido. Requiere estar en el
+// mundo abierto (no en instancia). Toma m.mu.Lock para poder mutar el
+// estado de misiones del jugador.
 func (m *Mundo) InteractuarNPC(jugadorID, npcID string) (DefNPC, error) {
-	m.mu.RLock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	j, ok := m.jugadores[jugadorID]
-	m.mu.RUnlock()
 	if !ok {
 		return DefNPC{}, errors.New("jugador no encontrado")
 	}
 	if j.instanciaID != "" {
 		return DefNPC{}, errors.New("no puedes interactuar con NPCs dentro de una instancia")
 	}
-	npc, ok := m.NPC(npcID)
+	npc, ok := m.npcPorID(npcID)
 	if !ok {
 		return DefNPC{}, errors.New("NPC no encontrado")
 	}
 	if distancia2D(j.pos, npc.Pos) > RangoInteraccionNPC {
 		return DefNPC{}, errors.New("estás demasiado lejos del NPC")
 	}
+	// Progresar objetivos "hablar" de misiones activas.
+	m.progresoHablar(j, npcID)
 	return npc, nil
 }
 
