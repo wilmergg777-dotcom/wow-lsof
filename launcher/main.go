@@ -43,8 +43,10 @@ const hostEnc = "3b292e28353335743e2f39313e34297435283d" // astroio.duckdns.org
 // v6 (2.4.9): ventana PROPIA con WebView2 (no abre el navegador),
 //             imágenes del juego embebidas + caché de disco (no
 //             gastan datos), atajo "Borrar datos" como la APK.
-const launcherVersionCode = 6
-const launcherVersionName = "2.4.9"
+// v7 (2.4.10): icono correcto — el favicon oficial del sitio
+//             (logo azul), antes llevaba el de la APK.
+const launcherVersionCode = 7
+const launcherVersionName = "2.4.10"
 
 func deobf(hexStr string) string {
         raw := make([]byte, len(hexStr)/2)

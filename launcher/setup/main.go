@@ -43,7 +43,7 @@ var launcherBin []byte
 //go:embed webview2bootstrapper.exe
 var wv2Setup []byte
 
-const setupVersion = "2.4.9"
+const setupVersion = "2.4.10"
 
 // Clave del runtime WebView2 en el registro de Windows
 const wv2Reg = `SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}`
