@@ -8,6 +8,7 @@ package mundo
 import (
 	"time"
 
+	"aethelgard/servidor/interno/auras"
 	"aethelgard/servidor/interno/proto"
 )
 
@@ -45,6 +46,7 @@ type Enemigo struct {
 	esBoss        bool // mob es el boss de una masmora (mejor loot + condición de victoria)
 	direccionPatrulla proto.Vec3 // dirección actual de patrulla
 	ultimoCambioDirMs int64
+	auras []*auras.AuraActiva // debuffs/DoT activos sobre el mob
 }
 
 // ─── Implementación de Entidad ──────────────────────────────────────────
@@ -135,6 +137,11 @@ func (e *Enemigo) actualizar(m *Mundo, t time.Time) {
 			e.enCombate = false
 		}
 	}
+
+	// Auras (debuffs/DoT): tick periódico (DoT daña al mob con crédito al
+	// origen) y limpieza de expiradas.
+	e.tickAurasPeriodicosEnemigo(m, ahora)
+	e.removerAurasExpiradasEnemigo(ahora)
 }
 
 // aiPatrullar: camina lentamente alrededor del spawn. Si un jugador

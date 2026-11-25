@@ -34,6 +34,7 @@ type Personaje struct {
 	Inventario   []string `json:"inventario"`  // IDs de ítems (legacy, sin pila)
 	InventarioStacks []ItemStack `json:"inventario_stacks,omitempty"` // inventario con pilas
 	Profesiones  []ProfesionPersist `json:"profesiones,omitempty"`
+	Auras        []AuraPersist      `json:"auras,omitempty"` // auras activas al guardar (frascos sobreviven muerte)
 	Oro          int     `json:"oro"`
 	MisionesActivas     []MisionPersist `json:"misiones_activas,omitempty"`
 	MisionesCompletadas []string        `json:"misiones_completadas,omitempty"`
@@ -67,6 +68,16 @@ type ProfesionPersist struct {
 	Skill            int      `json:"skill"`
 	RangosAprendidos []string `json:"rangos_aprendidos"`
 	Especializacion  string   `json:"especializacion,omitempty"`
+}
+
+// AuraPersist es una aura activa persistida (p. ej. un frasco de 1h que
+// sigue corriendo entre sesiones). Solo se persisten las auras con
+// PersisteMuerte=true (frascos); el resto se descarta al guardar.
+type AuraPersist struct {
+	DefID         string `json:"def_id"`
+	FinMs         int64  `json:"fin_ms"`           // 0 = permanente
+	ProximoTickMs int64  `json:"proximo_tick_ms,omitempty"`
+	AplicadoPor   string `json:"aplicado_por,omitempty"`
 }
 
 // Gestor persiste personajes en disco de forma thread-safe.

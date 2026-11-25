@@ -91,6 +91,12 @@ func profesionInscripcion() DefProfesion {
 		// Investigación de Rasganorte: descubre un glifo (cooldown diario real
 		// no modelado; aquí es una receta que produce glifo_descubierto).
 		r("investigacion_rasganorte", "Investigación de inscripción de Rasganorte", "glifo_descubierto", 385, 400, "tinta_avalancha", 1),
+		// ─── Pergaminos de atributo (consumibles usables, 1h) ───
+		r("pergamino_aguante_viii_rec", "Pergamino de aguante VIII", "pergamino_aguante_viii", 395, 420, "tinta_avalancha", 1, "papiro", 2),
+		r("pergamino_intelecto_viii_rec", "Pergamino de intelecto VIII", "pergamino_intelecto_viii", 395, 420, "tinta_avalancha", 1, "papiro", 2),
+		r("pergamino_fuerza_viii_rec", "Pergamino de fuerza VIII", "pergamino_fuerza_viii", 400, 425, "tinta_avalancha", 1, "papiro", 2),
+		r("pergamino_agilidad_viii_rec", "Pergamino de agilidad VIII", "pergamino_agilidad_viii", 400, 425, "tinta_avalancha", 1, "papiro", 2),
+		r("pergamino_espiritu_viii_rec", "Pergamino de espíritu VIII", "pergamino_espiritu_viii", 405, 430, "tinta_avalancha", 1, "papiro", 2),
 	}
 	return DefProfesion{
 		ID:       "inscripción",

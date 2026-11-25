@@ -57,20 +57,21 @@ func (j *Jugador) statDeEquipo(stat string) int {
 }
 
 // statPrincipalTotal devuelve el stat principal de la clase del jugador
-// (base por nivel + bonus de equipo). Base: 10 + nivel·3.
+// (base por nivel + bonus de equipo + bonus de auras). Base: 10 + nivel·3.
 func (j *Jugador) statPrincipalTotal() int {
 	base := 10 + j.nivel*3
 	sp := j.claseDef.StatPrincipal
 	if sp == "" {
 		return base
 	}
-	return base + j.statDeEquipo(sp)
+	return base + j.statDeEquipo(sp) + j.bonusStatAura(sp)
 }
 
-// armaduraTotal devuelve la armadura total equipada.
+// armaduraTotal devuelve la armadura total (equipo + auras como Elixir de
+// protección +800).
 func (j *Jugador) armaduraTotal() int {
 	_, _, _, _, _, arm := j.statsEquipados()
-	return arm
+	return arm + j.bonusStatAura("armadura")
 }
 
 // bonusAguanteEquip devuelve el aguante bonus del equipo.
@@ -80,9 +81,12 @@ func (j *Jugador) bonusAguanteEquip() int {
 }
 
 // recalcularStatsMaximos recalcula hpMax/energiaMax con la fórmula de la
-// clase + racial + bonus de aguante del equipo (+10 HP c/u), y clampea los
-// valores actuales al nuevo máximo. Llamado al equipar/quitar y al subir
-// de nivel. NO cura (el equipo no cura; al subir nivel sí cura subirNivel).
+// clase + racial + bonus de aguante del equipo (+10 HP c/u) + auras
+// (aguante/hp_max/mana_max de frascos, elixires, pergaminos, comida), y
+// clampea los valores actuales al nuevo máximo. Llamado al equipar/quitar,
+// al subir de nivel, y al aplicar/expirar auras de máximo. NO cura (el
+// equipo no cura; al subir nivel sí cura subirNivel; las auras curan el
+// delta vía recalcMaximosConBuff).
 func (j *Jugador) recalcularStatsMaximos(m *Mundo) {
 	def := j.claseDef
 	hpMax := def.HPBase + def.HPPorNivel*(j.nivel-1)
@@ -92,6 +96,9 @@ func (j *Jugador) recalcularStatsMaximos(m *Mundo) {
 		energiaMax = int(float64(energiaMax) * (1 + razaDef.ModMana))
 	}
 	hpMax += j.bonusAguanteEquip() * 10
+	// Auras: aguante (+10 HP c/u, como el equipo), hp_max plano, mana_max plano.
+	hpMax += j.bonusStatAura("aguante")*10 + j.bonusStatAura("hp_max")
+	energiaMax += j.bonusStatAura("mana_max")
 	j.hpMax = hpMax
 	j.energiaMax = energiaMax
 	if j.hpActual > j.hpMax {

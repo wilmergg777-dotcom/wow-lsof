@@ -273,6 +273,7 @@ type EstadoCombate struct {
 	AutoAtaqueActivo   bool           `json:"auto_ataque_activo"`
 	Cooldowns          map[string]int `json:"cooldowns,omitempty"`     // habilidad_id → ms restantes
 	BuffsActivos       map[string]int `json:"buffs_activos,omitempty"` // buff_id → ms restantes
+	AurasActivas       []AuraRes      `json:"auras_activas,omitempty"`  // auras (frascos, elixires, comida, DoT...)
 	Muerto             bool           `json:"muerto,omitempty"`
 	RespawnMs          int            `json:"respawn_ms,omitempty"` // ms hasta respawn si muerto
 	Faccion            string         `json:"faccion,omitempty"`
@@ -281,6 +282,15 @@ type EstadoCombate struct {
 	InstanciaID        string         `json:"instancia_id,omitempty"` // vacío = mundo abierto
 	InstanciaTipo      string         `json:"instancia_tipo,omitempty"`
 	Equipo             int            `json:"equipo,omitempty"` // -1 = sin equipo; 0|1 = PvP
+}
+
+// AuraRes es la representación de un aura activa enviada al cliente.
+type AuraRes struct {
+	ID          string `json:"id"`
+	Nombre      string `json:"nombre"`
+	Tipo        string `json:"tipo"`           // "buff" | "debuff"
+	RestanteMs  int64  `json:"restante_ms"`    // ms hasta expirar (0 = permanente)
+	AplicadoPor string `json:"aplicado_por,omitempty"` // origen (itemID/habilidadID)
 }
 
 // ─── Codificación de frames ─────────────────────────────────────────────

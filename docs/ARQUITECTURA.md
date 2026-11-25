@@ -52,6 +52,10 @@ servidor/
     │   ├── registro.go        Catalogo() — registro central de las 13 profesiones.
     │   ├── profesion_*.go     Una profesión por archivo (herrería, alquimia, ...).
     │   └── profesiones_test.go Tests del paquete aislado.
+    ├── auras/            Catálogo de auras (subpaquete, 23 auras: frascos/elixires/comida/pergaminos/DoT).
+    │   ├── tipos.go           Tipos base (DefAura, AuraActiva, ModStat, EfectoPeriodico, ...).
+    │   ├── catalogo.go        CatalogoAuras() — registro central cacheado.
+    │   └── auras_test.go      Tests del paquete aislado.
     └── conexion/         TCP listener + Sesión por conexión.
         ├── servidor.go   Accept loop + goroutine por sesión.
         └── sesion.go     State machine de sesión + escritor + handlers de cola.
@@ -591,6 +595,39 @@ profesiones conocidas (barra de habilidad + botón para aprender el
 siguiente rango y, si aplica, las especializaciones disponibles con sus
 materiales), permite aprender profesiones nuevas y lista las recetas
 crafteables con sus materiales (tener/necesario) y un botón Craftear.
+
+### Auras, buffs y consumibles
+
+El sistema de **auras** modela efectos temporales sobre entidades (buffs
+sobre el jugador, debuffs/DoT sobre enemigos). Vive en un subpaquete
+dedicado `interno/auras/` (data pura: `DefAura` con mods de stat, efecto
+periódico, categoría de stacking y flag `PersisteMuerte`; `AuraActiva` es
+la instancia). La aplicación, el ticking y la integración con stats viven
+en `mundo/auras.go`, que importa el catálogo sin acoplamiento circular.
+
+- **Stats**: las auras alimentan `statPrincipalTotal` (fuerza/agilidad/...),
+  `armaduraTotal` y `recalcularStatsMaximos` (aguante→+10 HP, `hp_max`,
+  `mana_max` planos). Un frasco de +1300 vida sube el máximo Y la vida
+  actual en el delta; al expirar se pierde (clampea abajo). El mod
+  `dano_pct` (por-mil) suma al multiplicador de `calcularDaño`.
+- **Ticking**: cada tick, `tickAurasPeriodicos` aplica Hots (curan vida) y
+  `removerAurasExpiradas` elimina las vencidas. Los DoT sobre enemigos
+  dañan al mob con crédito de muerte al origen (`AplicadoPor`).
+- **Stacking (reglas WoW 3.3.5)**: 1 frasco (reemplaza frasco), 1 elixir de
+  batalla + 1 guardián (slots distintos), 1 comida, 1 pergamino por
+  atributo. Aplicar un aura con categoría elimina la activa de esa categoría.
+
+**Consumibles** (`DefItem.Uso` → `Mundo.UsarItem`): pociones (instantáneas,
+CD compartido 60 s), frascos (1 h, sobreviven muerte), elixires (1 h),
+comida (1 h "bien alimentado", prohíbe comer en combate), pergaminos (1 h),
+bebida (restaura maná fuera de combate). Producidos por profesiones:
+Alquimia (frascos/elixires/pociones), Cocina (comidas), Inscripción
+(pergaminos). El catálogo añade 23 auras y ~25 ítems consumibles.
+
+**Persistencia**: solo los frascos se guardan (`aurasParaPersist` filtra
+`PersisteMuerte`); al cargar, `cargarAurasDesdePersist` restaura los no
+expirados y recalcula máximos. Al morir, `limpiarAurasAlMorir` descarta
+todo salvo frascos.
 
 ### Instancias
 

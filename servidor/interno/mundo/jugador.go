@@ -10,6 +10,7 @@ import (
 	"log"
 	"time"
 
+	"aethelgard/servidor/interno/auras"
 	"aethelgard/servidor/interno/auth"
 	"aethelgard/servidor/interno/persistencia"
 	"aethelgard/servidor/interno/proto"
@@ -71,7 +72,9 @@ type Jugador struct {
 	ultimoDanoMs      int64 // último ms en que tomó o hizo daño
 	ultimoAutoAtaqueMs int64
 	cooldowns         map[string]int64 // hab_id → ms fin cooldown
-	buffs             map[string]int64 // buff_id → ms fin buff
+	buffs             map[string]int64 // buff_id → ms fin buff (sistema simple de habilidades)
+	auras             []*auras.AuraActiva // auras del sistema de auras (frascos, elixires, DoT...)
+	ultimoUsoPocionMs int64            // último ms en que se usó una poción (CD compartido)
 	muertoDesdeMs     int64            // 0 si vivo
 
 	// Inventario y profesiones
@@ -263,6 +266,9 @@ func NuevoJugadorDesdePersistencia(
 		}
 	}
 	j.recalcularStatsMaximos(m)
+	// Cargar auras persistentes (frascos) y recalcular máximos con los buffs
+	// para que el personaje cargue con el HP/mana buffeado.
+	j.cargarAurasDesdePersist(p.Auras, m, time.Now().UnixMilli())
 	return j
 }
 
@@ -525,6 +531,11 @@ func (j *Jugador) actualizarCombate(m *Mundo, t time.Time) {
 			delete(j.buffs, b)
 		}
 	}
+
+	// Auras del sistema de auras: tick periódico (Hot cura, DoT daña) y
+	// limpieza de las expiradas (recalcula máximos si cae un buff de +HP).
+	j.tickAurasPeriodicos(m, ahora)
+	j.removerAurasExpiradas(ahora, m)
 }
 
 // respawn revive al jugador con HP/energía al máximo. La posición de
@@ -615,6 +626,8 @@ func (j *Jugador) calcularDaño(base int) int {
 		mult += 0.10
 	}
 	mult += float64(j.statPrincipalTotal()) / 200.0
+	// Auras: frasco/elixir de daño (+dano_pct en por-mil, 100 = +10%).
+	mult += float64(j.bonusStatAura(auras.StatDanoPct)) / 1000.0
 	return int(float64(base) * mult)
 }
 
@@ -654,6 +667,10 @@ func (j *Jugador) morir(m *Mundo, ahora int64) {
 	j.muertoDesdeMs = ahora
 	j.autoAtaqueActivo = false
 	j.objetivoID = ""
+	// Las auras que no sobreviven a la muerte (elixires, comida, DoT) se
+	// eliminan; los frascos persisten (siguen corriendo su hora). Recalcula
+	// máximos si cae un buff de +HP/+mana.
+	j.limpiarAurasAlMorir(m)
 	// Broadcast death event a jugadores cercanos en la misma zona.
 	m.broadcastCercanoZona(proto.MensajeServidor{
 		Tipo:      "muerte",
@@ -694,6 +711,7 @@ func (j *Jugador) enviarSnapshot(m *Mundo) {
 		AutoAtaqueActivo: j.autoAtaqueActivo,
 		Cooldowns:        cooldownsRestantes(j.cooldowns, time.Now().UnixMilli()),
 		BuffsActivos:     cooldownsRestantes(j.buffs, time.Now().UnixMilli()),
+		AurasActivas:     j.aurasRes(time.Now().UnixMilli()),
 		Muerto:           !j.EstaVivo(),
 		Faccion:          j.faccion,
 		Raza:             j.raza,
@@ -791,6 +809,7 @@ func (j *Jugador) guardar(p *persistencia.Gestor) error {
 		Inventario:  []string{},
 		InventarioStacks: j.stacksParaPersist(),
 		Profesiones: j.profesionesParaPersist(),
+		Auras:       j.aurasParaPersist(),
 		Oro:         j.oro,
 		MisionesActivas:     j.misionesActivasParaPersist(),
 		MisionesCompletadas: j.misionesCompletadasParaPersist(),

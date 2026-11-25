@@ -14,8 +14,8 @@ func TestInscripcionCatalogo(t *testing.T) {
 	if !ok {
 		t.Fatal("inscripción no existe")
 	}
-	if len(p.Recetas) != 43 {
-		t.Errorf("recetas de inscripción = %d, esperaba 43", len(p.Recetas))
+	if len(p.Recetas) != 48 {
+		t.Errorf("recetas de inscripción = %d, esperaba 48", len(p.Recetas))
 	}
 	if len(p.Nodos) != 0 {
 		t.Errorf("inscripción es producción pura, no debería tener nodos: %d", len(p.Nodos))

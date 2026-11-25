@@ -53,6 +53,11 @@ func profesionCocina() DefProfesion {
 		r("kungaloosh", "Kungaloosh", "kungaloosh", 375, 400, "bayas_tundra", 2, "ciruela_blanca_sabrosa", 1),
 		r("guiso_pecespora", "Guiso de pecespora", "guiso_pecespora", 400, 425, "pecespora_zangar", 2, "northern_spice", 1),
 		r("filete_dardo_picante", "Filete de dardo dorado picante", "filete_dardo_picante", 425, 450, "dardo_dorado", 2, "northern_spice", 1),
+		// ─── WotLK: comidas usables (bien alimentado, 1h) ───
+		r("comida_rinoceronte_rec", "Riñón de rinoceronte asado", "comida_rinoceronte", 400, 425, "carne_rinoceronte", 2, "northern_spice", 1),
+		r("comida_sabalo_rec", "Cabeza de sábalo picante", "comida_sabalo", 400, 425, "sabalo", 2, "northern_spice", 1),
+		r("comida_mamut_rec", "Golosinas de mamut especiadas", "comida_mamut", 415, 440, "carne_mamut", 2, "northern_spice", 1),
+		r("comida_banquete_rec", "Gran banquete", "comida_banquete", 425, 450, "carne_mamut", 2, "northern_spice", 1, "especias_frescas", 1),
 	}
 	return DefProfesion{
 		ID:       "cocina",

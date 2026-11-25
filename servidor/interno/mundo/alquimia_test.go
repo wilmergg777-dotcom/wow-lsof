@@ -1,4 +1,4 @@
-// alquimia_test.go valida la profesión de Alquimia: catálogo completo (30
+// alquimia_test.go valida la profesión de Alquimia: catálogo completo (38
 // recetas, 6 rangos, 3 especializaciones), la cadena de pociones
 // intermedias (poción de curación menor y aceite de pigmeo se consumen en
 // recetas posteriores), el crafteo 0-450 con la Investigación insertada en
@@ -16,8 +16,8 @@ func TestRecetasAlquimiaCompletas(t *testing.T) {
 	if !ok {
 		t.Fatal("alquimia no existe")
 	}
-	if len(p.Recetas) != 30 {
-		t.Errorf("recetas de alquimia = %d, esperaba 30", len(p.Recetas))
+	if len(p.Recetas) != 38 {
+		t.Errorf("recetas de alquimia = %d, esperaba 38", len(p.Recetas))
 	}
 	if len(p.Rangos) != 6 {
 		t.Errorf("rangos de alquimia = %d, esperaba 6", len(p.Rangos))

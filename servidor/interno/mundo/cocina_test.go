@@ -16,8 +16,8 @@ func TestCocinaCatalogo(t *testing.T) {
 	if p.Primaria {
 		t.Error("cocina debe ser SECUNDARIA (Primaria=false)")
 	}
-	if len(p.Recetas) != 13 {
-		t.Errorf("recetas de cocina = %d, esperaba 13", len(p.Recetas))
+	if len(p.Recetas) != 17 {
+		t.Errorf("recetas de cocina = %d, esperaba 17", len(p.Recetas))
 	}
 	if len(p.Rangos) != 6 {
 		t.Errorf("rangos = %d, esperaba 6", len(p.Rangos))

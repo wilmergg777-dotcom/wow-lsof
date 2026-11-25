@@ -36,6 +36,9 @@ const (
 	TipoPoción = "poción" // consumibles de un solo uso (sanación, maná, efectos)
 	TipoElixir = "elixir" // consumibles con efecto duradero (batalla/guardián)
 	TipoFrasco = "frasco" // consumibles potentes que cuentan como elixir de batalla y guardián
+	TipoComida = "comida"   // comidas que dan "bien alimentado" (1h)
+	TipoBebida = "bebida"   // bebidas que restauran maná (fuera de combate)
+	TipoPergamino = "pergamino" // pergaminos de atributo (Inscripción)
 	// Tipos de Herrería
 	TipoArma = "arma" // armas crafteadas (hachas, mazas, espadas, dagas)
 	// Tipos de Ingeniería
@@ -98,6 +101,20 @@ type DefItem struct {
 	Espiritu  int    `json:"espiritu,omitempty"`
 	Aguante   int    `json:"aguante,omitempty"`
 	Armadura  int    `json:"armadura,omitempty"`
+
+	// Consumible: si Uso != nil, el ítem es usable (Mundo.UsarItem) y
+	// aplica el efecto descrito. nil = no usable.
+	Uso *UsoItem `json:"uso,omitempty"`
+}
+
+// UsoItem describe el efecto de usar un consumible. Tipo determina la
+// regla de uso; AuraID enlaza con el catálogo de auras (frasco/elixir/
+// comida/pergamino); Cantidad es el HP curado o maná restaurado (pociones/
+// bebida). Ver Mundo.UsarItem y auras.CatalogoAuras.
+type UsoItem struct {
+	Tipo    string `json:"tipo"`     // "pocion_curacion"|"pocion_mana"|"bebida"|"frasco"|"elixir"|"comida"|"pergamino"
+	AuraID  string `json:"aura_id,omitempty"` // para frasco/elixir/comida/pergamino
+	Cantidad int    `json:"cantidad,omitempty"` // para pocion_curacion/pocion_mana/bebida
 }
 
 // itemsPredefinidos devuelve el registro de todos los ítems del juego.
@@ -271,6 +288,13 @@ func itemsPredefinidos() map[string]DefItem {
 		"bayas_tundra":          "Bayas de la tundra",
 		"ciruela_blanca_sabrosa": "Ciruela blanca sabrosa",
 		"northern_spice":        "Especia del norte",
+		"especias_frescas":      "Especias frescas",
+		// Carnes y pescados WotLK (para comidas "bien alimentado").
+		"carne_rinoceronte":     "Carne de rinoceronte",
+		"carne_mamut":           "Carne de mamut",
+		"sabalo":                "Sábalo",
+		// Papiro (soporte de pergaminos de Inscripción).
+		"papiro":                "Papiro",
 		// Comidas cocinadas (productos finales, dan buffs de atributo).
 		"pececito_luminoso":            "Pececito luminoso",
 		"pargo_lodo_boquilargo":        "Pargo de lodo boquilargo",
@@ -953,6 +977,77 @@ func itemsPredefinidos() map[string]DefItem {
 	} {
 		m[id] = def(id, n, TipoMaterial, CalidadRaro)
 	}
+	// ─── Consumibles usables (Mundo.UsarItem) ───
+	// Cada uno enlaza con un aura del catálogo (auras.CatalogoAuras) o con
+	// un efecto instantáneo (pociones/bebida). Producidos por Alquimia
+	// (frascos/elixires/pociones), Cocina (comida) e Inscripción (pergaminos).
+	cons := func(id, nombre, tipo, calidad string, nivelReq int, uso *UsoItem) {
+		it := def(id, nombre, tipo, calidad)
+		it.NivelReq = nivelReq
+		it.Precio = 50
+		it.Uso = uso
+		m[id] = it
+	}
+	// Pociones (instantáneas, CD compartido 60s).
+	cons("pocion_curacion_superior", "Poción de curación superior", TipoPoción, CalidadComun, 35,
+		&UsoItem{Tipo: "pocion_curacion", Cantidad: 800})
+	cons("pocion_mana_superior", "Poción de maná superior", TipoPoción, CalidadComun, 35,
+		&UsoItem{Tipo: "pocion_mana", Cantidad: 1500})
+	cons("pocion_curacion_runica", "Poción de curación rúnica", TipoPoción, CalidadRaro, 70,
+		&UsoItem{Tipo: "pocion_curacion", Cantidad: 2700})
+	cons("pocion_mana_runica", "Poción de maná rúnica", TipoPoción, CalidadRaro, 70,
+		&UsoItem{Tipo: "pocion_mana", Cantidad: 7200})
+	// Frascos (1h, sobreviven muerte, slot frasco).
+	cons("frasco_iracolosal", "Frasco de ira colosal", TipoFrasco, CalidadRaro, 70,
+		&UsoItem{Tipo: "frasco", AuraID: "frasco_iracolosal"})
+	cons("frasco_vidrio_escarcha", "Frasco de vidrio de escarcha", TipoFrasco, CalidadRaro, 70,
+		&UsoItem{Tipo: "frasco", AuraID: "frasco_vidrio_escarcha"})
+	cons("frasco_sangre_piedra", "Frasco de sangre de piedra", TipoFrasco, CalidadRaro, 70,
+		&UsoItem{Tipo: "frasco", AuraID: "frasco_sangre_piedra"})
+	cons("frasco_mojo_puro", "Frasco de mojo puro", TipoFrasco, CalidadRaro, 70,
+		&UsoItem{Tipo: "frasco", AuraID: "frasco_mojo_puro"})
+	// Elixires de batalla (slot batalla).
+	cons("elixir_agilidad_poderosa", "Elixir de agilidad poderosa", TipoElixir, CalidadPocoComun, 60,
+		&UsoItem{Tipo: "elixir", AuraID: "elixir_agilidad_poderosa"})
+	cons("elixir_fuerza_poderosa", "Elixir de fuerza poderosa", TipoElixir, CalidadPocoComun, 60,
+		&UsoItem{Tipo: "elixir", AuraID: "elixir_fuerza_poderosa"})
+	cons("elixir_pensamientos_poderosos", "Elixir de pensamientos poderosos", TipoElixir, CalidadPocoComun, 60,
+		&UsoItem{Tipo: "elixir", AuraID: "elixir_pensamientos_poderosos"})
+	cons("elixir_espiritu", "Elixir de espíritu", TipoElixir, CalidadPocoComun, 60,
+		&UsoItem{Tipo: "elixir", AuraID: "elixir_espiritu"})
+	cons("elixir_guru", "Elixir de gurú", TipoElixir, CalidadRaro, 60,
+		&UsoItem{Tipo: "elixir", AuraID: "elixir_guru"})
+	// Elixires guardián (slot guardián).
+	cons("elixir_proteccion", "Elixir de protección", TipoElixir, CalidadPocoComun, 60,
+		&UsoItem{Tipo: "elixir", AuraID: "elixir_proteccion"})
+	cons("elixir_fortaleza_poderosa", "Elixir de fortaleza poderosa", TipoElixir, CalidadPocoComun, 60,
+		&UsoItem{Tipo: "elixir", AuraID: "elixir_fortaleza_poderosa"})
+	cons("elixir_regen_mana_poderosa", "Elixir de regeneración de maná poderosa", TipoElixir, CalidadPocoComun, 60,
+		&UsoItem{Tipo: "elixir", AuraID: "elixir_regen_mana_poderosa"})
+	// Comida (1h "bien alimentado", no en combate).
+	cons("comida_rinoceronte", "Riñón de rinoceronte asado", TipoComida, CalidadComun, 70,
+		&UsoItem{Tipo: "comida", AuraID: "comida_rinoceronte"})
+	cons("comida_sabalo", "Cabeza de sábalo picante", TipoComida, CalidadComun, 70,
+		&UsoItem{Tipo: "comida", AuraID: "comida_sabalo"})
+	cons("comida_mamut", "Golosinas de mamut especiadas", TipoComida, CalidadComun, 70,
+		&UsoItem{Tipo: "comida", AuraID: "comida_mamut"})
+	cons("comida_banquete", "Gran banquete", TipoComida, CalidadRaro, 70,
+		&UsoItem{Tipo: "comida", AuraID: "comida_banquete"})
+	// Pergaminos (1h, 1 por atributo).
+	cons("pergamino_aguante_viii", "Pergamino de aguante VIII", TipoPergamino, CalidadComun, 60,
+		&UsoItem{Tipo: "pergamino", AuraID: "pergamino_aguante_viii"})
+	cons("pergamino_intelecto_viii", "Pergamino de intelecto VIII", TipoPergamino, CalidadComun, 60,
+		&UsoItem{Tipo: "pergamino", AuraID: "pergamino_intelecto_viii"})
+	cons("pergamino_fuerza_viii", "Pergamino de fuerza VIII", TipoPergamino, CalidadComun, 60,
+		&UsoItem{Tipo: "pergamino", AuraID: "pergamino_fuerza_viii"})
+	cons("pergamino_agilidad_viii", "Pergamino de agilidad VIII", TipoPergamino, CalidadComun, 60,
+		&UsoItem{Tipo: "pergamino", AuraID: "pergamino_agilidad_viii"})
+	cons("pergamino_espiritu_viii", "Pergamino de espíritu VIII", TipoPergamino, CalidadComun, 60,
+		&UsoItem{Tipo: "pergamino", AuraID: "pergamino_espiritu_viii"})
+	// Bebida (restaura maná, no en combate).
+	cons("agua_fresca", "Agua fresca", TipoBebida, CalidadComun, 35,
+		&UsoItem{Tipo: "bebida", Cantidad: 2000})
+
 	// Mezclar los ítems equipables (armas/armadura con stats por ranura).
 	for k, v := range itemsEquipoPredefinidos() {
 		m[k] = v

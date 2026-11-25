@@ -73,6 +73,18 @@ func profesionAlquimia() DefProfesion {
 		r("transmutar_titanio", "Transmutar: titanio", "titanio", 425, 430, mat("barra_de_saronita", 8)),
 		r("transmutar_diamante_llama_celeste", "Transmutar: diamante de llama celeste", "diamante_llama_celeste", 430, 435, mat("aire_eterno", 1, "sangrita", 1, "calcedonia", 1, "barra_de_saronita", 1)),
 		r("frasco_ira_infinita", "Frasco de ira infinita", "frasco_ira_infinita", 435, 450, mat("lengua_de_víboris", 2, "flor_exánime", 1)),
+		// ─── WotLK: consumibles usables (frascos/elixires/pociones) ───
+		// Producen ítems con Uso (ver mundo.itemsPredefinidos) que aplican
+		// auras del catálogo (auras.CatalogoAuras) al usarlos. Ordenadas por
+		// skill ascendente; los frascos cierran la banda en 450.
+		r("pocion_curacion_runica_rec", "Poción de curación rúnica", "pocion_curacion_runica", 350, 400, mat("lirio_atigrado", 2, "espina_de_hielo", 1)),
+		r("pocion_mana_runica_rec", "Poción de maná rúnica", "pocion_mana_runica", 365, 415, mat("lirio_atigrado", 2, "espina_de_hielo", 1)),
+		r("elixir_agilidad_poderosa_rec", "Elixir de agilidad poderosa", "elixir_agilidad_poderosa", 375, 425, mat("lirio_atigrado", 2, "frasco_mojo", 1)),
+		r("elixir_fuerza_poderosa_rec", "Elixir de fuerza poderosa", "elixir_fuerza_poderosa", 380, 430, mat("lirio_atigrado", 2, "frasco_mojo", 1)),
+		r("frasco_iracolosal_rec", "Frasco de ira colosal", "frasco_iracolosal", 435, 450, mat("lirio_atigrado", 7, "espina_de_hielo", 3, "frasco_mojo", 1)),
+		r("frasco_vidrio_escarcha_rec", "Frasco de vidrio de escarcha", "frasco_vidrio_escarcha", 435, 450, mat("lirio_atigrado", 7, "espina_de_hielo", 3, "frasco_mojo", 1)),
+		r("frasco_sangre_piedra_rec", "Frasco de sangre de piedra", "frasco_sangre_piedra", 435, 450, mat("lirio_atigrado", 7, "espina_de_hielo", 3, "frasco_mojo", 1)),
+		r("frasco_mojo_puro_rec", "Frasco de mojo puro", "frasco_mojo_puro", 435, 450, mat("flor_abisal", 7, "espina_de_hielo", 3, "frasco_mojo", 1)),
 	}
 	especializaciones := []DefEspecializacion{
 		{
