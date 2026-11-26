@@ -16,13 +16,16 @@
      4) APK para Android (se auto-actualiza igual que la APK móvil)
 
    NOTAS DE MANTENIMIENTO (leer antes de editar):
-   - Las versiones de las tarjetas están escritas a mano. Al subir
-     versión nueva hay que cambiarlas aquí y en styles/templates/
-     game/page.descargas.default.tpl (esa otra es dinámica, lee
-     version.json; esta es estática porque el login no carga PHP).
-   - Los enlaces apuntan al servidor del juego. El Setup y los
-     launchers llevan DENTRO las imágenes del juego (~130 MB): por
-     eso pesan eso y por eso NO gastan datos al jugar.
+   - ✅ Las versiones y URLs salen DIRECTO de apk/version.json: esta
+     página las recibe de ShowDownloadsPage.class.php
+     (includes/pages/login/), que lee el JSON en cada render — IGUAL
+     que la página de descargas del juego (ShowDescargasPage +
+     styles/templates/game/page.descargas.default.tpl). Las dos
+     trabajan a la par: al subir versión nueva NO hay que tocar
+     nada aquí, el workflow regenera version.json y las dos
+     páginas muestran lo publicado.
+   - El Setup y los launchers llevan DENTRO las imágenes del juego
+     (~130 MB): por eso pesan eso y por eso NO gastan datos al jugar.
    - Los colores del tema: naranja #ff5e00, cian #00e0ff,
      verde #4aff88 / #10b981, fondo de tarjeta rgba(10,15,25,.9).
    ═════════════════════════════════════════════════════════════════ *}
@@ -378,7 +381,7 @@
             <h3>💻 Windows — Instalador</h3>
             <div class="dl-info">
                 <p><strong>Instalador completo del juego</strong> (Setup).</p>
-                <p>⚙️ Versión: <strong>v2.4.11</strong> &middot; Tamaño: ~136 MB</p>
+                <p>⚙️ Versión: <strong>v{$winVersion}</strong>{if $setupSize} &middot; Tamaño: {$setupSize}{else} &middot; Tamaño: ~136 MB{/if}</p>
                 <p>🖥️ Compatible: Windows 10 y 11 (64 bits)</p>
                 <p>🗒 Qué hace al instalarlo:</p>
                 <ul>
@@ -394,8 +397,8 @@
                     instalador no está firmado con certificado de pago.
                 </p>
             </div>
-            <a href="https://astroio.duckdns.org/launcher/AstroIO-Setup-Windows.exe" class="dl-btn" download>Descargar instalador (Setup)</a>
-            <a href="https://astroio.duckdns.org/launcher/AstroIO-Launcher-windows.exe" class="dl-btn-sec" download>Alternativa: launcher portable sin instalar (132 MB)</a>
+            <a href="{$setupUrl}" class="dl-btn" download>Descargar instalador (Setup)</a>
+            <a href="{$winUrl}" class="dl-btn-sec" download>Alternativa: launcher portable sin instalar{if $winSize} ({$winSize}){else} (132 MB){/if}</a>
         </div>
 
         {* ─── 3) LINUX: BINARIO + INSTALADOR ───
@@ -407,7 +410,7 @@
             <h3>🐧 Linux (64 bits)</h3>
             <div class="dl-info">
                 <p><strong>Launcher oficial de AstroIO</strong>.</p>
-                <p>⚙️ Versión: <strong>v2.4.11</strong> &middot; Tamaño: ~131 MB</p>
+                <p>⚙️ Versión: <strong>v{$linuxVersion}</strong>{if $linuxSize} &middot; Tamaño: {$linuxSize}{else} &middot; Tamaño: ~131 MB{/if}</p>
                 <p>🗒 Instalación en 3 pasos:</p>
                 <ol class="dl-pasos">
                     <li>Descarga <strong>los 2 archivos</strong> a la misma carpeta (ej. Descargas).</li>
@@ -420,8 +423,8 @@
                     por usuario. El launcher se auto-actualiza al abrirse.
                 </p>
             </div>
-            <a href="https://astroio.duckdns.org/launcher/AstroIO-Launcher-linux" class="dl-btn" download>1) Descargar el juego (Linux)</a>
-            <a href="https://astroio.duckdns.org/launcher/instalar-linux.sh" class="dl-btn-sec" download>2) Descargar instalar-linux.sh</a>
+            <a href="{$linuxUrl}" class="dl-btn" download>1) Descargar el juego (Linux)</a>
+            <a href="{$linuxShUrl}" class="dl-btn-sec" download>2) Descargar instalar-linux.sh{if $linuxShSize} ({$linuxShSize}){/if}</a>
         </div>
 
         {* ─── 4) ANDROID: APK ─── *}
@@ -429,7 +432,7 @@
             <h3>📱 Android (APK)</h3>
             <div class="dl-info">
                 <p><strong>Juego completo en tu teléfono o tablet.</strong></p>
-                <p>⚙️ Versión: <strong>v2.4.4</strong> &middot; Tamaño: ~131 MB</p>
+                <p>⚙️ Versión: <strong>v{$apkVersion}</strong>{if $apkSize} &middot; Tamaño: {$apkSize}{else} &middot; Tamaño: ~131 MB{/if}</p>
                 <p>📱 Compatible: Android 7.0 o superior</p>
                 <p>🗒 Se actualiza sola: al abrirse comprueba si hay versión
                    nueva y la instala sin que hagas nada.</p>
@@ -438,7 +441,7 @@
                     desconocidos", actívalo solo para instalar esta app.
                 </p>
             </div>
-            <a href="https://astroio.duckdns.org/apk/AstroIO.apk" class="dl-btn" download>Descargar APK</a>
+            <a href="{$apkUrl}" class="dl-btn" download>Descargar APK</a>
         </div>
 
     </div>

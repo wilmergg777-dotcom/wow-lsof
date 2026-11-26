@@ -1,22 +1,25 @@
 <?php
 /**
  * ShowDescargasPage — Página de descargas DENTRO del juego
- * AstroIO v2.4.1
+ * AstroIO v2.4.11
  *
  * URL: game.php?page=descargas
  *
  * Muestra al jugador los enlaces oficiales para descargar:
  *   - APK para Android (AstroIO.apk)
- *   - Launcher para Windows (AstroIO-Launcher-windows.exe)
- *   - Launcher para Linux (AstroIO-Launcher-linux)
+ *   - Launcher para Windows — Setup recomendado + portable
+ *     (AstroIO-Setup-Windows.exe / AstroIO-Launcher-windows.exe)
+ *   - Launcher para Linux + el script instalar-linux.sh
+ *     (AstroIO-Launcher-linux / instalar-linux.sh)
  *
- * Los datos se leen del archivo apk/version.json que vive en la RAÍZ del
- * dominio (la misma carpeta donde están game.php e index.php). Como el
- * workflow de GitHub Actions genera ese archivo con la versión y los
- * SHA-256 correctos en cada compilación, esta página SIEMPRE muestra la
- * versión y las URLs reales sin necesidad de tocar código.
- * Si el archivo no existe (servidor sin la carpeta apk/), se usan los
- * valores de respaldo definidos más abajo.
+ * ✅ La versión de la APK y de los launchers se lee DIRECTO de
+ *    apk/version.json (igual que la página de descargas del login,
+ *    ShowDownloadsPage: las dos trabajan a la par). El workflow de
+ *    GitHub Actions genera ese archivo con versiones, URLs y
+ *    SHA-256 correctos en cada compilación, así que esta página
+ *    SIEMPRE muestra lo publicado sin tocar código.
+ *    Si el archivo no existe (servidor sin la carpeta apk/), se usan
+ *    los valores de respaldo definidos más abajo.
  *
  * Además:
  *   - Detecta el dispositivo del jugador (Android / Windows / Linux) para
@@ -33,10 +36,13 @@ class ShowDescargasPage extends AbstractGamePage
 
 	// Valores de respaldo si el servidor no tiene apk/version.json
 	private static $DEFAULTS = array(
-		'versionName' => '2.4.1',
-		'apkUrl'      => 'https://astroio.duckdns.org/apk/AstroIO.apk',
-		'winUrl'      => 'https://astroio.duckdns.org/launcher/AstroIO-Launcher-windows.exe',
-		'linuxUrl'    => 'https://astroio.duckdns.org/launcher/AstroIO-Launcher-linux',
+		'apkVersion'   => '2.4.4',
+		'apkUrl'       => 'https://astroio.duckdns.org/apk/AstroIO.apk',
+		'winVersion'   => '2.4.11',
+		'setupUrl'     => 'https://astroio.duckdns.org/launcher/AstroIO-Setup-Windows.exe',
+		'winUrl'       => 'https://astroio.duckdns.org/launcher/AstroIO-Launcher-windows.exe',
+		'linuxVersion' => '2.4.11',
+		'linuxUrl'     => 'https://astroio.duckdns.org/launcher/AstroIO-Launcher-linux',
 	);
 
 	public function __construct()
@@ -51,37 +57,63 @@ class ShowDescargasPage extends AbstractGamePage
 		// 1) Leer apk/version.json de la raíz del dominio
 		// ─────────────────────────────────────────────────────────
 		$data = array(
-			'versionName' => self::$DEFAULTS['versionName'],
-			'apkUrl'      => self::$DEFAULTS['apkUrl'],
-			'winUrl'      => self::$DEFAULTS['winUrl'],
-			'linuxUrl'    => self::$DEFAULTS['linuxUrl'],
+			'apkVersion'   => self::$DEFAULTS['apkVersion'],
+			'apkUrl'       => self::$DEFAULTS['apkUrl'],
+			'winVersion'   => self::$DEFAULTS['winVersion'],
+			'setupUrl'     => self::$DEFAULTS['setupUrl'],
+			'winUrl'       => self::$DEFAULTS['winUrl'],
+			'linuxVersion' => self::$DEFAULTS['linuxVersion'],
+			'linuxUrl'     => self::$DEFAULTS['linuxUrl'],
 		);
 
 		$jsonFile = ROOT_PATH.'apk/version.json';
 		if (is_file($jsonFile)) {
 			$json = json_decode((string) @file_get_contents($jsonFile), true);
 			if (is_array($json)) {
+				// Versión y URL de la APK (bloque principal del JSON)
 				if (!empty($json['versionName'])) {
-					$data['versionName'] = (string) $json['versionName'];
+					$data['apkVersion'] = (string) $json['versionName'];
 				}
 				if (!empty($json['url'])) {
 					$data['apkUrl'] = (string) $json['url'];
 				}
+				// Versión de los launchers (bloque "launcher", INDEPENDIENTE
+				// de la APK: Windows y Linux van siempre a la par)
+				if (!empty($json['launcher']['versionName'])) {
+					$data['winVersion']   = (string) $json['launcher']['versionName'];
+					$data['linuxVersion'] = (string) $json['launcher']['versionName'];
+				}
+				// Setup recomendado en Windows (instalador completo)
+				if (!empty($json['launcher']['windowsInstaller']['url'])) {
+					$data['setupUrl'] = (string) $json['launcher']['windowsInstaller']['url'];
+				}
+				// Launcher portable de Windows (sin instalar)
 				if (!empty($json['launcher']['windows']['url'])) {
 					$data['winUrl'] = (string) $json['launcher']['windows']['url'];
 				}
+				// Launcher Linux
 				if (!empty($json['launcher']['linux']['url'])) {
 					$data['linuxUrl'] = (string) $json['launcher']['linux']['url'];
 				}
 			}
 		}
 
+		// instalar-linux.sh vive en la MISMA carpeta del servidor que el
+		// launcher Linux: se deriva de su URL (no está en version.json).
+		$data['linuxShUrl'] = preg_replace(
+			'#/AstroIO-Launcher-linux([?#].*)?$#',
+			'/instalar-linux.sh',
+			$data['linuxUrl']
+		);
+
 		// ─────────────────────────────────────────────────────────
 		// 2) Tamaño real de cada archivo si está en el servidor
 		// ─────────────────────────────────────────────────────────
-		$data['apkSize']   = self::fileSizeMB(ROOT_PATH.'apk/AstroIO.apk');
-		$data['winSize']   = self::fileSizeMB(ROOT_PATH.'launcher/AstroIO-Launcher-windows.exe');
-		$data['linuxSize'] = self::fileSizeMB(ROOT_PATH.'launcher/AstroIO-Launcher-linux');
+		$data['apkSize']     = self::fileSizeMB(ROOT_PATH.'apk/AstroIO.apk');
+		$data['setupSize']   = self::fileSizeMB(ROOT_PATH.'launcher/AstroIO-Setup-Windows.exe');
+		$data['winSize']     = self::fileSizeMB(ROOT_PATH.'launcher/AstroIO-Launcher-windows.exe');
+		$data['linuxSize']   = self::fileSizeMB(ROOT_PATH.'launcher/AstroIO-Launcher-linux');
+		$data['linuxShSize'] = self::fileSizeKB(ROOT_PATH.'launcher/instalar-linux.sh');
 
 		// ─────────────────────────────────────────────────────────
 		// 3) Detectar el dispositivo del jugador (User-Agent)
@@ -114,5 +146,20 @@ class ShowDescargasPage extends AbstractGamePage
 			return '';
 		}
 		return round($bytes / 1048576, 1).' MB';
+	}
+
+	/**
+	 * Devuelve el tamaño del archivo en KB (texto), o '' si no existe.
+	 */
+	private static function fileSizeKB($path)
+	{
+		if (!is_file($path)) {
+			return '';
+		}
+		$bytes = (int) filesize($path);
+		if ($bytes <= 0) {
+			return '';
+		}
+		return round($bytes / 1024, 0).' KB';
 	}
 }
