@@ -429,7 +429,7 @@
             <h3>📱 Android (APK)</h3>
             <div class="dl-info">
                 <p><strong>Juego completo en tu teléfono o tablet.</strong></p>
-                <p>⚙️ Versión: <strong>v2.4.3</strong> &middot; Tamaño: ~131 MB</p>
+                <p>⚙️ Versión: <strong>v2.4.4</strong> &middot; Tamaño: ~131 MB</p>
                 <p>📱 Compatible: Android 7.0 o superior</p>
                 <p>🗒 Se actualiza sola: al abrirse comprueba si hay versión
                    nueva y la instala sin que hagas nada.</p>

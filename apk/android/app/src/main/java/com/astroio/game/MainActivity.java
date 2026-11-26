@@ -2,6 +2,8 @@ package com.astroio.game;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
@@ -47,35 +49,25 @@ import java.util.concurrent.Executors;
  *  - Sirve las imágenes del juego desde dentro de la APK (assets locales)
  *    para ahorrar datos móviles.
  *  - Al abrirse comprueba la versión con el servidor; si hay una versión
- *    más nueva, descarga e instala la actualización y NO deja entrar al
- *    juego hasta que la app esté actualizada.
+ *    más nueva lo AVISA con dos opciones (Continuar / Actualizar) sin
+ *    bloquear la entrada al juego. Si se actualiza, la descarga muestra
+ *    porcentaje, velocidad y tiempo restante, y se instala sola.
+ *  - v2.4.4: servicio en segundo plano con notificaciones flotantes de
+ *    mensaje nuevo y alarma sonora de ataque (EstadoService), icono y
+ *    pantalla de carga con el logo oficial del sitio.
  *  - Si falla la conexión muestra un aviso genérico (sin dominios ni datos
  *    técnicos del servidor).
  */
 public class MainActivity extends Activity {
 
     // ════════════════════════════════════════════════════════════════
-    //  Configuración del servidor (XOR 0x5A: el dominio no aparece
-    //  en texto plano dentro del APK ni en pantallas de error).
+    //  Configuración del servidor: vive en Servidor.java (v2.4.4) para
+    //  compartirla con EstadoService (notificaciones en segundo plano).
     // ════════════════════════════════════════════════════════════════
-    private static final int XK = 0x5A;
-    private static final String HOST_ENC = "3b292e28353335743e2f39313e34297435283d";
-    // ASTROIO v2.4.1: el juego está en la RAÍZ del dominio (antes /AstroIO3.4/).
-    // Cadena vacía => sin subcarpeta (https://astroio.duckdns.org/...).
-    private static final String BASE_PATH_ENC = "";
-
-    private static String deobf(String hex) {
-        byte[] raw = new byte[hex.length() / 2];
-        for (int i = 0; i < raw.length; i++) {
-            raw[i] = (byte) (Integer.parseInt(hex.substring(i * 2, i * 2 + 2), 16) ^ XK);
-        }
-        return new String(raw, StandardCharsets.UTF_8);
-    }
-
-    private static String serverHost()     { return deobf(HOST_ENC); }
-    private static String serverBasePath() { return deobf(BASE_PATH_ENC); }
-    private static String homeUrl()        { return "https://" + serverHost() + serverBasePath() + "game.php"; }
-    private static String versionUrl()     { return "https://" + serverHost() + serverBasePath() + "apk/version.json"; }
+    private static String serverHost()     { return Servidor.host(); }
+    private static String serverBasePath() { return Servidor.basePath(); }
+    private static String homeUrl()        { return Servidor.juegoUrl(); }
+    private static String versionUrl()     { return Servidor.versionUrl(); }
 
     private static final int FILE_CHOOSER_REQ = 4242;
     private static final int CONNECT_TIMEOUT  = 10000;
@@ -115,6 +107,10 @@ public class MainActivity extends Activity {
             showFatal(err);
             return;
         }
+        // v2.4.4: permiso de notificaciones (Android 13+) y servicio de
+        // estado en segundo plano. Ninguno bloquea la entrada al juego.
+        pedirPermisoNotificaciones();
+        arrancarServicioEstado();
         runVersionCheck();
     }
 
@@ -175,15 +171,11 @@ public class MainActivity extends Activity {
         io.execute(new Runnable() {
             @Override public void run() {
                 try {
-                    HttpURLConnection conn = (HttpURLConnection) new URL(versionUrl()).openConnection();
-                    conn.setConnectTimeout(CONNECT_TIMEOUT);
-                    conn.setReadTimeout(READ_TIMEOUT);
-                    conn.setInstanceFollowRedirects(true);
-                    int code = conn.getResponseCode();
-                    String body = readAll(code == 200 ? conn.getInputStream() : conn.getErrorStream());
-                    conn.disconnect();
+                    // v2.4.4: el GET lo hace Servidor (código compartido con
+                    // el servicio en segundo plano).
+                    String body = Servidor.get(versionUrl(), null, Servidor.LECTURA_TIMEOUT);
 
-                    if (code != 200 || body == null || body.trim().isEmpty()) {
+                    if (body == null || body.trim().isEmpty()) {
                         // Sin archivo de versiones configurado: no hay nada que
                         // comparar aún (primera puesta en marcha) → entrar al juego.
                         ui.post(new Runnable() { @Override public void run() { loadGame(); } });
@@ -191,15 +183,23 @@ public class MainActivity extends Activity {
                     }
 
                     JSONObject json = new JSONObject(body);
+                    // IMPORTANTE: se compara SOLO el versionCode de la APK.
+                    // El bloque "launcher" del JSON es para los launchers de
+                    // PC: las versiones de la APK y de los launchers son
+                    // INDEPENDIENTES, así que una versión nueva del launcher
+                    // de Windows NO hace que la app diga "hay actualización".
                     int serverCode = json.optInt("versionCode", 0);
+                    String serverName = json.optString("versionName", "");
                     String apkUrl  = json.optString("url", "");
                     String sha256  = json.optString("sha256", "");
 
                     if (serverCode > BuildConfig.VERSION_CODE && !apkUrl.isEmpty()) {
-                        // Todo lo que toca la UI va por ui.post (hilo principal)
+                        // v2.4.4: ACTUALIZACIÓN NO BLOQUEANTE. Antes se
+                        // descargaba a la fuerza y no dejaba entrar al juego;
+                        // ahora el jugador decide qué hacer.
+                        final String nombre = serverName;
                         ui.post(new Runnable() { @Override public void run() {
-                            showStatus(getString(R.string.s_update_available), null, false, 0, false, false, false);
-                            downloadUpdate(apkUrl, sha256);
+                            preguntarActualizar(nombre, apkUrl, sha256);
                         }});
                     } else {
                         ui.post(new Runnable() { @Override public void run() { loadGame(); } });
@@ -211,6 +211,36 @@ public class MainActivity extends Activity {
                 }
             }
         });
+    }
+
+    /**
+     * v2.4.4 — Aviso de actualización con DOS OPCIONES:
+     *   · Continuar  → entra al juego normal, sin actualizar.
+     *   · Actualizar → descarga la versión nueva con barra de progreso
+     *                  (% , velocidad y tiempo restante) e instala sola.
+     */
+    private void preguntarActualizar(String nombreNuevo, final String apkUrl, final String sha256) {
+        gameLoaded = false;
+        webView.setVisibility(View.GONE);
+        statusScreen.setVisibility(View.GONE); // fondo limpio detrás del diálogo
+        AlertDialog dlg = new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.s_update_title))
+                .setMessage(getString(R.string.s_update_msg, nombreNuevo))
+                .setPositiveButton(R.string.btn_download, new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface d, int which) {
+                        downloadUpdate(apkUrl, sha256);
+                    }
+                })
+                .setNegativeButton(R.string.btn_cont, new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface d, int which) {
+                        loadGame(); // continúa normal, sin actualizar
+                    }
+                })
+                .setCancelable(false)
+                .show();
+        // Colores del tema (cian = actualizar, verde = continuar).
+        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(0xFF00E0FF);
+        dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(0xFF10B981);
     }
 
     private void downloadUpdate(final String apkUrl, final String sha256) {
@@ -246,27 +276,49 @@ public class MainActivity extends Activity {
                     long total = resume ? offset + conn.getContentLength() : conn.getContentLength();
                     InputStream in = conn.getInputStream();
                     FileOutputStream out = new FileOutputStream(part, resume);
+                    // v2.4.4: la barra muestra PORCENTAJE, MB descargados,
+                    // VELOCIDAD por momento (media exponencial suavizada) y
+                    // TIEMPO RESTANTE estimado con esa velocidad.
                     byte[] buf = new byte[16384];
                     long read = offset;
                     int n;
                     int lastPct = -1;
+                    long tMuestra    = System.currentTimeMillis(); // último tramo medido
+                    long readMuestra = offset;                     // bytes al medirlo
+                    double velocidad = 0;                          // bytes/s suavizados
+                    long ultimaUi    = 0;                          // último refresco de pantalla
                     while ((n = in.read(buf)) > 0) {
                         out.write(buf, 0, n);
                         read += n;
                         if (total > 0) {
                             final int pct = (int) (read * 100 / total);
-                            final long doneMB = read / 1048576;
-                            final long totMB  = total / 1048576;
-                            if (pct != lastPct) {
+                            long ahora = System.currentTimeMillis();
+                            // Velocidad instantánea del tramo + suavizado
+                            // (evita que la cifra "baile" de MB/s en MB/s).
+                            double dt = (ahora - tMuestra) / 1000.0;
+                            if (dt >= 0.3) {
+                                double vInst = (read - readMuestra) / dt;
+                                velocidad = (velocidad <= 0)
+                                        ? vInst : 0.4 * vInst + 0.6 * velocidad;
+                                tMuestra    = ahora;
+                                readMuestra = read;
+                            }
+                            // Refresco de pantalla: al cambiar el % o cada segundo.
+                            if (pct != lastPct || ahora - ultimaUi >= 1000) {
                                 lastPct = pct;
+                                ultimaUi = ahora;
+                                final long doneMB = read / 1048576;
+                                final long totMB  = total / 1048576;
+                                final String fVel = (velocidad > 0)
+                                        ? String.format(Locale.US, "%.1f MB/s", velocidad / 1048576.0)
+                                        : "…";
+                                final String fEta = (velocidad > 0)
+                                        ? etaTexto(Math.round((total - read) / velocidad))
+                                        : "…";
                                 ui.post(new Runnable() { @Override public void run() {
-                                    // v2.4.3: % + MB descargados/restantes para que
-                                    // el jugador vea que avanza (no es un bucle).
-                                    if (totMB > 0) {
-                                        showStatus(getString(R.string.s_downloading_mb, pct, doneMB, totMB), null, true, pct, false, false, false);
-                                    } else {
-                                        showStatus(getString(R.string.s_downloading, pct), null, true, pct, false, false, false);
-                                    }
+                                    showStatus(getString(R.string.s_dl_info,
+                                            pct, doneMB, totMB, fVel, fEta),
+                                            null, true, pct, false, false, false);
                                 }});
                             }
                         }
@@ -475,6 +527,50 @@ public class MainActivity extends Activity {
     // ════════════════════════════════════════════════════════════════
     //  Utilidades
     // ════════════════════════════════════════════════════════════════
+
+    /** Convierte segundos a texto corto ("45s", "2m 05s", "1h 12m"). */
+    private static String etaTexto(long segundos) {
+        if (segundos < 0) segundos = 0;
+        if (segundos < 60) return segundos + "s";
+        long m = segundos / 60;
+        long s = segundos % 60;
+        if (m < 60) return m + "m " + (s < 10 ? "0" : "") + s + "s";
+        long h = m / 60;
+        m = m % 60;
+        return h + "h " + (m < 10 ? "0" : "") + m + "m";
+    }
+
+    /**
+     * v2.4.4 — Pide el permiso de notificaciones (Android 13+), necesario
+     * para que el servicio en segundo plano pueda avisar de mensajes y
+     * ataques. No bloquea nada: si se deniega, el juego funciona igual,
+     * solo que sin avisos.
+     */
+    private void pedirPermisoNotificaciones() {
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            try {
+                requestPermissions(
+                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 777);
+            } catch (Exception ignored) { }
+        }
+    }
+
+    /**
+     * v2.4.4 — Arranca el servicio de estado (notificaciones flotantes +
+     * sirena de ataque) que sigue trabajando con la APK minimizada o cerrada.
+     */
+    private void arrancarServicioEstado() {
+        try {
+            Intent s = new Intent(this, EstadoService.class);
+            if (Build.VERSION.SDK_INT >= 26) {
+                startForegroundService(s);
+            } else {
+                startService(s);
+            }
+        } catch (Exception ignored) { }
+    }
 
     private boolean isOnline() {
         try {

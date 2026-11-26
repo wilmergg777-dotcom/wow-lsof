@@ -19,6 +19,28 @@
     <string name="s_debug">Aplicación no válida (versión de depuración).</string>
     <string name="s_editor">Se detectó una app de edición de APK.\nDesinstálala para poder jugar a AstroIO.</string>
 
+    <!-- ═══ v2.4.4: actualización NO bloqueante ═══ -->
+    <string name="s_update_title">Actualización disponible</string>
+    <string name="s_update_msg">Hay una versión nueva de AstroIO (%1$s).\nPuedes seguir jugando o actualizar ahora.</string>
+    <!-- Barra de descarga: % · MB · velocidad por momento · tiempo restante -->
+    <string name="s_dl_info">Descargando actualización… %1$d%%\n%2$d de %3$d MB · %4$s\nFaltan ~%5$s</string>
+    <string name="btn_cont">Continuar</string>
+
+    <!-- ═══ v2.4.4: canales de notificación (Android 8+) ═══ -->
+    <string name="c_servicio">AstroIO (servicio)</string>
+    <string name="c_mensajes">Mensajes nuevos</string>
+    <string name="c_mensajes_desc">Avisos flotantes cuando recibes un mensaje nuevo en el juego</string>
+    <string name="c_ataques">Alarmas de ataque</string>
+    <string name="c_ataques_desc">Notificación y sirena de alarma cuando estás siendo atacado</string>
+
+    <!-- ═══ v2.4.4: textos de las notificaciones ═══ -->
+    <string name="n_servicio_titulo">AstroIO activo</string>
+    <string name="n_servicio_texto">Vigilando mensajes y ataques</string>
+    <string name="n_mensaje_titulo">💬 Mensaje nuevo</string>
+    <string name="n_mensaje_texto">Tienes %1$d mensajes sin leer en el juego</string>
+    <string name="n_ataque_titulo">🚨 ¡Estás siendo atacado!</string>
+    <string name="n_ataque_texto">Flotas enemigas en vuelo hacia tus planetas.\nEntra ya para defenderte.</string>
+
     <string name="btn_retry">Reintentar</string>
     <string name="btn_continue">Entrar de todas formas</string>
     <string name="btn_close">Cerrar</string>

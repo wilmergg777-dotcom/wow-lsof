@@ -19,10 +19,12 @@
         android:padding="28dp"
         android:visibility="visible">
 
+        <!-- v2.4.4: el logo oficial del sitio (el mismo del icono) en la
+             pantalla de carga y de actualización -->
         <ImageView
-            android:layout_width="96dp"
-            android:layout_height="96dp"
-            android:src="@mipmap/ic_launcher"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:src="@drawable/logo_astroio"
             android:contentDescription="@string/app_name" />
 
         <TextView

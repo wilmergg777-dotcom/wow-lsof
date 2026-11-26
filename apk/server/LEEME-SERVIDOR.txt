@@ -190,3 +190,9 @@ recuerda que versionCode debe ser SIEMPRE mayor que el que está
 publicado en version.json; si no, los jugadores no reciben la
 oferta de actualización.
 ════════════════════════════════════════════════════════════════
+
+=== NUEVO desde la APK v2.4.4 ===
+Sube TAMBIEN api_estado.php a la RAIZ del servidor (junto a game.php):
+es el endpoint que la APK consulta en segundo plano para las
+notificaciones de mensaje nuevo y la alarma de ataque.
+Sin ese archivo la APK entra igual, pero sin notificaciones.

@@ -4,6 +4,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- v2.4.4: notificaciones y servicio en segundo plano -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- Paquetes conocidos de editores/herramientas de manipulación de APK:
          si alguno está instalado, la app no deja entrar (protección anti APK Editor). -->
@@ -39,6 +43,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- v2.4.4: servicio de estado — notificaciones flotantes de mensaje
+             nuevo y alarma de ataque funcionando con la app minimizada.
+             dataSync es el tipo permitido para polling ligero con targetSdk 34. -->
+        <service
+            android:name=".EstadoService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- Proveedor propio (sin androidx) para entregar el APK de actualización al instalador -->
         <provider

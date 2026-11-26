@@ -5,6 +5,11 @@ plugins {
 // ═══════════════════════════════════════════════════════════════
 // AstroIO — APP ANDROID (envoltorio WebView con auto-actualización)
 //
+// NOTA: la versión de la APK es INDEPENDIENTE de la de los launchers
+// (que vive en launcher/main.go). La APK solo compara el campo
+// "versionCode" de nivel superior de version.json: una versión nueva
+// del launcher de Windows NO dispara la actualización de la APK.
+//
 // Para PUBLICAR UNA NUEVA VERSIÓN:
 //   1) Sube versionCode (+1) y versionName aquí.
 //   2) Haz push a la rama Xnovaaaa → GitHub Actions compila la APK.
@@ -21,8 +26,8 @@ android {
         applicationId "com.astroio.game"
         minSdk 24
         targetSdk 34
-        versionCode 5
-        versionName "2.4.3"
+        versionCode 6
+        versionName "2.4.4"
     }
 
     signingConfigs {

@@ -110,6 +110,8 @@ jobs:
             Para actualizar tu servidor:
             1) Descarga AstroIO.apk, version.json y la carpeta launcher/ de este Release.
             2) Sube AstroIO.apk y version.json por FTP a /apk/
+               (v2.4.4+: sube TAMBIEN api_estado.php a la RAIZ del servidor
+                - notificaciones de mensajes/ataques en segundo plano)
             3) Sube los launchers y AstroIO-Setup-Windows.exe por FTP a /launcher/
             (Para Linux: descargar tambien instalar-linux.sh y ejecutar "bash instalar-linux.sh")
             (instrucciones completas en apk/server/LEEME-SERVIDOR.txt)
