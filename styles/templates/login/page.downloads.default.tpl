@@ -378,7 +378,7 @@
             <h3>💻 Windows — Instalador</h3>
             <div class="dl-info">
                 <p><strong>Instalador completo del juego</strong> (Setup).</p>
-                <p>⚙️ Versión: <strong>v2.4.10</strong> &middot; Tamaño: ~136 MB</p>
+                <p>⚙️ Versión: <strong>v2.4.11</strong> &middot; Tamaño: ~136 MB</p>
                 <p>🖥️ Compatible: Windows 10 y 11 (64 bits)</p>
                 <p>🗒 Qué hace al instalarlo:</p>
                 <ul>
@@ -407,7 +407,7 @@
             <h3>🐧 Linux (64 bits)</h3>
             <div class="dl-info">
                 <p><strong>Launcher oficial de AstroIO</strong>.</p>
-                <p>⚙️ Versión: <strong>v2.4.10</strong> &middot; Tamaño: ~131 MB</p>
+                <p>⚙️ Versión: <strong>v2.4.11</strong> &middot; Tamaño: ~131 MB</p>
                 <p>🗒 Instalación en 3 pasos:</p>
                 <ol class="dl-pasos">
                     <li>Descarga <strong>los 2 archivos</strong> a la misma carpeta (ej. Descargas).</li>

@@ -1,5 +1,5 @@
 ════════════════════════════════════════════════════════════════
- ASTROIO LAUNCHER — PC Windows y Linux (v6, build 6 / versión 2.4.9)
+ ASTROIO LAUNCHER — PC Windows y Linux (v8, build 8 / versión 2.4.11)
 ════════════════════════════════════════════════════════════════
 
 QUÉ ES (AHORA SÍ UNA APP DE VERDAD, COMO LA APK)
@@ -21,13 +21,26 @@ Ya no abre "el navegador": es una APLICACIÓN con ventana propia.
      guarda en CACHÉ DE DISCO la primera vez y ya no se baja más.
    - Acceso directo "AstroIO - Borrar datos" (menú Inicio / menú
      de apps): borra sesión, caché y ajustes, IGUAL QUE LA APK.
-   - Se AUTO-ACTUALIZA consultando version.json igual que la APK
-     (descarga, verifica SHA-256 y se reemplaza sola).
+   - PANTALLA DE CARGA con el logo oficial (el mismo del icono):
+     la ventana abre AL INSTANTE mostrando el logo mientras
+     comprueba la versión; antes esperabas a ciegas.
+   - ACTUALIZACIÓN NO BLOQUEANTE (v2.4.11, igual que la APK):
+     si hay versión nueva SE AVISA con dos botones (Continuar /
+     Actualizar). La descarga muestra %, MB, VELOCIDAD y TIEMPO
+     RESTANTE; al terminar verifica el SHA-256, se reemplaza
+     sola y abre la versión nueva. NUNCA instala nada por su
+     cuenta ni te bloquea la entrada al juego.
+   - NO INSTALA NADA: el launcher es portable (doble clic y
+     funciona); el Setup de Windows sigue siendo OPCIONAL.
    - La dirección del servidor va ofuscada dentro (XOR 0x5A).
 
 HISTORIAL
 ---------
    v4 (2.4.7): Setup en Go — adiós al error SxS del NSIS viejo
+   v7 (2.4.10): icono corregido al favicon oficial del sitio
+   v8 (2.4.11): pantalla de carga con el logo + actualización no
+                bloqueante (Continuar/Actualizar) con barra de
+                %, velocidad y tiempo restante + autoinstalación
                ("la configuración en paralelo no es correcta").
    v5 (2.4.8): icono del juego incrustado en los exes de Windows.
    v6 (2.4.9): app de verdad: ventana WebView2 propia, imágenes

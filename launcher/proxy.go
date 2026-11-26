@@ -96,6 +96,11 @@ func (p *proxyServer) handler() http.Handler {
 		},
 	}
 	mux := http.NewServeMux()
+	// v2.4.11: rutas de la UI del launcher (pantalla de carga con el
+	// logo, aviso de actualización Continuar/Actualizar y barra de
+	// progreso). Van antes del proxy: Go ServeMux siempre prefiere
+	// el patrón más concreto, así que no interfieren con el juego.
+	launcherRoutes(mux)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && p.serveLocal(w, r) {
 			return
