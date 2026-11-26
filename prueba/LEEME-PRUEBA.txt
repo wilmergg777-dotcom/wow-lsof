@@ -1,0 +1,66 @@
+================================================================
+ ASTROIO - CARPETA PRUEBA (descarga directa desde GitHub)
+ launcher PC v2.4.13 (build 10) + APK v2.4.6 (versionCode 8)
+================================================================
+
+QUE ES ESTO
+-----------
+Carpeta de pruebas para bajar los ficheros directamente desde
+GitHub sin depender de otros enlaces.
+
+IMPORTANTE: GitHub NO deja subir ficheros de mas de 100 MB dentro
+de una carpeta normal del repositorio. Por eso la APK y los
+launchers (que pesan 138-142 MB cada uno) se publican en la
+seccion "Releases" del repositorio, que permite ficheros grandes
+y tambien es descarga directa:
+
+  1) Abre esta pagina en el navegador:
+
+     https://github.com/wilmergg777-dotcom/wow-lsof/releases/tag/prueba
+
+  2) Ahi estan los ficheros grandes, listos para descargar con un
+     clic:
+
+     - AstroIO.apk                        (APK v2.4.6, versionCode 8)
+     - AstroIO-Launcher-windows.exe       (launcher PC v2.4.13)
+     - AstroIO-Setup-Windows.exe          (instalador para Windows)
+     - AstroIO-RECONEXION-AUTO_launcher-v2.4.13_apk-v2.4.6.zip
+       (paquete completo con todo incluido)
+
+     La APK se instala directamente en el movil (permitir
+     "instalar apps de fuentes desconocidas" si lo pide).
+
+QUE HAY EN ESTA CARPETA
+-----------------------
+- LEEME-RECONEXION-AUTO-v2.4.13-launcher-v2.4.6-apk.txt
+  (en la raiz del repo) Detalle completo de la correccion de
+  reconexion automatica: esto es lo que hace que ya no salga
+  "Sin conexion al servidor" con el servidor en linea.
+
+- descargas.php (en la raiz del repo)
+  Vista "link" de descargas con el mismo estilo del launcher PC
+  (fondo oscuro #0A0F1A, cian #00E0FF, verde #00CC66).
+  Va en la raiz del servidor, donde esta el juego.
+
+- instalar-linux.sh
+  Instalador para Linux (3 pasos, crea entradas en el menu).
+
+- PREV-descargas-pc.png / PREV-descargas-movil.png
+  Capturas de como queda la pagina de descargas en PC y movil.
+
+- src-cambios-v2.4.13-apk-v2.4.6.zip
+  Solo las fuentes que cambiaron (MainActivity.java,
+  Servidor.java, plantillas del launcher, etc.) por si se quiere
+  revisar el codigo exacto.
+
+QUE PROBAR CON ESTA VERSION
+---------------------------
+1. Abrir la APK o el launcher PC: debe conectar solo, sin dar
+   "Sin conexion" con el servidor en linea.
+2. Si se corta la conexion, la APK reintenta sola cada 7 segundos
+   (hasta 12 intentos) y el PC cada 6 segundos (hasta 60), con
+   cuenta visible "Reconectando automaticamente... intento N".
+3. El boton "Continuar" SOLO aparece cuando hay version nueva;
+   en los errores de conexion solo esta "Reintentar".
+4. La pagina de descargas (vista link) lleva el mismo estilo
+   oscuro del launcher.
