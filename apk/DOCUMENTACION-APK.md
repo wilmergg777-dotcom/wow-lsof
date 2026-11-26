@@ -1,5 +1,5 @@
 # AstroIO — DOCUMENTACIÓN TÉCNICA COMPLETA DE LA APK
-### Versión documentada: 2.4.4 (versionCode 6) · Rama: Xnovaaaa
+### Versión documentada: 2.4.6 (versionCode 8) · Rama: Xnovaaaa
 
 > Este documento explica CÓMO está programada la APK por completo y DÓNDE
 > vive cada cosa dentro del proyecto y dentro del paquete APK final.
@@ -38,7 +38,9 @@ apk/
 │       │   ├── EstadoService.java  ← servicio en SEGUNDO PLANO (v2.4.4):
 │       │   │                          notificaciones + alarma de ataque
 │       │   ├── Servidor.java       ← URLs ofuscadas (XOR 0x5A), cookies y GET
-│       │   │                          compartido (Activity + Service)
+│       │   │                          compartido (Activity + Service) +
+│       │   │                          conexión robusta (v2.4.5): IPv4,
+│       │   │                          timeouts 15/20 s y juegoResponde()
 │       │   ├── SecurityGuard.java  ← protecciones anti-modificación
 │       │   └── UpdateFileProvider.java ← ContentProvider propio (sin androidx)
 │       │                              para entregar la APK nueva al instalador
@@ -53,7 +55,9 @@ apk/
 │       │   │                          barrido 550→1150 Hz, sin copyright)
 │       │   ├── raw/isrgrootx1.pem  ← certificado raíz ISRG (Let's Encrypt)
 │       │   ├── layout/activity_main.xml ← WebView + pantalla de estado
-│       │   │                          (logo + título + barra de progreso + botones)
+│       │   │                          (v2.4.5: tarjeta IGUAL que la del
+│       │   │                          launcher de PC + bg_card/btn/progress
+│       │   │                          en drawable/)
 │       │   └── values/strings.xml  ← TODOS los textos visibles al jugador
 │       └── assets/game/…           ← IMÁGENES DEL JUEGO (styles/… del servidor)
 │                                      copiadas al compilar por apk/copiar_assets.sh
@@ -76,7 +80,15 @@ apk/
 - `Servidor` expone: `host()`, `basePath()` (vacío, el juego está en la
   raíz), `juegoUrl()` (game.php), `versionUrl()` (apk/version.json),
   `estadoUrl()` (api_estado.php), `cookieSesion()` (la PHPSESSID del
-  WebView) y `get(url, cookie, timeout)` (GET textual compartido).
+  WebView), `get(url, cookie, timeout)` (GET textual compartido) y
+  `juegoResponde()` (v2.4.5: ¿responde el servidor? cualquier código
+  HTTP cuenta como online).
+- **Conexión robusta (v2.4.5)**: en el arranque de la clase se fuerza la
+  pila **IPv4** (`java.net.preferIPv4Stack`): algunas redes 4G tienen el
+  IPv6 a medias y las peticiones se quedan a 0 KB/s sin dar error claro.
+  Los timeouts suben a **15 s de conexión / 20 s de lectura** (el primer
+  contacto DNS+TCP+TLS en 4G a veces pasa de 10 s) y el GET no usa caché
+  (`setUseCaches(false)`: versiones/estado SIEMPRE frescos).
 - **MainActivity y EstadoService usan la MISMA clase**: si algún día
   cambia el dominio, se cambia SOLO en Servidor.java.
 - Para cambiar de dominio: cifrar la cadena nueva con XOR 0x5A y pegar el
@@ -95,7 +107,8 @@ Flujo en `onCreate`:
    funciona igual (solo sin avisos). NO bloquea.
 4. `arrancarServicioEstado()` — arranca EstadoService (servicio en primer
    plano). NO bloquea.
-5. `runVersionCheck()` — verificación de versión (ver §5).
+5. `runVersionCheck()` — verificación de versión (ver §5). Con la
+   conexión robusta de la v2.4.5 hace 3 intentos antes de rendirse.
 
 ## 5. Actualización NO bloqueante (v2.4.4, cambio grande)
 
@@ -104,12 +117,15 @@ dejaba entrar al juego hasta actualizar**.
 
 Ahora (v2.4.4):
 
-1. `runVersionCheck()` descarga `apk/version.json` y compara **SOLO el
+1. `runVersionCheck()` descarga `apk/version.json` — **con 3 intentos**
+   (esperando 1,5 s y 3 s entre intentos) — y compara **SOLO el
    campo `versionCode` de nivel superior** con `BuildConfig.VERSION_CODE`.
    - El bloque `"launcher"` del JSON se IGNORA: las versiones de la APK y
      de los launchers de PC son **independientes** (un launcher nuevo no
      dispara la actualización de la APK y viceversa).
    - Si no hay `version.json` (primera puesta en marcha) → entra al juego.
+   - Si el JSON llega ilegible PERO el servidor respondió → entra igual
+     (no se marca "Sin conexión" por gusto).
 2. Si hay versión nueva → `preguntarActualizar()` muestra un **diálogo con
    dos opciones**:
    - **Continuar** → `loadGame()` y a jugar sin actualizar.
@@ -127,9 +143,15 @@ Ahora (v2.4.4):
      si está, lanza el instalador del sistema con la APK vía
      `UpdateFileProvider` (content://com.astroio.game.update/…).
    - Tras instalar, `onResume` re-comprueba la versión y entra al juego.
-4. Errores de red durante la comprobación → pantalla con "Reintentar" y
-   "Entrar de todas formas" (el juego necesita internet de todas formas,
-   pero nada queda bloqueado en un bucle).
+4. Errores de red durante la comprobación (v2.4.5): tras los 3 intentos
+   fallidos se hace una ÚLTIMA comprobación — si el JUEGO en sí responde
+   (`Servidor.juegoResponde()`, GET a game.php), el servidor está ONLINE
+   y **se entra igual** (solo se pierde el aviso de actualización de esa
+   sesión, nunca el acceso). Solo si TAMPOCO responde el juego hay
+   pantalla de error, y esa pantalla ofrece **SOLO Reintentar** — el botón
+   "Entrar de todas formas" desaparece de los errores de conexión y queda
+   reservado a cuando hay una versión nueva pendiente de decidir (igual
+   que el launcher de PC).
 
 **Para publicar versión nueva de la APK:** subir `versionCode +1` y
 `versionName` en `apk/android/app/build.gradle` y hacer push. El workflow
@@ -216,14 +238,24 @@ sesión del juego (la APK manda la PHPSESSID del WebView). Devuelve JSON:
 - Ojo: hay que subirlo por FTP a la raíz (está en el LEEME-SERVIDOR.txt y
   en el cuerpo del Release para no olvidarlo).
 
-## 10. Icono y pantalla de carga (v2.4.4, NUEVO)
+## 10. Icono y pantalla de carga (v2.4.4; estilo v2.4.5)
 
 - **Icono de la app**: `res/mipmap-*/ic_launcher.png` (48/72/96/144/192 px,
   mdpi→xxxhdpi), generado desde el **favicon.ico oficial del sitio** (el
   logo azul, el mismo de la web y de los launchers de PC).
-- **Pantalla de carga/actualización**: `res/drawable/logo_astroio.png`
-  (512 px, mismo logo) sobre fondo oscuro, con el título, la barra de
-  progreso y los botones debajo. Es el primer impacto visual de la app.
+- **Pantalla de carga/actualización**: desde la **v2.4.5 tiene el MISMO
+  estilo que la pantalla de carga del launcher de PC**: tarjeta central
+  oscura `#131A2A` con borde `#223050` y esquinas redondeadas
+  (`drawable/bg_card.xml`), logo 96dp, título "AstroIO" + subtítulo
+  "App oficial del juego", barra de progreso cian con degradado
+  (`drawable/progress_astroio.xml`) y botones redondeados: cian para la
+  acción principal (`bg_btn_accent.xml`), verde para Continuar
+  (`bg_btn_continue.xml`) y gris azulado para Reintentar
+  (`bg_btn_retry.xml`) — los mismos colores `#0A0F1A / #131A2A /
+  #00E0FF / #00CC66` del launcher. Los IDs de las vistas NO cambian:
+  MainActivity sigue funcionando igual.
+- El logo en alta resolución sigue siendo `res/drawable/logo_astroio.png`
+  (512 px, el mismo logo oficial). Es el primer impacto visual de la app.
 
 ## 11. Versiones: APK y launchers son INDEPENDIENTES
 
@@ -256,6 +288,7 @@ Cada producto solo mira SU bloque → nunca se avisan actualizaciones ajenas.
 | 2.4.2 | 4 | Protecciones, User-Agent, certificado |
 | 2.4.3 | 5 | Descarga reanudable (Range), timeouts grandes, % + MB |
 | 2.4.4 | 6 | **Icono y logo oficiales del sitio** · **actualización NO bloqueante (Continuar/Actualizar) con velocidad y tiempo restante** · **servicio en segundo plano** con notificación flotante de mensaje nuevo y **alarma de ataque con sirena** · `api_estado.php` · versiones APK/launcher independientes |
+| 2.4.5 | 7 | **Conexión robusta: 3 intentos de version.json + comprobación de si el JUEGO responde antes de marcar "Sin conexión"** · timeouts 15/20 s · pila IPv4 (redes 4G con IPv6 a medias) · sin caché en versiones/estado · **"Entrar de todas formas" eliminado de los errores de conexión (solo Reintentar; queda reservado a cuando hay versión nueva)** · **pantalla de carga con el MISMO estilo que el launcher de PC** (tarjeta + botones redondeados + barra cian) |
 
 ## 14. Limitaciones conocidas (honestas)
 
@@ -270,3 +303,35 @@ Cada producto solo mira SU bloque → nunca se avisan actualizaciones ajenas.
 - La sirena suena en bucle MIENTRAS haya ataque en vuelo (como la alarma de
   la web). Si dura horas, se puede pausar silenciando el volumen de alarma
   o tocando la notificación (que abre el juego).
+
+
+---
+
+## 12. Qué cambió en la v2.4.6 (versionCode 8) — AUTO-RECONECTA
+
+| Antes (v2.4.5) | Ahora (v2.4.6) |
+|---|---|
+| Las pantallas de error de conexión ("Sin conexión a Internet", "No se pudo comprobar", "No se pudo cargar el juego") quedaban esperando clicks de Reintentar; en 4G había que dar 5-10 veces. | **AUTO-RECONECTA**: cada pantalla de error se reprograma SOLA cada 7 s (hasta 12 intentos) mostrando "Reconectando automáticamente… intento N de 12"; en cuanto el servidor contesta, la app **entra sola**. |
+| Un error de red al cargar game.php en el WebView sacaba la pantalla de error al primer golpe. | **Reintentos silenciosos**: el WebView recarga solo 2 veces (esperando 2,5 s) antes de mostrar error. |
+
+Detalles técnicos (todo en `MainActivity.java`):
+- Campos nuevos: `MAX_AUTO_INTENTOS = 12`, `AUTO_REINTENTO_MS = 7000`,
+  `autoIntentos`, `autoReintentoPendiente` (Runnable), `webReintentos`.
+- `runVersionCheck(boolean manual)`: `manual=true` (arranque, botón
+  Reintentar, onResume tras instalar) REINICIA el contador y cancela el
+  auto programado; `manual=false` lo llama el propio auto-reintento y
+  muestra "intento N de 12" bajo "Comprobando versión…".
+- `programarAutoReintento()` / `cancelarAutoReintento()` gestionan el
+  Runnable con `ui.postDelayed` / `ui.removeCallbacks` (siempre en el
+  hilo de UI). Se cancela al entrar al juego (`loadGame`) y al abrir el
+  diálogo de actualización.
+- `onReceivedError` (main frame): si `webReintentos < 2` y hay red,
+  recarga en silencio (2,5 s); si no, pantalla de error + auto-reintento.
+- NO se toca la pantalla de error de descarga (`s_dl_err`): ahí el
+  Continuar/Reintentar es decisión del jugador (un auto-reintento
+  reabriría el diálogo de actualización cada 7 s).
+- El botón "Entrar de todas formas" SIGUE reservado a cuando HAY una
+  versión nueva (v2.4.5), igual que en el launcher de PC.
+- Verificado: compilación real `gradle assembleRelease` OK (JDK 17,
+  AGP 8.5.2, SDK 34), APK firmada con el certificado oficial AstroIO,
+  `aapt2 dump badging` → versionCode 8 / versionName 2.4.6.

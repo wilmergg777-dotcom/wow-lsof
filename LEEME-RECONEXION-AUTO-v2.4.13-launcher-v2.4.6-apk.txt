@@ -1,0 +1,118 @@
+════════════════════════════════════════════════════════════════
+ ASTROIO — RECONEXIÓN AUTOMÁTICA
+ LAUNCHER PC v2.4.13 (build 10) + APK v2.4.6 (versionCode 8)
+════════════════════════════════════════════════════════════════
+
+QUÉ PASABA (por qué salía "Sin conexión" con el servidor online)
+----------------------------------------------------------------
+· El servidor está BIEN: la comprobación desde fuera responde en
+  menos de 1 segundo (version.json y game.php, 200 OK).
+· Lo que fallaba era el CLIENTE VIEJO que tenías instalado:
+  - Launcher instalado: build 8 (2.4.11) → 1 solo intento corto.
+  - APK instalada: v2.4.4 (versionCode 6) → 1 solo intento de 10 s.
+  Con un solo intento corto basta un primer contacto lento (DNS +
+  TCP + TLS en 4G o en tu ruta hasta el servidor) para sacar el
+  aviso: en PC dando a Reintentar 3-5 veces entrabas; en móvil
+  4G ni con 5-10 veces (la app se quedaba en "Sin conexión").
+· El arreglo anterior (v2.4.12/v2.4.5) se quedó SIN PUBLICAR: sólo
+  llegó el código fuente, y sin el push a GitHub Actions no se
+  compiló nunca. Esta vez los BINARIOS YA VIENEN COMPILADOS en el
+  ZIP y el version.json ya lleva sus SHA-256.
+
+QUÉ SE ARREGLÓ AHORA (v2.4.13 launcher / v2.4.6 APK)
+----------------------------------------------------
+1. AUTO-RECONECTA (lo más importante): si aun así sale "Sin
+   conexión", la pantalla se reintenta SOLA:
+   - Launcher PC: cada 6 s (hasta 60 intentos ≈ 8 min), con
+     "intento N · reintento en Xs" visible. Entra solo al conectar.
+   - APK: cada 7 s (hasta 12 intentos), con "Reconectando
+     automáticamente… intento N de 12". Entra solo al conectar.
+   Reintentar sigue ahí para forzar un intento inmediato, pero ya
+   NO hace falta darle 3, 5 ni 10 veces: la app trabaja sola.
+2. PC: ruta nueva /__entrar__ — antes de navegar al juego comprueba
+   que responde POR EL PROXY y, si no, DIRECTO al servidor; si
+   tampoco, vuelve al loader con auto-recconexión. Nunca más una
+   página de error de WebView a mitad de camino.
+3. APK: el WebView recarga el juego 2 veces en silencio (2,5 s de
+   espera) antes de sacar el error "No se pudo cargar el juego".
+4. BOTONES (se mantiene lo acordado):
+   - "Continuar" SOLO aparece cuando HAY una versión nueva (aviso
+     Continuar/Actualizar) o tras un error de descarga.
+   - Las pantallas de error de conexión muestran SOLO Reintentar.
+5. ESTILO (lo que pediste):
+   - La pantalla de carga/error de la APK ya tiene el MISMO diseño
+     que el launcher de PC (tarjeta #131A2A, cian #00E0FF, logo).
+   - NUEVO: la página descargas.php ("vista link") ahora usa el
+     MISMO estilo del launcher (fondo #0A0F1A, tarjeta, botones
+     cian/verde redondeados, responsive para móvil) y sus enlaces
+     apuntan a las rutas que se actualizan solas: /apk/AstroIO.apk
+     y /launcher/AstroIO-Launcher-windows.exe.
+
+QUÉ TRAE ESTE ZIP (TODO COMPILADO, LISTO PARA PROBAR)
+-----------------------------------------------------
+  launcher/AstroIO-Launcher-windows.exe   ← v2.4.13 build 10 (PC)
+  launcher/AstroIO-Launcher-linux         ← v2.4.13 build 10
+  launcher/AstroIO-Setup-Windows.exe      ← instalador opcional
+  launcher/instalar-linux.sh              ← instala en Linux
+  apk/AstroIO.apk                         ← v2.4.6 (versionCode 8)
+  apk/version.json                        ← LISTO para subir a /apk/
+  web/descargas.php                       ← vista link con el estilo
+  src-cambios/                            ← fuentes cambiados (repo)
+  PREV-descargas-pc.png / -movil.png      ← vista previa de la página
+
+SHA-256 (los mismos que lleva version.json):
+  APK     e0ea883be0eda63862f43e8e5dfdf6f6db63894435133cec733a44ca293b53c7
+  Windows 44b5d124160b3d7f13e494210f91bf2068fd3b91410e78494974c7481d4160cf
+  Linux   b02ead7935977485fb78d059bd15dcf5c929aca8df4d1fa164b8a28a8406ba5a
+  Setup   b9504fb9542d1ab51724d9e88ec3c7021e64f049b7d9b8edf925aeede53e7ae5
+
+CÓMO PROBARLO EN TU PC (30 segundos)
+------------------------------------
+  1) Copia AstroIO-Launcher-windows.exe a cualquier carpeta y dale
+     doble clic (es portable, no instala nada).
+  2) Verás el logo + "Comprobando versión…" → "Todo al día ·
+     Entrando al juego…" y entra solo.
+  3) Prueba de la reconexión: corta el WiFi 10 segundos al abrir el
+     launcher → aparecerá "Sin conexión… Reconectando
+     automáticamente… intento N · reintento en Xs" → vuelve el WiFi
+     y ENTRA SOLO, sin tocar nada.
+  4) La APK: instálala encima de la actual (v2.4.4 → 2.4.6, firma
+     igual). Pruébala con la señal floja: se reconecta sola.
+
+CÓMO PUBLICAR (para que se actualicen los jugadores)
+----------------------------------------------------
+  1) Sube por FTP: apk/AstroIO.apk y apk/version.json → /apk/
+  2) Sube por FTP: los 3 binarios de launcher/ → /launcher/
+  3) Sube por FTP: web/descargas.php → la RAÍZ del servidor
+  4) Nada más: los launchers instalados (build 8) se auto-actualizan
+     al abrirse (10 > 8) y las APK instaladas (6) reciben el aviso
+     Continuar/Actualizar (8 > 6).
+  5) Cuando vuelvas a tener el token de GitHub: haz push (los
+     cambios ya están como commit local) y Actions reconstruirá lo
+     mismo; el version.json del Release nuevo sustituye al de este
+     ZIP (mismas versiones si no subes los números).
+
+ARCHIVOS CAMBIADOS (para el push)
+---------------------------------
+  launcher/main.go                     ← build 10 / 2.4.13
+  launcher/ui_launcher.go              ← auto-recconecta + /__entrar__
+  launcher/.gitignore                  ← binarios fuera del repo
+  launcher/DOCUMENTACION-LAUNCHER.md   ← sección 11 (v10)
+  launcher/LEEME-LAUNCHER.txt          ← historial v10
+  apk/android/app/build.gradle         ← versionCode 8 / 2.4.6
+  apk/.../MainActivity.java            ← AUTO-RECONECTA + reloads
+  apk/.../res/values/strings.xml       ← texto "Reconectando…"
+  apk/DOCUMENTACION-APK.md             ← sección 12 (2.4.6)
+  apk/version.json + apk/server/version.json ← SHA reales nuevos
+  descargas.php                        ← estilo launcher + enlaces /apk/ y /launcher/
+
+VERIFICADO ANTES DE ENTREGAR
+----------------------------
+  · Launcher: go vet limpio (Linux y Windows); binario Linux ejecutado
+    de verdad: --version OK, proxy arriba, __estado__ → al_dia contra
+    el servidor real, __entrar__ → URL por el proxy, logo PNG OK.
+  · APK: gradle assembleRelease OK (JDK 17, AGP 8.5.2, SDK 34),
+    firmada con el certificado oficial (CN=AstroIO),
+    aapt2 dump badging → versionCode 8 / versionName 2.4.6.
+  · descargas.php: etiquetas balanceadas y capturas PC + móvil OK.
+════════════════════════════════════════════════════════════════

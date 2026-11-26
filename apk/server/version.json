@@ -1,18 +1,22 @@
 {
-  "versionCode": 5,
-  "versionName": "2.4.3",
+  "versionCode": 8,
+  "versionName": "2.4.6",
   "url": "https://astroio.duckdns.org/apk/AstroIO.apk",
-  "sha256": "c6a444c0f1a8d96f3a865f53cf1a239de7f0ae9f69d7edda187cb11412024369",
+  "sha256": "e0ea883be0eda63862f43e8e5dfdf6f6db63894435133cec733a44ca293b53c7",
   "launcher": {
-    "versionCode": 1,
-    "versionName": "2.4.1",
+    "versionCode": 10,
+    "versionName": "2.4.13",
     "windows": {
       "url": "https://astroio.duckdns.org/launcher/AstroIO-Launcher-windows.exe",
-      "sha256": "9e5cae50c0f27e68d56632d80b8d32b88e1d77a6a12a82d8eb6876a7ed7173a9"
+      "sha256": "44b5d124160b3d7f13e494210f91bf2068fd3b91410e78494974c7481d4160cf"
     },
     "linux": {
       "url": "https://astroio.duckdns.org/launcher/AstroIO-Launcher-linux",
-      "sha256": "ed238df60b4843385764db73127ac9b5cd6f0172fec4df146647aa8c313677a1"
+      "sha256": "b02ead7935977485fb78d059bd15dcf5c929aca8df4d1fa164b8a28a8406ba5a"
+    },
+    "windowsInstaller": {
+      "url": "https://astroio.duckdns.org/launcher/AstroIO-Setup-Windows.exe",
+      "sha256": "b9504fb9542d1ab51724d9e88ec3c7021e64f049b7d9b8edf925aeede53e7ae5"
     }
   }
 }

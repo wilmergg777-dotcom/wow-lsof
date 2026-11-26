@@ -7,4 +7,10 @@
     <color name="astro_text">#CBD5E1</color>
     <color name="astro_title">#FFFFFF</color>
     <color name="astro_bad">#FF5A6E</color>
+    <!-- v2.4.5: MISMO estilo que la pantalla de carga del launcher de PC -->
+    <color name="astro_border">#223050</color>
+    <color name="astro_muted">#8FA0B8</color>
+    <color name="astro_btn_dark">#2A3A5A</color>
+    <color name="astro_btn_text">#CFE2FF</color>
+    <color name="astro_dark_text">#04121F</color>
 </resources>

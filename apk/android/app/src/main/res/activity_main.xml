@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AstroIO — pantalla de carga / estado (v2.4.5):
+  MISMO ESTILO que la pantalla de carga del launcher de PC:
+  fondo oscuro #0A0F1A, tarjeta #131A2A con borde #223050 y
+  esquinas redondeadas, botones redondeados (cian principal,
+  verde para continuar, gris azulado para Reintentar) y barra
+  de progreso cian. Los IDs NO cambian (web_view, status_screen,
+  status_title, status_msg, status_progress, btn_install_perm,
+  btn_continue, btn_retry): MainActivity los sigue encontrando igual.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/astro_bg">
+
+    <WebView
+        android:id="@+id/web_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/status_screen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="18dp"
+        android:visibility="visible">
+
+        <!-- Tarjeta central, IGUAL que la del launcher de PC -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_card"
+            android:paddingLeft="24dp"
+            android:paddingRight="24dp"
+            android:paddingTop="30dp"
+            android:paddingBottom="26dp">
+
+            <ImageView
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:src="@drawable/logo_astroio"
+                android:contentDescription="@string/app_name" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/app_name"
+                android:textColor="@color/astro_title"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.06" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/s_subtitulo"
+                android:textColor="@color/astro_muted"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/status_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:textColor="@color/astro_title"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:text="@string/s_checking" />
+
+            <TextView
+                android:id="@+id/status_msg"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:textColor="@color/astro_muted"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:visibility="gone" />
+
+            <ProgressBar
+                android:id="@+id/status_progress"
+                style="@android:style/Widget.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="14dp"
+                android:layout_marginTop="18dp"
+                android:max="100"
+                android:progress="0"
+                android:progressDrawable="@drawable/progress_astroio"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btn_install_perm"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="22dp"
+                android:background="@drawable/bg_btn_accent"
+                android:text="@string/btn_install_perm"
+                android:textColor="@color/astro_dark_text"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textAllCaps="false"
+                android:stateListAnimator="@null"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btn_continue"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_btn_continue"
+                android:text="@string/btn_continue"
+                android:textColor="@color/astro_dark_text"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textAllCaps="false"
+                android:stateListAnimator="@null"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btn_retry"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_btn_retry"
+                android:text="@string/btn_retry"
+                android:textColor="@color/astro_btn_text"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textAllCaps="false"
+                android:stateListAnimator="@null"
+                android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

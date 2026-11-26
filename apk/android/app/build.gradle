@@ -16,6 +16,11 @@ plugins {
 //   3) Descarga la APK y el version.json del resultado del workflow
 //      (o del Release "apk-vX") y súbelos por FTP a tu servidor en
 //      /apk/  (ver apk/server/LEEME-SERVIDOR.txt).
+//
+// v2.4.6 (versionCode 8): AUTO-RECONECTA — las pantallas de error de
+//   conexión se reintentan SOLAS cada 7 s (hasta 12 veces) y la app
+//   entra sola en cuanto el servidor contesta; además el WebView
+//   recarga el juego 2 veces en silencio antes de sacar error.
 // ═══════════════════════════════════════════════════════════════
 
 android {
@@ -26,8 +31,8 @@ android {
         applicationId "com.astroio.game"
         minSdk 24
         targetSdk 34
-        versionCode 6
-        versionName "2.4.4"
+        versionCode 8
+        versionName "2.4.6"
     }
 
     signingConfigs {

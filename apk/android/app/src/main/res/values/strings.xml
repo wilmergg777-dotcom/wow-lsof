@@ -4,6 +4,8 @@
 
     <!-- Pantalla de estado / actualización (sin dominios ni datos técnicos) -->
     <string name="s_checking">Comprobando versión…</string>
+    <!-- v2.4.5: subtítulo fijo bajo el logo, igual que el del launcher de PC -->
+    <string name="s_subtitulo">App oficial del juego</string>
     <string name="s_no_net">Sin conexión a Internet.\nRevisa tu conexión y vuelve a intentarlo.</string>
     <string name="s_check_err">No se pudo comprobar la actualización.\nRevisa tu conexión e inténtalo de nuevo.</string>
     <string name="s_update_available">Hay una nueva versión de AstroIO disponible.\nDebes actualizar para poder jugar.</string>
@@ -46,4 +48,7 @@
     <string name="btn_close">Cerrar</string>
     <string name="btn_install_perm">Permitir instalación</string>
     <string name="btn_download">Actualizar ahora</string>
+
+    <!-- ═══ v2.4.6: AUTO-RECONECTA (intento N de M en las pantallas de error) ═══ -->
+    <string name="s_auto">Reconectando automáticamente… intento %1$d de %2$d</string>
 </resources>

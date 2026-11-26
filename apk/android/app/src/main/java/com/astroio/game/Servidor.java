@@ -24,6 +24,16 @@ public final class Servidor {
 
     private static final int XK = 0x5A;
 
+    static {
+        // v2.4.5 — CONEXIÓN ROBUSTA: algunas redes móviles (4G) tienen el
+        // IPv6 a medias y las peticiones se quedan colgadas sin dar error
+        // claro (0 KB/s en el intento). Forzando la pila IPv4 la conexión
+        // va directa por IPv4, que es como entra el PC.
+        try {
+            System.setProperty("java.net.preferIPv4Stack", "true");
+        } catch (Exception ignored) { }
+    }
+
     // Dominio del juego en XOR 0x5A (astroio.duckdns.org)
     private static final String HOST_ENC = "3b292e28353335743e2f39313e34297435283d";
     // v2.4.1: el juego está en la RAÍZ del dominio (antes /AstroIO3.4/).
@@ -71,10 +81,13 @@ public final class Servidor {
         }
     }
 
-    /** Timeout de conexión para peticiones cortas (estado/versiones). */
-    public static final int CONEX_TIMEOUT = 10000;
-    /** Timeout de lectura para peticiones cortas. */
-    public static final int LECTURA_TIMEOUT = 15000;
+    /** Timeout de conexión para peticiones cortas (estado/versiones).
+     *  v2.4.5: 15 s — el primer contacto con el servidor (DNS + TCP +
+     *  TLS en una red 4G lenta) a veces pasa de 10 s y un solo intento
+     *  corto marcaba "Sin conexión" por gusto. */
+    public static final int CONEX_TIMEOUT = 15000;
+    /** Timeout de lectura para peticiones cortas (v2.4.5: 20 s). */
+    public static final int LECTURA_TIMEOUT = 20000;
 
     /**
      * GET sencillo que devuelve el cuerpo como texto (o null si la
@@ -88,6 +101,7 @@ public final class Servidor {
             conn.setConnectTimeout(CONEX_TIMEOUT);
             conn.setReadTimeout(timeoutLectura);
             conn.setInstanceFollowRedirects(true);
+            conn.setUseCaches(false); // versiones/estado SIEMPRE frescos
             if (cookie != null && !cookie.isEmpty()) {
                 conn.setRequestProperty("Cookie", cookie);
             }
@@ -107,5 +121,37 @@ public final class Servidor {
         } finally {
             conn.disconnect();
         }
+    }
+
+    /**
+     * v2.4.5 — ¿Responde el servidor del juego? Cualquier respuesta HTTP
+     * (200, 302, 403...) cuenta como ONLINE: lo único que cuenta como
+     * caído es que NO haya respuesta (DNS/TCP/TLS/timeout). Con esto la
+     * app no marca "Sin conexión" cuando version.json falla por un mal
+     * intento aislado pero el juego va bien: en ese caso se entra igual.
+     * Hace 2 intentos con una pequeña espera entre ellos.
+     */
+    public static boolean juegoResponde() {
+        for (int intento = 1; intento <= 2; intento++) {
+            HttpURLConnection conn = null;
+            try {
+                conn = (HttpURLConnection) new URL(juegoUrl()).openConnection();
+                conn.setConnectTimeout(CONEX_TIMEOUT);
+                conn.setReadTimeout(LECTURA_TIMEOUT);
+                conn.setInstanceFollowRedirects(true);
+                conn.setUseCaches(false);
+                conn.getResponseCode(); // cualquier código: el servidor responde
+                return true;
+            } catch (Exception e) {
+                if (intento < 2) {
+                    try { Thread.sleep(1500); } catch (InterruptedException ie) { }
+                }
+            } finally {
+                if (conn != null) {
+                    conn.disconnect();
+                }
+            }
+        }
+        return false;
     }
 }
