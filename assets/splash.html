@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    width: 100%;
+    height: 100%;
+    background: #0c1727;
+    overflow: hidden;
+    font-family: -apple-system, Roboto, 'Segoe UI', sans-serif;
+}
+.stage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80vw;
+    max-width: 380px;
+    aspect-ratio: 2 / 3;
+}
+.hub {
+    position: absolute;
+    top: 42%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 75%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+    animation: spinSlow 25s linear infinite;
+    filter: drop-shadow(0 0 18px rgba(0, 180, 255, 0.65));
+}
+.alien {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    animation: pulseAlien 3s ease-in-out infinite;
+}
+.appname {
+    position: absolute;
+    bottom: 18%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: #ffffff;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 20px rgba(0, 200, 255, 0.85), 0 0 6px rgba(0, 200, 255, 0.6);
+}
+.loader {
+    position: absolute;
+    bottom: 12%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 13px;
+    letter-spacing: 2px;
+}
+.loader::after {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    animation: dots 1.4s steps(4, end) infinite;
+}
+.version {
+    position: absolute;
+    bottom: 3%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+@keyframes spinSlow {
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+@keyframes pulseAlien {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(0, 255, 255, 0.5)); }
+    50% { transform: scale(1.03); filter: drop-shadow(0 0 35px rgba(0, 150, 255, 0.9)); }
+}
+@keyframes dots {
+    0% { content: ''; }
+    25% { content: '.'; }
+    50% { content: '..'; }
+    75% { content: '...'; }
+}
+</style>
+</head>
+<body>
+<div class="stage">
+    <img src="hub.png" class="hub" alt="">
+    <img src="alien.png" class="alien" alt="">
+</div>
+<div class="appname">AstroIO</div>
+<div class="loader">LOADING</div>
+<div class="version">{{VERSION}}</div>
+</body>
+</html>
