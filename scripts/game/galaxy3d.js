@@ -777,6 +777,10 @@
 	$('ag3d_in_s').addEventListener('keydown', function (e) { if (e.key === 'Enter') ir(); });
 	$('ag3d_in_g').addEventListener('keydown', function (e) { if (e.key === 'Enter') ir(); });
 	$('ag3d_home').addEventListener('click', irHome);
+	// selector de vista: saltar a la tabla clásica conservando galaxia:sistema
+	$('ag3d_clasico').addEventListener('click', function () {
+		window.location.href = 'game.php?page=galaxy&vista=clasico&galaxy=' + estado.g + '&system=' + estado.s;
+	});
 	$('ag3d_ord_pos').addEventListener('click', function () {
 		estado.orden = 'pos';
 		this.classList.add('activo'); $('ag3d_ord_pts').classList.remove('activo');

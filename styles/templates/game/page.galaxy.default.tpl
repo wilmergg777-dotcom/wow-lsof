@@ -284,6 +284,7 @@ tr.vacia td { color: #475569; font-style: italic; }
         </div>
         <div class="der">
             <button class="ag3d_btn ag3d_btn-oro" id="ag3d_home" title="Ir al sistema de tu planeta">⌂ MI PLANETA [{$current_galaxy}:{$current_system}:{$current_planet}]</button>
+            <button class="ag3d_btn" id="ag3d_clasico" title="Cambiar a la vista clásica (tabla) conservando galaxia:sistema">🖥 CLÁSICO</button>
             <button class="ag3d_btn ag3d_toggle" id="ag3d_tgl_pos">☰ POSICIONES</button>
             <button class="ag3d_btn ag3d_toggle" id="ag3d_tgl_det">ℹ DETALLE</button>
         </div>
