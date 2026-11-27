@@ -220,7 +220,8 @@
 
     <!-- DOCK de escenas -->
     <div id="x3d_dock">
-        <button data-esc="base" class="activo">🪐 Base</button>
+        <button data-esc="resumen" class="activo">🏠 Resumen</button>
+        <button data-esc="base">🪐 Base</button>
         <button data-esc="hangar">🚀 Naves</button>
         <button data-esc="lab">🔬 Investigación</button>
         <button data-esc="imperio">🛰 Imperio</button>

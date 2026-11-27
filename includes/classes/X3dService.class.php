@@ -27,6 +27,7 @@ require_once(__DIR__ . '/x3d/X3dHangar.php');
 require_once(__DIR__ . '/x3d/X3dLab.php');
 require_once(__DIR__ . '/x3d/X3dImperio.php');
 require_once(__DIR__ . '/x3d/X3dFlotas.php');
+require_once(__DIR__ . '/x3d/X3dOverview.php');
 
 class X3dService
 {
@@ -46,6 +47,7 @@ class X3dService
 	public static function todo($modo)
 	{
 		switch ($modo) {
+			case 'resumen': return X3dOverview::overview();
 			case 'hangar':  return X3dHangar::hangar();
 			case 'lab':     return X3dLab::lab();
 			case 'imperio': return X3dImperio::imperio();

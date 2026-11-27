@@ -35,6 +35,7 @@ class ShowX3dPage extends AbstractGamePage
 	$this->tplObj->loadscript('three.min.js');
 	$this->tplObj->loadscript('OrbitControls.js');
 	$this->tplObj->loadscript('x3d/core.js');
+	$this->tplObj->loadscript('x3d/overview.js');
 	$this->tplObj->loadscript('x3d/base.js');
 	$this->tplObj->loadscript('x3d/hangar.js');
 	$this->tplObj->loadscript('x3d/lab.js');
@@ -53,8 +54,8 @@ class ShowX3dPage extends AbstractGamePage
 	/** API JSON AJAX del escritorio 3D */
 	public function fetch()
 	{
-		$modo = HTTP::_GP('modo', 'base');
-		$permitidos = array('base', 'hangar', 'lab', 'imperio', 'flotas');
+		$modo = HTTP::_GP('modo', 'resumen');
+		$permitidos = array('resumen', 'base', 'hangar', 'lab', 'imperio', 'flotas');
 		if (!in_array($modo, $permitidos)) {
 			$modo = 'base';
 		}

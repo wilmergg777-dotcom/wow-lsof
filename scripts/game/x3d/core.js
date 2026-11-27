@@ -190,7 +190,7 @@ window.X3D = (function () {
 	}
 
 	/* ================= estado de la app ================= */
-	var estado = { escena: 'base', datos: null, sel: null, grupo: null, rayTargets: [] };
+	var estado = { escena: 'resumen', datos: null, sel: null, grupo: null, rayTargets: [] };
 
 	function limpiarEscena() {
 		if (!estado.grupo) return;
@@ -354,6 +354,12 @@ window.X3D = (function () {
 		var mod = modulos[estado.escena];
 		if (mod && mod.construir) cargarDatos(estado.escena, mod.construir);
 	}
+	/* saltar a otra escena del dock (la usan los módulos para enlazarse) */
+	function irA(nombre) {
+		var b = document.querySelector('#x3d_dock button[data-esc="' + nombre + '"]');
+		if (b) { b.click(); return; }
+		toast('⚠️ Módulo <b>' + esc(nombre) + '</b> no disponible', true);
+	}
 
 	/* ================= clic en la escena (raycast → módulo activo) =================
 	   Se enlaza en prepararDOM() porque necesita el canvas ya creado. */
@@ -415,14 +421,15 @@ window.X3D = (function () {
 			});
 		});
 
-		$('x3d_panel_cerrar').addEventListener('click', function () {
+		function al(id, fn) { var el = $(id); if (el) el.addEventListener('click', fn); }
+		al('x3d_panel_cerrar', function () {
 			$('x3d_panel').classList.add('x3d_oculto');
 			$('x3d_iframe').src = 'about:blank';
 		});
-		$('x3d_btn_mods').addEventListener('click', function () {
+		al('x3d_btn_mods', function () {
 			$('x3d_mods').classList.remove('x3d_oculto');
 		});
-		$('x3d_mods_cerrar').addEventListener('click', function () {
+		al('x3d_mods_cerrar', function () {
 			$('x3d_mods').classList.add('x3d_oculto');
 		});
 		document.querySelectorAll('#x3d_mods .x3d_mod').forEach(function (b) {
@@ -447,7 +454,10 @@ window.X3D = (function () {
 		// THREE (las escenas pueden añadir objetos)
 		escena: escena,
 		camara: camara,
-		controls: controls,
+		// getter: controls se crea en prepararDOM() DESPUÉS de devolver el
+		// objeto; un literal plano guardaría null para siempre (bug que
+		// rompía X.controls en todos los módulos).
+		get controls() { return controls; },
 		estado: estado,
 		limpiarEscena: limpiarEscena,
 		// imágenes reales del juego
@@ -458,6 +468,7 @@ window.X3D = (function () {
 		// datos y recursos
 		cargarDatos: cargarDatos,
 		recargarEscena: recargarEscena,
+		irA: irA,
 		hayPara: hayPara,
 		// UI compartida
 		fmt: fmt,
