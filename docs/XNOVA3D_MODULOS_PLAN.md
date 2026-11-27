@@ -13,8 +13,30 @@
    - **Dock de MÓDULOS**: TODOS los módulos del juego abren como paneles
      dentro del app 3D (nada queda sin pasar a 3D).
    - API: `api/index.php?r=x3d&modo=...` para las APKs.
-   - Archivos: `X3dService.class.php`, `ShowX3dPage.class.php`,
-     `page.x3d.tpl`, `scripts/game/xnova3d.js`.
+
+## ESTRUCTURA MODULAR (para trabajar sin romper nada)
+
+**Un módulo = un archivo JS de escena + un archivo PHP de datos.**
+Para corregir o mejorar un módulo se toca SOLO su par de archivos;
+el núcleo, las otras escenas y la API no cambian.
+
+| Módulo (escena 3D) | Escena JS | Datos PHP | Acción real (POST) |
+|---|---|---|---|
+| 🪐 BASE (edificios) | `scripts/game/x3d/base.js` | `includes/classes/x3d/X3dBase.php` | buildings cmd=insert/destroy |
+| 🚀 NAVES (hangar) | `scripts/game/x3d/hangar.js` | `includes/classes/x3d/X3dHangar.php` | shipyard fmenge / auftr[] |
+| 🔬 INVESTIGACIÓN | `scripts/game/x3d/lab.js` | `includes/classes/x3d/X3dLab.php` | research cmd=insert |
+| 🛰 IMPERIO | `scripts/game/x3d/imperio.js` | `includes/classes/x3d/X3dImperio.php` | overview cp=ID |
+| ⚓ FLOTAS | `scripts/game/x3d/flotas.js` | `includes/classes/x3d/X3dFlotas.php` | panel fleetTable |
+| 🧠 NÚCLEO (no toca módulos) | `scripts/game/x3d/core.js` | `includes/classes/x3d/X3dCore.php` | — |
+| 🔀 ROUTER (enruta, no calcula) | carga en `ShowX3dPage` | `X3dService.class.php` | — |
+| 🎨 Plantilla shell | `page.x3d.tpl` | CSS del shell | — |
+| 📋 Catálogo de módulos | `page.x3d.mods.tpl` (1 línea por módulo) | — | — |
+
+Reglas:
+1. **Escena**: cada `x3d/*.js` se registra con `X3D.registrar('nombre', {construir, alClic})` y define SUS propias acciones. El núcleo (`core.js`) solo aporta THREE, texturas reales, fetch, HUD y acciones genéricas.
+2. **Datos**: cada `X3d*.php` devuelve un array JSON; usa `X3dCore::` para dpath/imágenes/costos/esquinas. `X3dService::todo($modo)` solo enruta (página + API no se tocan al corregir un módulo).
+3. **Añadir un módulo 3D nuevo**: 1) crea `x3d/mimodulo.js` que registre su escena, 2) crea `includes/classes/x3d/X3dMiModulo.php`, 3) cárgalo en `ShowX3dPage` y añade el `case` en `X3dService::todo()` + el botón en el dock de `page.x3d.tpl`.
+4. Nada del juego clásico se modifica: las órdenes son POST a las páginas clásicas (el servidor aplica las reglas).
 
 ## El principio (acordado)
 

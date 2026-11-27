@@ -27,9 +27,19 @@ class ShowX3dPage extends AbstractGamePage
 	{
 		global $LNG, $PLANET;
 
-		$this->tplObj->loadscript('three.min.js');
-		$this->tplObj->loadscript('OrbitControls.js');
-		$this->tplObj->loadscript('xnova3d.js');
+	/**
+	 * CARGA MODULAR: el núcleo (x3d/core.js) y UN ARCHIVO POR MÓDULO.
+	 * Añadir un módulo nuevo = crear x3d/mimodulo.js que llame a
+	 * X3D.registrar('mimodulo', {...}) y cargarlo aquí.
+	 */
+	$this->tplObj->loadscript('three.min.js');
+	$this->tplObj->loadscript('OrbitControls.js');
+	$this->tplObj->loadscript('x3d/core.js');
+	$this->tplObj->loadscript('x3d/base.js');
+	$this->tplObj->loadscript('x3d/hangar.js');
+	$this->tplObj->loadscript('x3d/lab.js');
+	$this->tplObj->loadscript('x3d/imperio.js');
+	$this->tplObj->loadscript('x3d/flotas.js');
 
 		$this->assign(array(
 			'x3d'    => X3dService::esquinas(), // el tpl lo pasa con |json
