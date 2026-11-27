@@ -135,7 +135,7 @@
 	renderer.setSize(cont.clientWidth, cont.clientHeight);
 	cont.appendChild(renderer.domElement);
 
-	escena.add(new THREE.AmbientLight(0x3a4a66, 1.0));
+	escena.add(new THREE.AmbientLight(0x3a4a66, 1.25));
 	var luzSol = new THREE.PointLight(0xffdd88, 1.6, 260);
 	escena.add(luzSol);
 
@@ -212,13 +212,33 @@
 		return new THREE.CanvasTexture(cv);
 	}
 
-	// textura real del planeta según su imagen del juego (fallback: procedural)
+	// texturas REALES del juego (styles/theme/gow/planeten) con caché:
+	// planetas grandes, luna, asteroide y escombros. Fallback: procedural.
 	var texLoader = new THREE.TextureLoader();
 	texLoader.setCrossOrigin('anonymous');
-	function texturaReal(url, malla, procedural) {
+	var texCache = {}, texFila = [];
+	function texPoner(url, tx) {
+		texCache[url] = tx;
+		texFila.push(url);
+		if (texFila.length > 40) { // cap de memoria: evicta la más vieja
+			var viejo = texFila.shift();
+			if (texCache[viejo]) { texCache[viejo].dispose(); delete texCache[viejo]; }
+		}
+	}
+	function aplicarTextura(malla, tx, comoBump) {
+		if (!malla.parent) return;
+		malla.material.map = tx;
+		if (comoBump && malla.material.bumpMap !== undefined) {
+			malla.material.bumpMap = tx; malla.material.bumpScale = 0.02;
+		}
+		malla.material.needsUpdate = true;
+	}
+	function texturaReal(url, malla, comoBump) {
 		try {
+			if (texCache[url]) { aplicarTextura(malla, texCache[url], comoBump); return; }
 			texLoader.load(url, function (tx) {
-				if (malla.parent) { malla.material.map = tx; malla.material.needsUpdate = true; }
+				texPoner(url, tx);
+				aplicarTextura(malla, tx, comoBump);
 			}, undefined, function () { /* mantiene la procedural */ });
 		} catch (e) { /* procedural */ }
 	}
@@ -274,7 +294,9 @@
 		grupoSistema.traverse(function (o) {
 			if (o.geometry) o.geometry.dispose();
 			if (o.material) {
-				if (o.material.map) o.material.map.dispose();
+				// solo se descartan texturas procedurales (canvas); las reales
+				// quedan en texCache para reutilizarlas entre sistemas
+				if (o.material.map && o.material.map.isCanvasTexture) o.material.map.dispose();
 				o.material.dispose();
 			}
 		});
@@ -316,7 +338,9 @@
 				grupoOrb.add(malla);
 				rayTargets.push(malla);
 				f._malla = malla; f._radio = radio;
-				if (f.img) texturaReal(DPATH + 'planeten/small/s_' + f.img + '.jpg', malla);
+				// textura REAL del juego (imagen grande de styles/theme/gow/planeten)
+				// + relieve (bump) para que no se vea pintada por código
+				if (f.img) texturaReal(DPATH + 'planeten/' + f.img + '.jpg', malla, true);
 
 				if (f.own) {
 					var anilloPropio = new THREE.Mesh(
@@ -343,12 +367,18 @@
 					grupoOrb.add(luna);
 					rayTargets.push(luna);
 					f._lunaMalla = luna;
-					texturaReal(DPATH + 'planeten/mond.jpg', luna);
+					texturaReal(DPATH + 'planeten/mond.jpg', luna, true);
 				}
-				if (f.deb) { // escombros: partículas naranjas
+				if (f.deb) { // escombros: imagen real debris.jpg + polvo naranja
 					grupoOrb.add(campoEscombros(rng, radio));
 					var chispa = glow('#ffaa33', 3);
 					grupoOrb.add(chispa);
+					var sprDeb = new THREE.Sprite(new THREE.SpriteMaterial({
+						color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+					}));
+					sprDeb.scale.set(radio * 2.4, radio * 2.4, 1);
+					grupoOrb.add(sprDeb);
+					texturaReal(DPATH + 'planeten/debris.jpg', sprDeb);
 				}
 				if (f.ast) { // asteroide del sistema AsteroidHelper
 					grupoOrb.add(mallaAsteroide(radio, rng));
@@ -407,10 +437,15 @@
 	function mallaAsteroide(radioRef, rng) {
 		var ast = new THREE.Mesh(
 			new THREE.DodecahedronGeometry(Math.max(radioRef * 0.32, 0.3)),
-			new THREE.MeshStandardMaterial({ color: 0xb08050, roughness: 1 })
+			new THREE.MeshStandardMaterial({
+				map: texPlaneta('#b08050', '#6b4f2e', Math.floor(rng() * 9999)),
+				roughness: 1
+			})
 		);
 		ast.scale.set(1, 0.7, 0.85);
 		ast.position.set(radioRef + 1.9, 0.2, 0);
+		// imagen real del asteroide del juego (fallback: procedural de arriba)
+		texturaReal(DPATH + 'planeten/small/s_asteroid.jpg', ast, true);
 		return ast;
 	}
 
@@ -532,6 +567,7 @@
 				'<td style="color:#475569">—</td><td class="pts">—</td><td class="rk">—</td></tr>';
 		}
 		var col = colorDe(f);
+		var mini = DPATH + 'planeten/small/s_' + f.img + '.jpg';
 		var icos = (f.luna ? '<span class="ico" title="Luna">🌙</span>' : '') +
 			(f.deb ? '<span class="ico" title="Escombros">♻️</span>' : '') +
 			(f.ast ? '<span class="ico" title="Asteroide">☄️</span>' : '') +
@@ -545,7 +581,7 @@
 		var al = f.ally ? ' <span class="tag-ally">[' + esc(f.ally.tag) + ']</span>' : '';
 		return '<tr class="' + cls + '" data-pos="' + f.pos + '" title="' + esc(nombreEstado(f)) + '">' +
 			'<td class="pos">' + f.pos + '</td>' +
-			'<td>' + dot + '<b>' + esc(f.name) + '</b>' + icos + '</td>' +
+			'<td>' + dot + '<img class="thumb" src="' + mini + '" alt="" onerror="this.style.display=\'none\'"><b>' + esc(f.name) + '</b>' + icos + '</td>' +
 			'<td><span style="color:' + col + '">' + esc(f.uname) + '</span>' + al + tu + '</td>' +
 			'<td class="pts" title="' + fmt(f.pts) + ' puntos · ' + esc(f.act || '') + '">' + fmtCorto(f.pts) + '</td>' +
 			'<td class="rk">#' + (f.rank || '-') + '</td></tr>';
@@ -611,7 +647,11 @@
 			return;
 		}
 		var coords = '[' + estado.g + ':' + estado.s + ':' + f.pos + ']';
-		var html = '<div class="ag3d_pt-titulo">OBJETIVO <span class="mono">' + coords + '</span></div>';
+		// imagen REAL del juego en el detalle (planeta o asteroide)
+		var detImg = '';
+		if (f.t === 'p' && f.img) detImg = '<img class="det-img" src="' + DPATH + 'planeten/small/s_' + f.img + '.jpg" alt="" onerror="this.remove()">';
+		else if ((f.t === 'r' || f.t === 'e') && f.ast) detImg = '<img class="det-img" src="' + DPATH + 'planeten/small/s_asteroid.jpg" alt="" onerror="this.remove()">';
+		var html = '<div class="ag3d_pt-titulo">OBJETIVO <span class="mono">' + coords + '</span>' + detImg + '</div>';
 		if (f.t === 'd') {
 			html += '<div class="kv"><span>Zona</span><b style="color:#b06cff">Espacio Profundo</b></div>' +
 				'<div class="kv"><span>Tipo</span><b>Expediciones (misión 15)</b></div>' +
@@ -640,7 +680,7 @@
 				(f.act ? '<div class="kv"><span>Actividad</span><b>🕒 ' + esc(f.act) + '</b></div>' : '') +
 				(f.clima ? '<div class="kv"><span>Clima</span><b style="color:#00e0ff">' + climaEmoji(f.clima.c) + ' ' + esc(f.clima.n) + '</b></div>' : '') +
 				(f.deb ? '<div class="kv"><span>♻️ Escombros</span><b style="color:#ffaa33">' + fmtCorto(f.deb.m) + ' M · ' + fmtCorto(f.deb.c) + ' C</b></div>' : '') +
-				(f.luna ? '<div class="kv"><span>🌙 Luna</span><b>' + fmt(f.luna.dia) + ' km</b></div>' : '') +
+				(f.luna ? '<div class="kv"><span>🌙 Luna</span><b><img class="thumb" src="' + DPATH + 'planeten/small/s_mond.jpg" alt="" onerror="this.style.display=\'none\'"> ' + fmt(f.luna.dia) + ' km</b></div>' : '') +
 				(f.inc === 'a' ? '<div class="kv"><span style="color:#ff4488">⚔️ ¡Ataque entrante!</span><b style="color:#ff4488">Defiende</b></div>' : '') +
 				(f.inc === 's' ? '<div class="kv"><span style="color:#ffaa33">👁️ Espionaje entrante</span><b style="color:#ffaa33">—</b></div>' : '') +
 				(f.inc === 't' ? '<div class="kv"><span style="color:#4a9eff">📦 Transporte entrante</span><b style="color:#4a9eff">—</b></div>' : '');

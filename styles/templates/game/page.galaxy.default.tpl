@@ -264,6 +264,12 @@ tr.vacia td { color: #475569; font-style: italic; }
     #ag3d_hint { display: none; }
     #ag3d_toasts { top: 96px; }
 }
+
+    /* ===== imágenes REALES del juego en el HUD (xnova3d) ===== */
+    .thumb { width: 16px; height: 16px; border-radius: 50%; vertical-align: middle;
+             margin: 0 4px 2px 0; border: 1px solid rgba(0,224,255,.35); }
+    .det-img { width: 54px; height: 54px; border-radius: 10px; object-fit: cover;
+               border: 1px solid rgba(0,224,255,.4); float: right; margin: 0 0 4px 8px; }
 </style>
 {/literal}
 
