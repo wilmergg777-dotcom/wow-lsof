@@ -1,0 +1,10 @@
+rsrc_windows_amd64.syso
+setup/rsrc_windows_amd64.syso
+assets/game/
+setup/launcher.exe
+setup/webview2bootstrapper.exe
+AstroIO-Setup-Windows.exe
+# v2.4.13: los binarios compilados NO van al repo (los genera GitHub
+# Actions con build.sh y se publican en el Release y en el ZIP):
+AstroIO-Launcher-windows.exe
+AstroIO-Launcher-linux

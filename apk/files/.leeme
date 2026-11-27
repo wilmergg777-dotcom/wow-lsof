@@ -1,0 +1,3 @@
+# Carpeta de archivos del juego para la actualización incremental.
+# Los archivos aquí (con la misma ruta relativa que en el servidor) son
+# descargados por la APK. Ver apk/server/LEEME-SERVIDOR.txt

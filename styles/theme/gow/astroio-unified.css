@@ -1,0 +1,343 @@
+/* ═══════════════════════════════════════════════════════════════════
+   ASTROIO — ESTILO UNIFICADO v1.0
+   Archivo: styles/theme/gow/astroio-unified.css
+   ───────────────────────────────────────────────────────────────────
+   Se carga DESPUÉS de ingame.css en los 4 layouts del proyecto:
+     • game  → main.header.tpl      (todas las páginas del juego)
+     • popup → layout.popup.tpl     (via main.header.tpl)
+     • admin → overall_header.tpl   (panel de administración)
+     • login → login/main.header.tpl
+   Objetivo: UN solo estilo en todos los lados, sin dispersión.
+   Los tokens son EXACTAMENTE los mismos que ya usan el chat
+   (page.chat.default.tpl) y el popup (layout.popup.tpl):
+     --accent-cyan #00e0ff · --accent-blue #3b82f6 · --accent-gold #fbbf24
+     --accent-purple #8b5cf6 · --accent-green #4aff88 · --accent-red #ef4444
+     --bg-card rgba(15,23,42,.75) · --border-color #1e293b
+   Todo lo específico de cada página (prefijos astrochat_, astrolaypp_,
+   xnova-…) sigue funcionando: este archivo es la BASE común.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+    --bg-dark:       rgba(11, 16, 30, 0.55);
+    --bg-card:       rgba(15, 23, 42, 0.75);
+    --bg-card-solid: rgba(15, 23, 42, 0.85);
+    --bg-inner:      rgba(0, 0, 0, 0.35);
+    --border-color:  #1e293b;
+    --text-main:     #cbd5e1;
+    --text-muted:    #94a3b8;
+    --text-title:    #ffffff;
+    --accent-blue:   #3b82f6;
+    --accent-cyan:   #00e0ff;
+    --accent-purple: #8b5cf6;
+    --accent-gold:   #fbbf24;
+    --accent-green:  #4aff88;
+    --accent-red:    #ef4444;
+}
+
+/* ═══════════ Base: fondo espacial + tipografía ═══════════ */
+body {
+    background:
+        radial-gradient(1100px 550px at 85% -10%, rgba(59, 130, 246, 0.13), transparent 62%),
+        radial-gradient(900px 500px at -10% 110%, rgba(0, 224, 255, 0.09), transparent 58%),
+        radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.75), transparent 2px),
+        radial-gradient(1px 1px at 34% 71%, rgba(255,255,255,.5), transparent 2px),
+        radial-gradient(1px 1px at 67% 18%, rgba(255,255,255,.6), transparent 2px),
+        radial-gradient(1px 1px at 81% 59%, rgba(255,255,255,.45), transparent 2px),
+        radial-gradient(1.5px 1.5px at 49% 39%, rgba(255,255,255,.55), transparent 2px),
+        radial-gradient(1px 1px at 90% 83%, rgba(255,255,255,.4), transparent 2px),
+        #04070f;
+    background-attachment: fixed;
+    color: var(--text-main);
+    font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+::selection { background: rgba(0, 224, 255, 0.35); color: #fff; }
+
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); }
+::-webkit-scrollbar-thumb { background: rgba(0, 224, 255, 0.35); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 224, 255, 0.55); }
+
+/* ═══════════ Títulos y enlaces ═══════════ */
+h1, h2, h3, h4 {
+    color: var(--text-title);
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+a { color: var(--accent-cyan); text-decoration: none; transition: 0.2s ease; }
+a:hover {
+    color: #ffffff;
+    text-shadow: 0 0 10px rgba(0, 224, 255, 0.7);
+}
+
+/* ═══════════ Tablas: tarjetas glass en todo el juego ═══════════ */
+table {
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    border-collapse: collapse;
+    overflow: hidden;
+}
+
+table th {
+    background: linear-gradient(135deg, rgba(0, 68, 136, 0.85), rgba(0, 119, 204, 0.85));
+    border-bottom: 1px solid rgba(0, 224, 255, 0.5);
+    color: #ffffff;
+    padding: 6px 9px;
+    text-align: left;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+table td {
+    padding: 6px 9px;
+    border-bottom: 1px solid rgba(30, 41, 59, 0.7);
+    color: var(--text-main);
+}
+
+table tr:hover td { background: rgba(0, 224, 255, 0.04); }
+
+/* ═══════════ Formularios ═══════════ */
+input[type="text"], input[type="password"], input[type="email"],
+input[type="number"], input[type="date"], select, textarea {
+    background: rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    border: 1px solid rgba(0, 204, 255, 0.35);
+    border-radius: 8px;
+    padding: 5px 9px;
+    font-size: 12px;
+    font-family: inherit;
+    box-sizing: border-box;
+    max-width: 100%;
+    transition: 0.25s ease;
+}
+
+input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus,
+input[type="number"]:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 12px rgba(0, 224, 255, 0.5);
+    background: rgba(0, 0, 0, 0.65);
+}
+
+textarea { width: 100%; resize: vertical; }
+
+/* ═══════════ Botones ═══════════ */
+button, input[type="submit"], input[type="button"] {
+    background: linear-gradient(180deg, #0066cc 0%, #0099ff 100%);
+    color: #ffffff;
+    border: 1px solid var(--accent-cyan);
+    border-radius: 8px;
+    padding: 5px 16px;
+    font-size: 11.5px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: 0.25s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+button:hover, input[type="submit"]:hover, input[type="button"]:hover {
+    box-shadow: 0 0 18px rgba(0, 224, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+button:active, input[type="submit"]:active { transform: translateY(0); }
+
+input[type="reset"] {
+    background: linear-gradient(180deg, #444 0%, #666 100%);
+    border-color: #888;
+}
+
+/* ═══════════ Aviso global de admin ═══════════ */
+.globalWarning {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    color: #fecaca;
+    border-radius: 10px;
+    margin: 8px 12px;
+    padding: 8px 14px;
+    text-align: center;
+}
+.globalWarning a { color: var(--accent-gold); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   CHAT FLOTANTE — prefijo aiofc- (AstroIO Floating Chat)
+   • Icono de telegrama del propio tema
+   • Dos pestañas: General (canal 0) y Alianza (canal ally_id + 100)
+   • Contador de mensajes no leídos (badge en burbuja y en pestañas)
+   • Oculto en popups y en la propia página del chat
+   ═══════════════════════════════════════════════════════════════════ */
+body.popup .aiofc-fab,
+body.popup .aiofc-pop,
+body#chat .aiofc-fab,
+body#chat .aiofc-pop { display: none !important; }
+
+.aiofc-fab {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 224, 255, 0.5);
+    background: linear-gradient(135deg, #0066cc 0%, #0099ff 100%);
+    cursor: pointer;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 26px rgba(0, 224, 255, 0.35);
+    transition: 0.2s ease;
+    padding: 0;
+}
+
+.aiofc-fab:hover { transform: scale(1.06); box-shadow: 0 10px 32px rgba(0, 224, 255, 0.5); }
+
+.aiofc-fab img {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 6px rgba(0, 224, 255, 0.6));
+}
+
+.aiofc-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    background: var(--accent-red);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #0A1220;
+    padding: 0 4px;
+    box-sizing: border-box;
+}
+.aiofc-badge[hidden] { display: none; }
+
+.aiofc-pop {
+    position: fixed;
+    bottom: 88px;
+    right: 20px;
+    width: min(330px, calc(100vw - 24px));
+    background: rgba(10, 18, 32, 0.96);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    z-index: 9999;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.aiofc-pop[hidden] { display: none; }
+
+.aiofc-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(30, 41, 59, 0.8);
+    background: rgba(0, 224, 255, 0.05);
+}
+.aiofc-head img { width: 18px; height: 18px; object-fit: contain; }
+
+.aiofc-tabs { display: flex; gap: 6px; }
+
+.aiofc-tab {
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 11px;
+    border-radius: 9px;
+    padding: 6px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.aiofc-tab[hidden] { display: none; }
+.aiofc-tab.on {
+    border-color: rgba(0, 224, 255, 0.55);
+    background: rgba(0, 224, 255, 0.1);
+    color: #ffffff;
+}
+
+.aiofc-tag {
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    background: var(--accent-red);
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 900;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+.aiofc-tag[hidden] { display: none; }
+
+.aiofc-grow { flex: 1; }
+
+.aiofc-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 6px;
+    text-transform: none;
+    box-shadow: none;
+}
+.aiofc-close:hover { color: #ffffff; box-shadow: none; transform: none; }
+
+.aiofc-frame {
+    width: 100%;
+    height: 340px;
+    border: none;
+    background: #0A1220;
+    display: block;
+}
+
+/* ═══════════ RESPONSIVE MÓVIL — que no se disperse ═══════════ */
+@media (max-width: 1100px) {
+    #content { padding: 10px !important; }
+}
+
+@media (max-width: 760px) {
+    #page { padding: 8px; }
+    #content { padding: 6px !important; overflow-x: auto; }
+
+    table { font-size: 11px; }
+    table th, table td { padding: 5px 7px; }
+
+    button, input[type="submit"], input[type="button"] {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+
+    .aiofc-fab { bottom: 14px; right: 14px; width: 50px; height: 50px; }
+    .aiofc-fab img { width: 26px; height: 26px; }
+    .aiofc-badge { top: -4px; right: -4px; }
+
+    .aiofc-pop {
+        bottom: 74px;
+        right: 12px;
+        width: calc(100vw - 24px);
+    }
+    .aiofc-frame { height: 62vh; }
+}

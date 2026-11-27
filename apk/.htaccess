@@ -1,0 +1,26 @@
+# ═══════════════════════════════════════════════════════════════
+# AstroIO — protección de la carpeta apk/ en el servidor (VPS)
+#
+# PÚBLICO (lo que la APK necesita):
+#   apk/api.php                    → versión + manifiesto incremental
+#   apk/notify.php                 → notificaciones (mensajes/ataques)
+#   apk/version.json               → compatibilidad con apps antiguas
+#   apk/release/AstroIO.apk        → la APK que se descarga al actualizar
+#   apk/release/version.json       → (se lee por PHP, no hace falta pública)
+#   apk/files/**                   → archivos del juego para actualización
+#
+# PRIVADO (bloqueado):
+#   apk/android/  apk/keystore/  apk/server/  apk/cache/
+#   cualquier .p12 / .sh / .bat / .md / .txt / .log / .cache.json
+# ═══════════════════════════════════════════════════════════════
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(android|keystore|server|cache)(/.*)?$ - [F,L]
+</IfModule>
+
+<FilesMatch "\.(p12|jks|keystore|sh|bat|md|txt|log|cache|cache\.json|properties)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

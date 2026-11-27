@@ -1,0 +1,432 @@
+/*
+ * @package AJAX_Chat
+ * @author Sebastian Tschan
+ * @copyright (c) Sebastian Tschan
+ * @license GNU Affero General Public License
+ * @link https://blueimp.net/ajax/
+ * 
+ * Estilo personalizado AstroIO 2026
+ * Paleta: navy #0f1624 / #1a2332 + cian #00ccff
+ */
+
+
+@import url('positions.css');
+@import url('borders.css');
+@import url('fonts.css');
+@import url('misc.css');
+@import url('print.css');
+
+
+/*
+ * Colors
+ */
+
+@media screen,projection,handheld {
+	:focus {
+		outline:0 none;
+	}
+	
+	/* ═══════════════════════════════════════════
+	   PÁGINA DE LOGIN
+	   ═══════════════════════════════════════════ */
+	#loginContent {
+		background: linear-gradient(135deg, #0f1624 0%, #1a2332 100%);
+		color:#c8d6e5;
+	}
+	#loginContent h1 {
+		color:#00e0ff;
+		text-shadow: 0 0 10px rgba(0,224,255,0.5);
+	}
+	#loginContent a {
+		color:#66ccff;
+		text-decoration: none;
+		transition: all 0.2s ease;
+	}
+	#loginContent a:hover {
+		color:#00e0ff;
+		text-shadow: 0 0 8px rgba(0,224,255,0.6);
+	}
+	#loginContent input, #loginContent select {
+		background: rgba(0, 0, 0, 0.5);
+		border: 1px solid rgba(0, 204, 255, 0.35);
+		border-radius: 6px;
+		color: #ffffff;
+		padding: 6px 10px;
+		font-family: 'Segoe UI', Roboto, sans-serif;
+		font-size: 12px;
+		transition: all 0.25s ease;
+	}
+	#loginContent input:focus, #loginContent select:focus {
+		border-color: #00e0ff;
+		box-shadow: 0 0 14px rgba(0, 224, 255, 0.4);
+		outline: none;
+	}
+	#loginContent #loginFormContainer #loginButton {
+		background: linear-gradient(135deg, #0066cc, #0099ff);
+		border: 1px solid #00ccff;
+		border-radius: 6px;
+		color: #ffffff;
+		font-weight: 700;
+		padding: 8px 20px;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4);
+	}
+	#loginContent #loginFormContainer #loginButton:hover {
+		background: linear-gradient(135deg, #0099ff, #00ccff);
+		box-shadow: 0 6px 18px rgba(0, 204, 255, 0.7);
+		transform: translateY(-1px);
+	}
+	#loginContent #errorContainer {
+		color: #ff4488;
+		text-shadow: 0 0 8px rgba(255, 68, 136, 0.4);
+	}
+	
+	/* ═══════════════════════════════════════════
+	   CONTENIDO PRINCIPAL DEL CHAT
+	   ═══════════════════════════════════════════ */
+	#content {
+		color: #c8d6e5;
+		position: inherit;
+		background: linear-gradient(135deg, #0f1624 0%, #1a2332 100%);
+		font-family: 'Segoe UI', Roboto, sans-serif;
+	}
+	#content h1 {
+		color: #00e0ff;
+		text-shadow: 0 0 12px rgba(0, 224, 255, 0.5);
+		font-weight: 700;
+		letter-spacing: 0.5px;
+	}
+	#content a {
+		color: #66ccff;
+		text-decoration: none;
+		transition: all 0.2s ease;
+	}
+	#content a:hover {
+		color: #00e0ff;
+		text-shadow: 0 0 8px rgba(0, 224, 255, 0.6);
+	}
+	
+	/* ─── Inputs y selects ─── */
+	#content input, #content select, #content textarea {
+		border: 1px solid rgba(0, 204, 255, 0.35);
+		background: rgba(0, 0, 0, 0.5);
+		color: #ffffff;
+		font-family: 'Segoe UI', Roboto, sans-serif;
+		font-size: 12px;
+		padding: 6px 10px;
+		border-radius: 6px;
+		transition: all 0.25s ease;
+	}
+	#content input:focus, #content select:focus, #content textarea:focus {
+		border-color: #00e0ff;
+		box-shadow: 0 0 14px rgba(0, 224, 255, 0.4);
+		outline: none;
+		background: rgba(0, 0, 0, 0.7);
+	}
+	
+	/* ─── Contenedores principales ─── */
+	#content #chatList, #content #onlineListContainer, #content #helpContainer, #content #settingsContainer, #content #bbCodeContainer, #content #colorCodesContainer, #content #emoticonsContainer {
+		background: rgba(10, 15, 26, 0.6);
+		border: 1px solid rgba(0, 204, 255, 0.2);
+		border-radius: 8px;
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 4px 12px rgba(0, 0, 0, 0.3);
+	}
+
+    #content #onlineListContainer #onlineList div > a {
+        padding-bottom: 2px;
+        padding-top: 4px;
+    }
+
+	/* ─── Status containers ─── */
+	.statusContainerOn {
+		background-image: url('../img/loading.png');
+	}
+	.statusContainerOff {
+		background-image: url('../img/loading-done.png');
+	}
+	.statusContainerAlert {
+		background-image: url('../img/loading-trouble.png');
+	}
+	
+	/* ─── BBCode y botones ─── */
+	#content #bbCodeContainer input, #content #submitButton {
+		margin: 2px;
+		text-align: center;
+		background: linear-gradient(135deg, #0066cc, #0099ff);
+		border: 1px solid #00ccff;
+		border-radius: 5px;
+		color: #ffffff;
+		font-weight: 600;
+		padding: 4px 10px;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		box-shadow: 0 2px 6px rgba(0, 102, 204, 0.3);
+	}
+	#content #bbCodeContainer input:hover, #content #submitButton:hover {
+		background: linear-gradient(135deg, #0099ff, #00ccff);
+		box-shadow: 0 4px 12px rgba(0, 204, 255, 0.6);
+		transform: translateY(-1px);
+	}
+	
+    #content #logoutChannelContainer {
+        display:none;
+    }
+
+	/* ─── Color codes (paleta de colores) ─── */
+	#content #colorCodesContainer a {
+		border-color: rgba(0, 204, 255, 0.5);
+		border-radius: 4px;
+		transition: all 0.2s ease;
+	}
+	#content #colorCodesContainer a:hover {
+		border-color: #00e0ff;
+		box-shadow: 0 0 10px rgba(0, 224, 255, 0.6);
+		transform: scale(1.15);
+	}
+	
+	/* ─── Botones de opciones (iconos) ─── */
+	#content #optionsContainer input {
+	    background-color: transparent;
+	    border: 0 none;
+	    cursor: pointer;
+	    transition: all 0.2s ease;
+	}
+	#content #optionsContainer input:hover {
+		transform: scale(1.15);
+		filter: brightness(1.3);
+	}
+	#content #optionsContainer #helpButton {
+	    background: url('../img/help.png') no-repeat;
+	}
+	#content #optionsContainer #settingsButton {
+	    background: url('../img/settings.png') no-repeat;
+	}
+	#content #optionsContainer #onlineListButton {
+	    background: url('../img/users.png') no-repeat;
+	}
+	#content #optionsContainer #audioButton {
+	    background: url('../img/audio.png') no-repeat;
+	}
+	#content #optionsContainer #audioButton.off {
+	    background: url('../img/audio-off.png') no-repeat;
+	}
+	#content #optionsContainer #autoScrollButton {
+	    background: url('../img/autoscroll.png') no-repeat;
+	}
+	#content #optionsContainer #autoScrollButton.off {
+	    background: url('../img/autoscroll-off.png') no-repeat;
+	}
+	
+	/* ─── Filas alternas ─── */
+	#content .rowEven {
+		background: transparent;
+	}
+	#content .rowOdd {
+		background: rgba(0, 204, 255, 0.04);
+	}
+	
+	/* ─── Colores por rol ─── */
+	#content .guest {
+		color: #8899aa;
+	}
+	#content .user {
+		color: #c8d6e5;
+	}
+	#content .moderator {
+		color: #66aaff;
+		text-shadow: 0 0 6px rgba(102, 170, 255, 0.4);
+	}
+	#content .admin {
+		color: #ff6688;
+		text-shadow: 0 0 8px rgba(255, 102, 136, 0.5);
+		font-weight: 700;
+	}
+	#content .chatBot {
+		color: #66ff99;
+		text-shadow: 0 0 6px rgba(102, 255, 153, 0.4);
+	}
+	
+	/* ─── Mensajes del bot ─── */
+	#content #chatList .chatBotErrorMessage {
+		color: #ff4488;
+		text-shadow: 0 0 6px rgba(255, 68, 136, 0.5);
+	}
+	
+	/* ─── Enlaces dentro del chat ─── */
+	#content #chatList a {
+		color: #00e0ff;
+		text-shadow: 0 0 6px rgba(0, 224, 255, 0.3);
+	}
+	#content #chatList a:hover {
+		color: #66ffff;
+		text-shadow: 0 0 10px rgba(102, 255, 255, 0.6);
+	}
+	
+	/* ─── Botón borrar ─── */
+	#content #chatList .delete {
+		background: url('../img/delete.png') no-repeat right;
+		transition: all 0.2s ease;
+	}
+	#content #chatList .delete:hover {
+		filter: brightness(1.4);
+		transform: scale(1.1);
+	}
+	#content #chatList .deleteSelected {
+		border-color: #ff4488;
+		box-shadow: 0 0 10px rgba(255, 68, 136, 0.6);
+	}
+	
+	/* ═══════════════════════════════════════════
+	   CABECERAS DE PANELES (Online, Help, Settings)
+	   ═══════════════════════════════════════════ */
+	#content #onlineListContainer h3, #content #helpContainer h3, #content #settingsContainer h3 {
+		background: linear-gradient(135deg, #004488, #0077cc);
+		border-bottom: 2px solid #00ccff;
+		color: #ffffff;
+		font-weight: 700;
+		height: 28px;
+		line-height: 24px;
+		text-align: center;
+		text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+		letter-spacing: 0.5px;
+		border-radius: 8px 8px 0 0;
+		margin: 0;
+		padding: 0 10px;
+	}
+	#onlineListContainer h3 {
+		padding: 2px 10px;
+	}
+	
+	/* ─── Settings (playback) ─── */
+	#content #settingsContainer > #settingsList input.playback {
+	    background: url('../img/playback.png') no-repeat;
+	    transition: all 0.2s ease;
+	    cursor: pointer;
+	}
+	#content #settingsContainer > #settingsList input.playback:hover {
+		transform: scale(1.15);
+		filter: brightness(1.4);
+	}
+	
+	/* ─── Anchos de contenedores ─── */
+	#content #settingsContainer,
+	#content #helpContainer {
+		width: 200px;
+	}
+	#content #settingsContainer > #settingsList,
+	#content #helpContainer > #helpList {
+		padding: 10px;
+	}
+	
+	/* ═══════════════════════════════════════════
+	   LISTA DE USUARIOS CONECTADOS
+	   ═══════════════════════════════════════════ */
+	#content #onlineListContainer {
+		background: rgba(10, 15, 26, 0.8);
+	}
+	#content #onlineListContainer #onlineList a {
+		color: #66ccff;
+		padding: 4px 8px;
+		display: block;
+		border-radius: 4px;
+		transition: all 0.2s ease;
+	}
+	#content #onlineListContainer #onlineList a:hover {
+		background: rgba(0, 204, 255, 0.12);
+		color: #00e0ff;
+		box-shadow: 0 0 10px rgba(0, 204, 255, 0.3);
+	}
+	
+	/* ═══════════════════════════════════════════
+	   SCROLLBAR MODERNA
+	   ═══════════════════════════════════════════ */
+	#content *::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+	#content *::-webkit-scrollbar-track {
+		background: rgba(0, 0, 0, 0.3);
+		border-radius: 4px;
+	}
+	#content *::-webkit-scrollbar-thumb {
+		background: linear-gradient(180deg, #0066cc, #00ccff);
+		border-radius: 4px;
+		border: 2px solid transparent;
+		background-clip: content-box;
+	}
+	#content *::-webkit-scrollbar-thumb:hover {
+		background: linear-gradient(180deg, #00ccff, #00e0ff);
+		background-clip: content-box;
+	}
+	
+	/* ═══════════════════════════════════════════
+	   ÁREA DE MENSAJES DEL CHAT
+	   ═══════════════════════════════════════════ */
+	#content #chatList {
+		padding: 10px;
+		background: rgba(10, 15, 26, 0.6);
+	}
+	
+	/* Mensajes individuales */
+	#content #chatList .rowEven,
+	#content #chatList .rowOdd {
+		padding: 3px 6px;
+		border-radius: 4px;
+		transition: background 0.2s ease;
+	}
+	#content #chatList .rowEven:hover,
+	#content #chatList .rowOdd:hover {
+		background: rgba(0, 204, 255, 0.08);
+	}
+	
+	/* Timestamps */
+	#content #chatList .timestamp {
+		color: #6688aa;
+		font-family: 'Courier New', monospace;
+		font-size: 10px;
+	}
+	
+	/* ═══════════════════════════════════════════
+	   ÁREA DE ENTRADA DE TEXTO (TEXTAREA)
+	   ═══════════════════════════════════════════ */
+	#content #messageTextArea {
+		background: rgba(0, 0, 0, 0.5);
+		border: 1.5px solid rgba(0, 204, 255, 0.35);
+		border-radius: 8px;
+		color: #ffffff;
+		font-family: 'Segoe UI', Roboto, sans-serif;
+		font-size: 13px;
+		padding: 10px 14px;
+		resize: vertical;
+		transition: all 0.25s ease;
+	}
+	#content #messageTextArea:focus {
+		border-color: #00e0ff;
+		box-shadow: 0 0 16px rgba(0, 224, 255, 0.4);
+		background: rgba(0, 0, 0, 0.7);
+		outline: none;
+	}
+	
+	/* ═══════════════════════════════════════════
+	   BOTONES DE ESTADO (guest, user, mod, admin)
+	   ═══════════════════════════════════════════ */
+	#content .guest .userName {
+		color: #8899aa;
+		font-style: italic;
+	}
+	#content .moderator .userName {
+		color: #66aaff;
+		font-weight: 600;
+	}
+	#content .admin .userName {
+		color: #ff6688;
+		font-weight: 700;
+		text-shadow: 0 0 6px rgba(255, 102, 136, 0.5);
+	}
+	#content .chatBot .userName {
+		color: #66ff99;
+		font-weight: 600;
+		text-shadow: 0 0 6px rgba(102, 255, 153, 0.4);
+	}
+}

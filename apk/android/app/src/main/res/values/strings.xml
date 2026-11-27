@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AstroIO</string>
+
+    <!-- Pantalla de estado / actualización (sin dominios ni datos técnicos) -->
+    <string name="s_checking">Comprobando versión…</string>
+    <string name="s_no_net">Sin conexión a Internet.\nRevisa tu conexión y vuelve a intentarlo.</string>
+    <string name="s_check_err">No se pudo comprobar la actualización.\nRevisa tu conexión e inténtalo de nuevo.</string>
+    <string name="s_update_available">Hay una nueva versión de AstroIO disponible.\nDebes actualizar para poder jugar.</string>
+    <string name="s_downloading">Descargando actualización… %1$d%%</string>
+    <string name="s_verifying">Verificando paquete…</string>
+    <string name="s_bad_pkg">El paquete descargado no es válido.\nInténtalo de nuevo más tarde.</string>
+    <string name="s_install_perm">Para instalar la actualización, permite a AstroIO instalar apps desconocidas y vuelve a intentarlo.</string>
+    <string name="s_installing">Instalando actualización…\nCuando termines, la app se comprobará de nuevo.</string>
+    <string name="s_game_err">No se pudo cargar el juego.\nRevisa tu conexión e inténtalo de nuevo.</string>
+    <string name="s_tampered">Aplicación modificada.\nDesinstálala e instala la versión original de AstroIO.</string>
+    <string name="s_debug">Aplicación no válida (versión de depuración).</string>
+    <string name="s_editor">Se detectó una app de edición de APK.\nDesinstálala para poder jugar a AstroIO.</string>
+
+    <string name="btn_retry">Reintentar</string>
+    <string name="btn_close">Cerrar</string>
+    <string name="btn_install_perm">Permitir instalación</string>
+    <string name="btn_download">Actualizar ahora</string>
+</resources>

@@ -1,0 +1,69 @@
+plugins {
+    id 'com.android.application'
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AstroIO — APP ANDROID (envoltorio WebView con auto-actualización)
+//
+// NOTA: la versión de la APK es INDEPENDIENTE de la de los launchers
+// (que vive en launcher/main.go). La APK solo compara el campo
+// "versionCode" de nivel superior de version.json: una versión nueva
+// del launcher de Windows NO dispara la actualización de la APK.
+//
+// Para PUBLICAR UNA NUEVA VERSIÓN:
+//   1) Sube versionCode (+1) y versionName aquí.
+//   2) Haz push a la rama Xnovaaaa → GitHub Actions compila la APK.
+//   3) Descarga la APK y el version.json del resultado del workflow
+//      (o del Release "apk-vX") y súbelos por FTP a tu servidor en
+//      /apk/  (ver apk/server/LEEME-SERVIDOR.txt).
+//
+// v2.4.6 (versionCode 8): AUTO-RECONECTA — las pantallas de error de
+//   conexión se reintentan SOLAS cada 7 s (hasta 12 veces) y la app
+//   entra sola en cuanto el servidor contesta; además el WebView
+//   recarga el juego 2 veces en silencio antes de sacar error.
+// ═══════════════════════════════════════════════════════════════
+
+android {
+    namespace 'com.astroio.game'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.astroio.game"
+        minSdk 24
+        targetSdk 34
+        versionCode 8
+        versionName "2.4.6"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('../../keystore/astroio-release.p12')
+            storePassword 'AstroIO_key_2024'
+            storeType 'PKCS12'
+            keyAlias 'astroio'
+            keyPassword 'AstroIO_key_2024'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// Sin dependencias externas: cero androidx, cero bibliotecas de terceros.
+dependencies {
+}

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AstroIO</string>
+
+    <!-- Pantalla de estado / actualización (sin dominios ni datos técnicos) -->
+    <string name="s_checking">Comprobando versión…</string>
+    <!-- v2.4.5: subtítulo fijo bajo el logo, igual que el del launcher de PC -->
+    <string name="s_subtitulo">App oficial del juego</string>
+    <string name="s_no_net">Sin conexión a Internet.\nRevisa tu conexión y vuelve a intentarlo.</string>
+    <string name="s_check_err">No se pudo comprobar la actualización.\nRevisa tu conexión e inténtalo de nuevo.</string>
+    <string name="s_update_available">Hay una nueva versión de AstroIO disponible.\nDebes actualizar para poder jugar.</string>
+    <string name="s_downloading">Descargando actualización… %1$d%%</string>
+    <string name="s_downloading_mb">Descargando actualización… %1$d%%\n%2$d de %3$d MB</string>
+    <string name="s_verifying">Verificando paquete…</string>
+    <string name="s_bad_pkg">El paquete descargado no es válido.\nInténtalo de nuevo más tarde.</string>
+    <string name="s_dl_err">No se pudo descargar la actualización.\nComprueba tu conexión e inténtalo de nuevo: se reanuda donde se cortó.</string>
+    <string name="s_install_perm">Para instalar la actualización, permite a AstroIO instalar apps desconocidas y vuelve a intentarlo.</string>
+    <string name="s_installing">Instalando actualización…\nCuando termines, la app se comprobará de nuevo.</string>
+    <string name="s_game_err">No se pudo cargar el juego.\nRevisa tu conexión e inténtalo de nuevo.</string>
+    <string name="s_tampered">Aplicación modificada.\nDesinstálala e instala la versión original de AstroIO.</string>
+    <string name="s_debug">Aplicación no válida (versión de depuración).</string>
+    <string name="s_editor">Se detectó una app de edición de APK.\nDesinstálala para poder jugar a AstroIO.</string>
+
+    <!-- ═══ v2.4.4: actualización NO bloqueante ═══ -->
+    <string name="s_update_title">Actualización disponible</string>
+    <string name="s_update_msg">Hay una versión nueva de AstroIO (%1$s).\nPuedes seguir jugando o actualizar ahora.</string>
+    <!-- Barra de descarga: % · MB · velocidad por momento · tiempo restante -->
+    <string name="s_dl_info">Descargando actualización… %1$d%%\n%2$d de %3$d MB · %4$s\nFaltan ~%5$s</string>
+    <string name="btn_cont">Continuar</string>
+
+    <!-- ═══ v2.4.4: canales de notificación (Android 8+) ═══ -->
+    <string name="c_servicio">AstroIO (servicio)</string>
+    <string name="c_mensajes">Mensajes nuevos</string>
+    <string name="c_mensajes_desc">Avisos flotantes cuando recibes un mensaje nuevo en el juego</string>
+    <string name="c_ataques">Alarmas de ataque</string>
+    <string name="c_ataques_desc">Notificación y sirena de alarma cuando estás siendo atacado</string>
+
+    <!-- ═══ v2.4.4: textos de las notificaciones ═══ -->
+    <string name="n_servicio_titulo">AstroIO activo</string>
+    <string name="n_servicio_texto">Vigilando mensajes y ataques</string>
+    <string name="n_mensaje_titulo">💬 Mensaje nuevo</string>
+    <string name="n_mensaje_texto">Tienes %1$d mensajes sin leer en el juego</string>
+    <string name="n_ataque_titulo">🚨 ¡Estás siendo atacado!</string>
+    <string name="n_ataque_texto">Flotas enemigas en vuelo hacia tus planetas.\nEntra ya para defenderte.</string>
+
+    <string name="btn_retry">Reintentar</string>
+    <string name="btn_continue">Entrar de todas formas</string>
+    <string name="btn_close">Cerrar</string>
+    <string name="btn_install_perm">Permitir instalación</string>
+    <string name="btn_download">Actualizar ahora</string>
+
+    <!-- ═══ v2.4.6: AUTO-RECONECTA (intento N de M en las pantallas de error) ═══ -->
+    <string name="s_auto">Reconectando automáticamente… intento %1$d de %2$d</string>
+</resources>

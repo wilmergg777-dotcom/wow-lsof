@@ -1,0 +1,135 @@
+════════════════════════════════════════════════════════════════
+ ASTROIO LAUNCHER — PC Windows y Linux (v9, build 9 / versión 2.4.12)
+════════════════════════════════════════════════════════════════
+
+QUÉ ES (AHORA SÍ UNA APP DE VERDAD, COMO LA APK)
+------------------------------------------------
+Ya no abre "el navegador": es una APLICACIÓN con ventana propia.
+
+   - WINDOWS: ventana propia con WebView2 (el motor de Edge que
+     trae Windows 10/11). Si el runtime de WebView2 no está, el
+     SETUP lo instala solo (instalador oficial de Microsoft,
+     embebido dentro del Setup).
+   - LINUX: navegador Chromium/Chrome/Edge/Brave en MODO APP con
+     PERFIL PROPIO del launcher (la sesión no se mezcla con la de
+     tu navegador).
+   - Las IMÁGENES DEL JUEGO VAN DENTRO del launcher (las mismas
+     que lleva la APK: edificios, planetas, razas, etc.). Por eso
+     el exe pesa ~140 MB UNA sola vez: después de instalar, las
+     imágenes NO se vuelven a descargar → NO gasta datos por gusto.
+   - Lo estático que no va embebido (css/js/fuentes sueltos) se
+     guarda en CACHÉ DE DISCO la primera vez y ya no se baja más.
+   - Acceso directo "AstroIO - Borrar datos" (menú Inicio / menú
+     de apps): borra sesión, caché y ajustes, IGUAL QUE LA APK.
+   - PANTALLA DE CARGA con el logo oficial (el mismo del icono):
+     la ventana abre AL INSTANTE mostrando el logo mientras
+     comprueba la versión; antes esperabas a ciegas.
+   - ACTUALIZACIÓN NO BLOQUEANTE (v2.4.11, igual que la APK):
+     si hay versión nueva SE AVISA con dos botones (Continuar /
+     Actualizar). La descarga muestra %, MB, VELOCIDAD y TIEMPO
+     RESTANTE; al terminar verifica el SHA-256, se reemplaza
+     sola y abre la versión nueva. NUNCA instala nada por su
+     cuenta ni te bloquea la entrada al juego.
+   - CONEXIÓN ROBUSTA (v2.4.12): la comprobación de versión hace
+     3 intentos (12 s cada uno) y, si el archivo de versiones no
+     responde, comprueba si el JUEGO responde: con el servidor
+     online ya NO aparece "Sin conexión" por gusto. El botón
+     Continuar aparece ÚNICAMENTE cuando hay una versión nueva
+     (igual que en la APK); la pantalla "Sin conexión" solo
+     ofrece Reintentar.
+   - NO INSTALA NADA: el launcher es portable (doble clic y
+     funciona); el Setup de Windows sigue siendo OPCIONAL.
+   - La dirección del servidor va ofuscada dentro (XOR 0x5A).
+
+HISTORIAL
+---------
+   v4 (2.4.7): Setup en Go — adiós al error SxS del NSIS viejo
+                ("la configuración en paralelo no es correcta").
+   v7 (2.4.10): icono corregido al favicon oficial del sitio
+   v8 (2.4.11): pantalla de carga con el logo + actualización no
+                bloqueante (Continuar/Actualizar) con barra de
+                %, velocidad y tiempo restante + autoinstalación
+   v9 (2.4.12): conexión robusta — 3 intentos de version.json +
+                comprobación del juego antes de marcar "Sin
+                conexión"; el Continuar solo sale cuando hay
+                versión nueva (igual que en la APK)
+   v5 (2.4.8): icono del juego incrustado en los exes de Windows.
+   v6 (2.4.9): app de verdad: ventana WebView2 propia, imágenes
+               embebidas + caché, "Borrar datos", desinstalador.
+
+ARCHIVOS
+--------
+   main.go                  → código del launcher (común Win/Linux)
+   proxy.go                 → proxy local 127.0.0.1: imágenes
+                              embebidas + caché de disco + cookies
+   window_windows.go        → ventana WebView2 (motor de la app)
+   window_linux.go          → navegador modo app con perfil propio
+   hidewindow_*.go          → evita consolas negras auxiliares
+   build.sh                 → compila las 3 piezas (dependencias,
+                              imágenes, bootstrapper WebView2, icono)
+   assets/astroio.ico       → icono incrustado en los exes Windows
+   setup/                   → instalador de Windows en Go: copia el
+                              launcher, instala WebView2 si falta,
+                              crea accesos directos + desinstalador
+   instalar-linux.sh        → instalador por usuario en Linux con
+                              icono y entradas en el menú de apps
+
+CÓMO LO USA UN JUGADOR
+----------------------
+WINDOWS (instalador):
+   1) Descarga AstroIO-Setup-Windows.exe (del Release o de la
+      página Descargas del juego).
+   2) Doble clic → instala el juego + accesos directos; si falta
+      WebView2 lo instala (pide permiso de administrador UNA vez).
+      Puede salir el aviso azul de SmartScreen ("Windows protegió
+      tu PC") porque el exe no está firmado con certificado de
+      pago: "Más información" → "Ejecutar de todas formas".
+   3) Desde entonces: doble clic en el icono "AstroIO" → ventana
+      propia del juego. "AstroIO - Borrar datos" en el menú Inicio
+      para limpiar sesión/caché; "Desinstalar AstroIO" para quitar
+      todo.
+WINDOWS (sin instalar):
+   AstroIO-Launcher-windows.exe funciona también suelto (doble
+   clic); pide WebView2 a Windows si no está.
+LINUX:
+   1) Del Release de GitHub descarga LOS 2 archivos y guárdalos en
+      la MISMA carpeta (ej. Descargas):
+         AstroIO-Launcher-linux   y   instalar-linux.sh
+   2) Abre una terminal EN ESA CARPETA y ejecuta:
+         bash instalar-linux.sh
+      (no necesita permisos de administrador: instala por usuario)
+   3) Abre "AstroIO" desde el menú de aplicaciones (categoría
+      Juegos) o con:  ~/.local/bin/AstroIO-Launcher
+      También queda "AstroIO - Borrar datos" en el menú.
+
+CÓMO PUBLICAR UNA VERSIÓN NUEVA (para el administrador)
+-------------------------------------------------------
+1) Edita launcher/main.go → sube launcherVersionCode (+1).
+2) El workflow de GitHub Actions compila TODO solo en cada push
+   que toque apk/ o launcher/: dependencias, imágenes, WebView2,
+   icono, los 3 binarios y el version.json con SHA-256 reales.
+3) Del Release nuevo: sube los 3 binarios por FTP a /launcher/
+   y el version.json a /apk/ (NUNCA edites el version.json a mano).
+4) Los launchers viejos se actualizan solos al abrirse.
+
+NOTAS IMPORTANTES
+-----------------
+- El launcher pesa ~140 MB PORQUE LLEVA LAS IMÁGENES DENTRO (es el
+  mismo peso que la APK). La descarga es UNA vez; jugar no consume
+  datos de imágenes nunca más.
+- Sin Internet: la auto-actualización se salta en silencio y la
+  ventana abre igual (las imágenes embebidas se ven; el juego
+  necesita conexión para las partidas).
+════════════════════════════════════════════════════════════════
+
+HISTORIAL
+---------
+- v10 (2.4.13) — AUTO-RECONECTA: la pantalla "Sin conexión" reintenta
+  SOLA cada 6 s (intento N + cuenta atrás visibles) y entra sola en
+  cuanto el servidor contesta; además antes de entrar se comprueba que
+  el juego responde por el proxy (y si no, directo al servidor), así
+  que ya no hay páginas de error de WebView a mitad de camino.
+- v9 (2.4.12) — Conexión robusta: 3 intentos de version.json + prueba
+  del juego + Continuar reservado a cuando hay versión nueva.
+- v8 (2.4.11) — Rework igual que la APK 2.4.4 (logo, aviso no
+  bloqueante, barra con %/velocidad/ETA, autoinstalación).

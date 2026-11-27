@@ -1,0 +1,59 @@
+plugins {
+    id 'com.android.application'
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AstroIO — APP ANDROID (envoltorio WebView con auto-actualización)
+//
+// Para PUBLICAR UNA NUEVA VERSIÓN:
+//   1) Sube versionCode (+1) y versionName aquí.
+//   2) Haz push a la rama Xnovaaaa → GitHub Actions compila la APK.
+//   3) Descarga la APK y el version.json del resultado del workflow
+//      (o del Release "apk-vX") y súbelos por FTP a tu servidor en
+//      /apk/  (ver apk/server/LEEME-SERVIDOR.txt).
+// ═══════════════════════════════════════════════════════════════
+
+android {
+    namespace 'com.astroio.game'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.astroio.game"
+        minSdk 24
+        targetSdk 34
+        versionCode 2
+        versionName "1.2.0"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('../../keystore/astroio-release.p12')
+            storePassword 'AstroIO_key_2024'
+            storeType 'PKCS12'
+            keyAlias 'astroio'
+            keyPassword 'AstroIO_key_2024'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// Sin dependencias externas: cero androidx, cero bibliotecas de terceros.
+dependencies {
+}
