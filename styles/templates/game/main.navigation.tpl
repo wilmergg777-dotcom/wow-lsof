@@ -992,6 +992,7 @@
                 
                 {if isModuleAvailable($smarty.const.MODULE_RESSOURCE_LIST)}<a href="game.php?page=resources">💎 {$LNG.lm_resources}</a>{/if}
                 {if isModuleAvailable($smarty.const.MODULE_GALAXY)}<a href="game.php?page=galaxy">🧭 {$LNG.lm_galaxy}</a>{/if}
+                <a href="game.php?page=x3d" style="color:#00e0ff;font-weight:700">🌌 XNOVA 3D</a>
                 {if isModuleAvailable($smarty.const.MODULE_ALLIANCE)}<a href="game.php?page=alliance">🏰 {$LNG.lm_alliance}</a>{/if}
                 {if isModuleAvailable($smarty.const.MODULE_SUPPORT)}<a href="game.php?page=ticket">🛠️ {$LNG.lm_support}</a>{/if}
                 <a href="index.php?page=rules" target="rules">📜 {$LNG.lm_rules}</a>

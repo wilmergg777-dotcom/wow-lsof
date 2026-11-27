@@ -1,5 +1,21 @@
 # XNOVA 3D — Inventario y plan de migración módulo por módulo
 
+## ESTADO ACTUAL (rama xnova3d)
+
+✅ **Galaxia 3D completa** con imágenes reales (`page=galaxy&vista=3d`).
+✅ **ESCRITORIO 3D completo** (`page=x3d`, enlace 🌌 XNOVA 3D en el menú):
+   - Escenas 3D con las **imágenes reales del juego**: BASE (planeta real +
+     edificios `gebaeude/{id}.gif`), NAVES (hangar de naves y defensas),
+     INVESTIGACIÓN (laboratorio), IMPERIO (todos tus mundos con sus texturas
+     `planeten/{img}.jpg`), FLOTAS (flotas en vuelo con la imagen de su nave).
+   - Acciones reales por POST al juego clásico (mejorar/demoler edificio,
+     investigar, construir naves/defensas, cancelar colas).
+   - **Dock de MÓDULOS**: TODOS los módulos del juego abren como paneles
+     dentro del app 3D (nada queda sin pasar a 3D).
+   - API: `api/index.php?r=x3d&modo=...` para las APKs.
+   - Archivos: `X3dService.class.php`, `ShowX3dPage.class.php`,
+     `page.x3d.tpl`, `scripts/game/xnova3d.js`.
+
 ## El principio (acordado)
 
 El Xnova clásico **no se reemplaza**: se pasa a 3D **por piezas**. Cada

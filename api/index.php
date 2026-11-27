@@ -308,6 +308,15 @@ try {
 			exit;
 		}
 
+		case 'x3d': {
+			// ESCRITORIO 3D (rama xnova3d): base/hangar/lab/imperio/flotas
+			// con las imágenes reales del juego. Misma fuente que la página
+			// game.php?page=x3d&mode=fetch (misma BD, mismas reglas).
+			require_once ROOT_PATH . 'includes/classes/X3dService.class.php';
+			$x3dModo = HTTP::_GP('modo', 'base');
+			api_res(X3dService::todo($x3dModo));
+		}
+
 		default:
 			api_res(array('ok' => false, 'err' => 'bad_request', 'mess' => 'Endpoint desconocido: r=' . $apiR), 400);
 	}
