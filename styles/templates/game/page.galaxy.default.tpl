@@ -18,6 +18,7 @@
 /* ====== contenedor 3D ====== */
 #ag3d_app {
     position: relative; width: 100%;
+    box-sizing: border-box;
     height: calc(100vh - 150px); min-height: 540px;
     background: #0a101e; border-radius: 12px; overflow: hidden;
     font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;

@@ -229,7 +229,10 @@ class Galaxy3dService
 	// ============================================================
 	public static function buildAstro3d($galaxy, $system, $datos)
 	{
-		global $USER, $PLANET, $config, $THEME, $LNG;
+		global $USER, $PLANET, $THEME, $LNG;
+
+		// ✅ FIX port: $config no es global en este juego; se obtiene del singleton
+		$config = Config::get();
 
 		$Result         = $datos['result'];
 		$asteroids      = $datos['asteroids'];
@@ -343,7 +346,7 @@ class Galaxy3dService
 			'maxPlanets' => $maxPlanets3d,
 			'maxGalaxy'  => (int)$config->max_galaxy,
 			'maxSystem'  => (int)$config->max_system,
-			'dpath'      => ($THEME && method_exists($THEME, 'getTheme')) ? $THEME->getTheme() : 'styles/themes/gow/',
+			'dpath'      => ($THEME && method_exists($THEME, 'getTheme')) ? $THEME->getTheme() : 'styles/theme/'.DEFAULT_THEME.'/',
 			'curGalaxy'  => (int)$PLANET['galaxy'],
 			'curSystem'  => (int)$PLANET['system'],
 			'curPlanet'  => (int)$PLANET['planet'],
