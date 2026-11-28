@@ -48,15 +48,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $st2 = db()->prepare('SELECT id FROM stores WHERE slug = ?');
             $st2->execute([$slug]);
             if ($st2->fetch()) $slug .= '-' . bin2hex(random_bytes(2));
+            $esAdmin = ($u['role'] ?? '') === 'admin';
             $trial = date('Y-m-d', time() + TRIAL_DAYS * 86400);
-            db()->prepare('INSERT INTO stores (owner_id, name, slug, description, photo, province, municipality, trial_until, subscription_until, created_at) VALUES (?,?,?,?,?,?,?,?,NULL,?)')
-                ->execute([$u['id'], $name, $slug, $desc, $photo, $province, $municipality, $trial, date('Y-m-d H:i:s')]);
-            db()->prepare("UPDATE users SET role = 'seller' WHERE id = ?")->execute([$u['id']]);
-            notify((int)$u['id'], '¡Tu mini tienda está abierta!', 'Tienes ' . TRIAL_DAYS . ' días de prueba gratis (hasta el ' . $trial . '). Publica productos y empieza a vender. Después, la suscripción cuesta ' . money(SUBSCRIPTION_CUP) . ' al mes.', 'vender.php');
-            foreach (db()->query("SELECT id FROM users WHERE role = 'admin'")->fetchAll() as $adm) {
-                notify((int)$adm['id'], 'Nueva mini tienda', $u['name'] . ' abrió la tienda «' . $name . '» en ' . province_name($province) . (municipality_name($province, $municipality) !== '—' ? ', ' . municipality_name($province, $municipality) : '') . ' (prueba hasta ' . $trial . ').', 'admin/tiendas.php');
+            // Los admins están exentos de pagar la suscripción de su tienda
+            $adminExempt = $esAdmin ? 1 : 0;
+            db()->prepare('INSERT INTO stores (owner_id, name, slug, description, photo, province, municipality, trial_until, subscription_until, admin_exempt, created_at) VALUES (?,?,?,?,?,?,?,?,NULL,?,?)')
+                ->execute([$u['id'], $name, $slug, $desc, $photo, $province, $municipality, $trial, $adminExempt, date('Y-m-d H:i:s')]);
+            // Si ya es admin no le bajamos el rol; si era cliente, pasa a vendedor
+            if (!$esAdmin) {
+                db()->prepare("UPDATE users SET role = 'seller' WHERE id = ?")->execute([$u['id']]);
             }
-            sec_log('tienda_creada', 'Nueva mini tienda: ' . $name . ' en ' . $province, (int)$u['id']);
+            if ($esAdmin) {
+                notify((int)$u['id'], '¡Tu mini tienda está abierta!', 'Como administrador, tu tienda está exenta del pago de suscripción mensual. Publica productos y empieza a vender.', 'vender.php');
+            } else {
+                notify((int)$u['id'], '¡Tu mini tienda está abierta!', 'Tienes ' . TRIAL_DAYS . ' días de prueba gratis (hasta el ' . $trial . '). Publica productos y empieza a vender. Después, la suscripción cuesta ' . money(SUBSCRIPTION_CUP) . ' al mes.', 'vender.php');
+            }
+            foreach (db()->query("SELECT id FROM users WHERE role = 'admin' AND id != ?")->fetchAll() as $adm) {
+                notify((int)$adm['id'], 'Nueva mini tienda', $u['name'] . ' abrió la tienda «' . $name . '» en ' . province_name($province) . (municipality_name($province, $municipality) !== '—' ? ', ' . municipality_name($province, $municipality) : '') . ($esAdmin ? ' (admin, exenta de suscripción)' : ' (prueba hasta ' . $trial . ')') . '.', 'admin/tiendas.php');
+            }
+            sec_log('tienda_creada', 'Nueva mini tienda: ' . $name . ' en ' . $province . ($esAdmin ? ' (admin exenta)' : ''), (int)$u['id']);
             flash('¡Tu mini tienda está abierta! Ahora publica tu primer producto.', 'ok');
             redirect('vender.php');
         }

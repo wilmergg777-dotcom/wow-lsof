@@ -8,8 +8,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     $uid = (int)($_POST['user_id'] ?? 0);
     $accion = $_POST['accion'] ?? '';
-    if ($uid === (int)$admin['id'] && in_array($accion, ['bloquear', 'desbloquear', 'hacer_vendedor', 'hacer_cliente'])) {
-        flash('No puedes cambiar tu propia cuenta desde aquí.', 'err');
+    if ($uid === (int)$admin['id'] && in_array($accion, ['bloquear', 'desbloquear', 'hacer_vendedor', 'hacer_cliente', 'eliminar', 'resetear'])) {
+        flash('No puedes modificar tu propia cuenta desde aquí.', 'err');
         redirect('usuarios.php');
     }
     $st = db()->prepare('SELECT * FROM users WHERE id = ?');
@@ -43,6 +43,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             db()->prepare('UPDATE users SET balance_cup = MAX(0, balance_cup + ?) WHERE id = ?')->execute([$delta, $uid]);
             notify($uid, 'Ajuste de saldo', ($delta >= 0 ? 'Se acreditaron ' : 'Se descontaron ') . money(abs($delta)) . ' de tu billetera por el administrador.', 'wallet.php');
             flash('Saldo de ' . $us['name'] . ' ajustado en ' . money($delta) . '.', 'ok');
+        }
+        /* ---------- Resetear contraseña (auto-generada, enviada por email) ---------- */
+        if ($accion === 'resetear') {
+            // Genera una contraseña aleatoria de 12 caracteres
+            $chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            $newPass = '';
+            for ($i = 0; $i < 12; $i++) $newPass .= $chars[random_int(0, strlen($chars) - 1)];
+            db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+                ->execute([password_hash($newPass, PASSWORD_DEFAULT), $uid]);
+            // Cierra todas las sesiones del usuario (obliga a entrar con la nueva)
+            db()->prepare('DELETE FROM user_sessions WHERE user_id = ?')->execute([$uid]);
+            // Intenta enviar por email; si no hay correo o falla, la mostramos al admin
+            $enviado = false;
+            if (!empty($us['email'])) {
+                $asunto = SITE_NAME . ' — Tu contraseña fue reseteada';
+                $cuerpo = "Hola " . $us['name'] . ",\n\n" .
+                          "Un administrador reseteó tu contraseña.\n\n" .
+                          "Tu nueva contraseña temporal es: " . $newPass . "\n\n" .
+                          "Entra a " . (isset($_SERVER['HTTP_HOST']) ? 'https://' . $_SERVER['HTTP_HOST'] : SITE_NAME) . "/login.php con ella y cámbiala cuanto antes desde Mi Cuenta → Seguridad.\n\n" .
+                          "Si no esperabas este cambio, contacta al administrador.\n\n" .
+                          "— " . SITE_NAME;
+                $enviado = @mail($us['email'], $asunto, $cuerpo, 'From: ' . SITE_NAME . ' <no-reply@' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '>');
+            }
+            sec_log('admin_reset_password', 'Contraseña reseteada para ' . $us['name'], (int)$admin['id']);
+            if ($enviado) {
+                notify($uid, 'Contraseña reseteada', 'Un administrador reseteó tu contraseña. Te enviamos la nueva por correo electrónico. Entra con ella y cámbiala cuanto antes.', 'cuenta.php?tab=seguridad');
+                flash('Contraseña de ' . $us['name'] . ' reseteada y enviada por email a ' . e($us['email']) . '.', 'ok');
+            } elseif (defined('DEMO_CODES') && DEMO_CODES) {
+                // En modo demo (sin email), mostramos la contraseña al admin
+                notify($uid, 'Contraseña reseteada', 'Un administrador reseteó tu contraseña. Pídesela directamente para entrar, y cámbiala cuanto antes.', 'cuenta.php?tab=seguridad');
+                flash('Contraseña de ' . $us['name'] . ' reseteada. Como no hay correo configurado, la contraseña temporal es: ' . e($newPass) . ' (entrégasela al usuario y pídele que la cambie).', 'ok');
+            } else {
+                flash('Se reseteó la contraseña de ' . $us['name'] . ' pero no se pudo enviar el email. Contraseña temporal: ' . e($newPass), 'warn');
+            }
+        }
+        /* ---------- Eliminar usuario ---------- */
+        if ($accion === 'eliminar') {
+            // No eliminar si tiene pedidos o tienda (para no romper la integridad)
+            $st2 = db()->prepare('SELECT COUNT(*) FROM orders WHERE buyer_id = ?');
+            $st2->execute([$uid]);
+            $nPedidos = (int)$st2->fetchColumn();
+            $st2 = db()->prepare('SELECT COUNT(*) FROM stores WHERE owner_id = ?');
+            $st2->execute([$uid]);
+            $nTiendas = (int)$st2->fetchColumn();
+            if ($nPedidos > 0 || $nTiendas > 0) {
+                flash('No se puede eliminar a ' . $us['name'] . ' porque tiene ' . $nPedidos . ' pedido(s) y ' . $nTiendas . ' tienda(s). Bloquéalo en su lugar para preservar el historial.', 'err');
+            } else {
+                // Limpia datos asociados sin historial crítico
+                db()->prepare('DELETE FROM cart_items WHERE user_id = ?')->execute([$uid]);
+                db()->prepare('DELETE FROM user_sessions WHERE user_id = ?')->execute([$uid]);
+                db()->prepare('DELETE FROM password_resets WHERE user_id = ?')->execute([$uid]);
+                db()->prepare('DELETE FROM notifications WHERE user_id = ?')->execute([$uid]);
+                db()->prepare('DELETE FROM messengers WHERE user_id = ?')->execute([$uid]);
+                db()->prepare('DELETE FROM messenger_offers WHERE owner_id = ?')->execute([$uid]);
+                db()->prepare('DELETE FROM users WHERE id = ?')->execute([$uid]);
+                sec_log('admin_usuario_eliminado', 'Usuario eliminado: ' . $us['name'], (int)$admin['id']);
+                flash('Usuario ' . $us['name'] . ' eliminado.', 'ok');
+            }
         }
         sec_log('admin_usuario', 'Usuario ' . $us['name'] . ': ' . $accion . (isset($delta) ? ' (' . $delta . ')' : ''), (int)$admin['id']);
     }
@@ -106,6 +164,14 @@ include __DIR__ . '/admin-header.php';
               <form method="post"><?= csrf_field() ?>
                 <input type="hidden" name="user_id" value="<?= (int)$us['id'] ?>">
                 <button class="btn btn-outline btn-sm" name="accion" value="<?= $us['role'] === 'seller' ? 'hacer_cliente' : 'hacer_vendedor' ?>" type="submit"><?= $us['role'] === 'seller' ? 'Hacer cliente' : 'Hacer vendedor' ?></button>
+              </form>
+              <form method="post" onsubmit="return confirmDel('¿Resetear la contraseña de <?= e($us['name']) ?>? Se generará una nueva y se le enviará por email (o se te mostrará si no hay correo).')"><?= csrf_field() ?>
+                <input type="hidden" name="user_id" value="<?= (int)$us['id'] ?>">
+                <button class="btn btn-outline btn-sm" name="accion" value="resetear" type="submit">🔑 Resetear clave</button>
+              </form>
+              <form method="post" onsubmit="return confirmDel('¿ELIMINAR a <?= e($us['name']) ?>? Esto borra su cuenta, carrito y notificaciones. No se puede deshacer. Si tiene pedidos o tienda, no se permitirá.')"><?= csrf_field() ?>
+                <input type="hidden" name="user_id" value="<?= (int)$us['id'] ?>">
+                <button class="btn btn-red btn-sm" name="accion" value="eliminar" type="submit">🗑 Eliminar</button>
               </form>
             <?php endif; ?>
           <?php else: ?>

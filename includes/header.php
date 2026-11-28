@@ -13,6 +13,7 @@ $__user = current_user();
 $__unread = $__user ? unread_count((int)$__user['id']) : 0;
 $__cart = $__user ? cart_count((int)$__user['id']) : 0;
 $__is_admin = $__user && $__user['role'] === 'admin';
+$__is_seller = $__user && in_array($__user['role'], ['seller', 'admin'], true);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -56,8 +57,12 @@ $__is_admin = $__user && $__user['role'] === 'admin';
             <a href="<?= $__up ?>cuenta.php"><?= icon('user', 16) ?> Mi Cuenta</a>
             <a href="<?= $__up ?>pedidos.php"><?= icon('package', 16) ?> Mis Pedidos</a>
             <a href="<?= $__up ?>wallet.php"><?= icon('wallet', 16) ?> Mi Billetera</a>
+            <a href="<?= $__up ?>invertir.php"><?= icon('trending-up', 16) ?> Invertir</a>
             <a href="<?= $__up ?>vender.php"><?= icon('store', 16) ?> Mi Mini Tienda</a>
-            <?php if ($__is_admin): ?><a href="index.php"><?= icon('bar-chart', 16) ?> Administración</a><?php endif; ?>
+            <a href="<?= $__up ?>mensajero-kyc.php"><?= icon('bike', 16) ?> Perfil de mensajero</a>
+            <a href="<?= $__up ?>ofertas-mensajeros.php"><?= icon('megaphone', 16) ?> Ofertas de mensajería</a>
+            <?php if ($__is_seller ?? false): ?><a href="<?= $__up ?>buscar-mensajeros.php"><?= icon('bike', 16) ?> Buscar mensajeros</a><?php endif; ?>
+            <?php if ($__is_admin): ?><a href="<?= $__up ?>admin/index.php"><?= icon('bar-chart', 16) ?> Administración</a><?php endif; ?>
             <a href="<?= $__up ?>logout.php"><?= icon('x', 16) ?> Salir</a>
           </div>
         </div>

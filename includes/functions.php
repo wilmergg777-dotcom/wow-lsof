@@ -132,6 +132,8 @@ function unread_count(int $userId): int {
 /* ---------- Estado de una mini tienda ---------- */
 // 'activa' (suscripción pagada) | 'prueba' (dentro de los días gratis) | 'suspendida'
 function store_status(array $store): string {
+    // Los admins con tienda están exentos de pagar suscripción
+    if (!empty($store['admin_exempt'])) return 'activa';
     $today = date('Y-m-d');
     if (!empty($store['subscription_until']) && $store['subscription_until'] >= $today) return 'activa';
     if (!empty($store['trial_until']) && $store['trial_until'] >= $today) return 'prueba';
@@ -256,6 +258,192 @@ function auto_migrate_location(): void {
     } catch (Throwable $e) { /* la migración nunca debe romper la web */ }
 }
 
+/* ---------- Migración de mensajeros KYC + inversiones + datos bancarios por admin ----------
+   Crea las tablas nuevas con CREATE TABLE IF NOT EXISTS (idempotente).
+   Se ejecuta una sola vez por instalación mediante el flag 'features_v2_migrated'. */
+function migrate_features_v2(): void {
+    $sql = [];
+    if (DB_DRIVER === 'mysql') {
+        $sql = [
+            // Perfil KYC de mensajero (1 fila por usuario que se postula como mensajero)
+            "CREATE TABLE IF NOT EXISTS messengers (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                user_id INT UNSIGNED NOT NULL,
+                full_name VARCHAR(120) NOT NULL,
+                id_number VARCHAR(40) NULL,
+                phone VARCHAR(40) NOT NULL,
+                province VARCHAR(60) NOT NULL,
+                municipality VARCHAR(80) NULL,
+                address VARCHAR(240) NULL,
+                vehicle VARCHAR(40) NULL DEFAULT 'bicicleta',
+                id_front VARCHAR(300) NULL,
+                id_back VARCHAR(300) NULL,
+                face_photo VARCHAR(300) NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+                submitted_at DATETIME NOT NULL,
+                reviewed_at DATETIME NULL,
+                INDEX (user_id), INDEX (status), INDEX (province), INDEX (municipality)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            // Ofertas de mensajería publicadas por dueños de tienda
+            "CREATE TABLE IF NOT EXISTS messenger_offers (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                store_id INT UNSIGNED NOT NULL,
+                owner_id INT UNSIGNED NOT NULL,
+                title VARCHAR(160) NOT NULL,
+                description TEXT NULL,
+                province VARCHAR(60) NULL,
+                municipality VARCHAR(80) NULL,
+                pay_cup INT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'abierta',
+                created_at DATETIME NOT NULL,
+                INDEX (store_id), INDEX (owner_id), INDEX (status), INDEX (province), INDEX (municipality)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            // Postulaciones de mensajeros a ofertas
+            "CREATE TABLE IF NOT EXISTS messenger_applications (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                offer_id INT UNSIGNED NOT NULL,
+                messenger_id INT UNSIGNED NOT NULL,
+                message VARCHAR(500) NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+                created_at DATETIME NOT NULL,
+                reviewed_at DATETIME NULL,
+                INDEX (offer_id), INDEX (messenger_id), INDEX (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            // Datos bancarios múltiples por admin (sustituye al payment_settings global para inversiones)
+            "CREATE TABLE IF NOT EXISTS admin_bank_accounts (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                admin_id INT UNSIGNED NOT NULL,
+                label VARCHAR(80) NOT NULL,
+                bank_name VARCHAR(120) NOT NULL,
+                account_number VARCHAR(60) NOT NULL,
+                holder VARCHAR(120) NOT NULL,
+                phone VARCHAR(40) NULL,
+                is_active TINYINT NOT NULL DEFAULT 1,
+                created_at DATETIME NOT NULL,
+                INDEX (admin_id), INDEX (is_active)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            // Solicitudes de inversión
+            "CREATE TABLE IF NOT EXISTS investments (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                code VARCHAR(20) NOT NULL,
+                user_id INT UNSIGNED NOT NULL,
+                amount_cup INT NOT NULL,
+                target_admin_id INT UNSIGNED NULL,
+                accepted_admin_id INT UNSIGNED NULL,
+                transfer_id VARCHAR(80) NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'solicitada',
+                admin_note VARCHAR(300) NULL,
+                created_at DATETIME NOT NULL,
+                accepted_at DATETIME NULL,
+                processed_at DATETIME NULL,
+                INDEX (user_id), INDEX (status), INDEX (code), INDEX (target_admin_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        ];
+    } else {
+        $sql = [
+            "CREATE TABLE IF NOT EXISTS messengers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                full_name TEXT NOT NULL,
+                id_number TEXT,
+                phone TEXT NOT NULL,
+                province TEXT NOT NULL,
+                municipality TEXT,
+                address TEXT,
+                vehicle TEXT DEFAULT 'bicicleta',
+                id_front TEXT, id_back TEXT, face_photo TEXT,
+                status TEXT NOT NULL DEFAULT 'pendiente',
+                submitted_at DATETIME NOT NULL,
+                reviewed_at DATETIME
+            )",
+            "CREATE TABLE IF NOT EXISTS messenger_offers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                store_id INTEGER NOT NULL,
+                owner_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                province TEXT, municipality TEXT,
+                pay_cup INTEGER,
+                status TEXT NOT NULL DEFAULT 'abierta',
+                created_at DATETIME NOT NULL
+            )",
+            "CREATE TABLE IF NOT EXISTS messenger_applications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                offer_id INTEGER NOT NULL,
+                messenger_id INTEGER NOT NULL,
+                message TEXT,
+                status TEXT NOT NULL DEFAULT 'pendiente',
+                created_at DATETIME NOT NULL,
+                reviewed_at DATETIME
+            )",
+            "CREATE TABLE IF NOT EXISTS admin_bank_accounts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                admin_id INTEGER NOT NULL,
+                label TEXT NOT NULL,
+                bank_name TEXT NOT NULL,
+                account_number TEXT NOT NULL,
+                holder TEXT NOT NULL,
+                phone TEXT,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at DATETIME NOT NULL
+            )",
+            "CREATE TABLE IF NOT EXISTS investments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                amount_cup INTEGER NOT NULL,
+                target_admin_id INTEGER,
+                accepted_admin_id INTEGER,
+                transfer_id TEXT,
+                status TEXT NOT NULL DEFAULT 'solicitada',
+                admin_note TEXT,
+                created_at DATETIME NOT NULL,
+                accepted_at DATETIME,
+                processed_at DATETIME
+            )",
+        ];
+    }
+    foreach ($sql as $q) {
+        try { db()->exec($q); } catch (Throwable $e) { /* ya existe */ }
+    }
+    // Columna review_note en messengers (nota del admin al rechazar)
+    try {
+        $has = false;
+        if (DB_DRIVER === 'mysql') {
+            $rs = db()->query("SHOW COLUMNS FROM messengers LIKE 'review_note'");
+            $has = $rs && $rs->fetch();
+        } else {
+            $rs = db()->query("PRAGMA table_info(messengers)");
+            while ($r = $rs->fetch()) if (strtolower($r['name']) === 'review_note') $has = true;
+        }
+        if (!$has) db()->exec("ALTER TABLE messengers ADD COLUMN review_note VARCHAR(300) NULL");
+    } catch (Throwable $e) {}
+    // Columna para eximir a los admins del pago de suscripción de tienda
+    try {
+        $has = false;
+        if (DB_DRIVER === 'mysql') {
+            $rs = db()->query("SHOW COLUMNS FROM stores LIKE 'admin_exempt'");
+            $has = $rs && $rs->fetch();
+        } else {
+            $rs = db()->query("PRAGMA table_info(stores)");
+            while ($r = $rs->fetch()) if (strtolower($r['name']) === 'admin_exempt') $has = true;
+        }
+        if (!$has) db()->exec("ALTER TABLE stores ADD COLUMN admin_exempt TINYINT NOT NULL DEFAULT 0");
+    } catch (Throwable $e) {}
+}
+
+function auto_migrate_features_v2(): void {
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    if (!db_installed()) return;
+    if (setting_get('features_v2_migrated') === '1') return;
+    try {
+        migrate_features_v2();
+        setting_set('features_v2_migrated', '1');
+    } catch (Throwable $e) { /* la migración nunca debe romper la web */ }
+}
+
 /* ---------- Helpers de ubicación ---------- */
 
 /* Determina la ubicación de búsqueda del visitante actual (sesión + cuenta).
@@ -359,6 +547,20 @@ function icon(string $name, int $size = 20, ?string $class = null): string {
         'search' => '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
         'bell' => '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
         'alert' => '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>',
+        'trending-up' => '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
+        'bike' => '<circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5V14l-3-3 4-3 2 3h2"/>',
+        'megaphone' => '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+        'credit-card' => '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',
+        'camera' => '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+        'mail' => '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+        'history' => '<path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/>',
+        'info' => '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+        'edit' => '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>',
+        'trash' => '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+        'arrow-left' => '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+        'lock' => '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+        'send' => '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+        'eye' => '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
     ];
     $body = $paths[$name] ?? $paths['tag'];
     $cls = $class !== null ? ' class="' . htmlspecialchars($class, ENT_QUOTES) . '"' : '';

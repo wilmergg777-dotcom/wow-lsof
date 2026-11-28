@@ -9,6 +9,24 @@ $st->execute([$u['id']]);
 $store = $st->fetch();
 if (!$store) { flash('Primero crea tu mini tienda.', 'info'); redirect('mi-tienda.php'); }
 
+// Los admins están exentos de pagar la suscripción de su tienda
+if (!empty($store['admin_exempt'])) {
+    include __DIR__ . '/includes/header.php';
+    ?>
+    <h1 style="color:var(--violet-dark)"><?= icon('wallet', 26) ?> Suscripción de mi mini tienda</h1>
+    <div class="card" style="max-width:620px">
+      <div class="row-between mb">
+        <h2 style="color:var(--violet-dark);font-size:18px"><?= e($store['name']) ?></h2>
+        <span class="badge b-ok">Exenta (administrador)</span>
+      </div>
+      <div class="flash flash-ok">Tu tienda es de administrador, así que <b>no paga suscripción</b>. Está siempre activa mientras mantengas el rol de administrador.</div>
+      <p class="help">Si en algún momento dejas de ser administrador, la tienda pasará al régimen normal (prueba de <?= TRIAL_DAYS ?> días y luego <?= money(SUBSCRIPTION_CUP) ?> al mes).</p>
+    </div>
+    <?php
+    include __DIR__ . '/includes/footer.php';
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'pagar') {
     csrf_check();
     if ((int)$u['balance_cup'] < SUBSCRIPTION_CUP) {

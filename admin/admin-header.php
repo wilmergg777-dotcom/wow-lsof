@@ -7,7 +7,10 @@ $adminMenu = [
     'productos.php'  => [icon('package', 16), 'Productos'],
     'tiendas.php'    => [icon('store', 16), 'Mini tiendas'],
     'usuarios.php'   => [icon('users', 16), 'Usuarios'],
+    'inversiones.php' => [icon('trending-up', 16), 'Inversiones'],
+    'mensajeros.php' => [icon('bike', 16), 'Mensajeros KYC'],
     'cobros.php'     => [icon('landmark', 16), 'Datos de cobro'],
+    'mis-bancos.php' => [icon('credit-card', 16), 'Mis bancos'],
     'recargas.php'   => [icon('wallet', 16), 'Recargas'],
     'seguridad.php'  => [icon('shield', 16), 'Seguridad'],
 ];

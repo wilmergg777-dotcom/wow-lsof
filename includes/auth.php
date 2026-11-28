@@ -20,6 +20,10 @@ if ($__entry !== 'install.php' && $__entry !== 'logout.php' && !db_installed()) 
 if ($__entry !== 'install.php' && $__entry !== 'logout.php' && function_exists('auto_migrate_location')) {
     auto_migrate_location();
 }
+// Auto-migración de mensajeros KYC, inversiones y datos bancarios por admin.
+if ($__entry !== 'install.php' && $__entry !== 'logout.php' && function_exists('auto_migrate_features_v2')) {
+    auto_migrate_features_v2();
+}
 
 /* ---------- Usuario actual ---------- */
 function current_user(): ?array {
