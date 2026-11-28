@@ -212,7 +212,9 @@ class ShowGalaxyPage extends AbstractGamePage
 
 		$this->tplObj->loadscript('three.min.js');
 		$this->tplObj->loadscript('OrbitControls.js');
-		$this->tplObj->loadscript('galaxy3d.js');
+		// galaxy3d.js NO va por loadscript(): se incluye en el tpl con su
+		// propia versión (?v=xn3d...) para que los navegadores de los
+		// jugadores descarguen la novedad sin depender de {$REV} del juego.
         $this->assign(array(
 			'GalaxyRows'				=> $datos['result'],
 			'asteroids'					=> $datos['asteroids'],

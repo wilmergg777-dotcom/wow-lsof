@@ -143,7 +143,7 @@
 		if (aspecto < 0.9) {
 			camara.position.set(0, 40, 88);
 			controles.target.set(0, 0, 0);
-			var desfase = Math.round(cont.clientHeight * 0.26);
+			var desfase = Math.round(cont.clientHeight * (cont.clientHeight < 700 ? 0.42 : 0.26));
 			camara.setViewOffset(cont.clientWidth, cont.clientHeight + desfase, 0, desfase, cont.clientWidth, cont.clientHeight);
 		} else {
 			camara.clearViewOffset();

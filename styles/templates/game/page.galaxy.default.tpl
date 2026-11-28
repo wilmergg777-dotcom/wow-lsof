@@ -18,7 +18,7 @@
 #ag3d_app {
     position: relative; width: 100%;
     box-sizing: border-box;
-    height: calc(100vh - 118px); min-height: 560px;
+    height: calc(100vh - 96px); min-height: 580px;
     background: #0a101e; border-radius: 12px; overflow: hidden;
     font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     color: #cbd5e1;
@@ -79,7 +79,7 @@
 .ag3d_panel::before { top: -1px; left: -1px; border-top: 2px solid #00e0ff; border-left: 2px solid #00e0ff; border-top-left-radius: 10px; }
 .ag3d_panel::after { bottom: -1px; right: -1px; border-bottom: 2px solid #00e0ff; border-right: 2px solid #00e0ff; border-bottom-right-radius: 10px; }
 
-#ag3d_pos { top: 56px; left: 12px; bottom: 12px; width: clamp(300px, 25vw, 356px); display: flex; flex-direction: column; }
+#ag3d_pos { top: 56px; left: 12px; bottom: 12px; width: clamp(310px, 30vw, 410px); display: flex; flex-direction: column; }
 #ag3d_det { top: 56px; right: 12px; width: clamp(272px, 22vw, 322px); max-height: calc(100% - 70px); }
 
 .ag3d_pt-titulo {
@@ -128,15 +128,15 @@
     flex: 1; overflow: auto; border-radius: 8px; min-height: 0;
     border: 1px solid rgba(0,204,255,.15); background: rgba(0,0,0,.3);
 }
-table.ag3d_table { width: 100%; min-width: 292px; border-collapse: collapse; font-size: 10.5px; }
+table.ag3d_table { width: 100%; min-width: 296px; border-collapse: collapse; font-size: 11.5px; }
 table.ag3d_table th {
     position: sticky; top: 0; z-index: 2;
     background: linear-gradient(135deg, #003366, #005599);
-    color: #fff; padding: 4px 5px; font-size: 9px; letter-spacing: .5px; text-align: left;
+    color: #fff; padding: 5px 6px; font-size: 10px; letter-spacing: .5px; text-align: left;
     white-space: nowrap;
 }
 table.ag3d_table th:last-child, table.ag3d_table td:last-child { text-align: center; }
-table.ag3d_table td { padding: 3px 4px; border-bottom: 1px solid rgba(0,204,255,.07); white-space: nowrap; }
+table.ag3d_table td { padding: 4px 6px; border-bottom: 1px solid rgba(0,204,255,.07); white-space: nowrap; }
 table.ag3d_table td b { font-weight: 600; }
 tr.fila { cursor: pointer; }
 tr.fila:hover { background: rgba(0,204,255,.09); }
@@ -144,14 +144,14 @@ tr.sel { background: rgba(0,224,255,.14) !important; outline: 1px solid rgba(0,2
 tr.propio { box-shadow: inset 3px 0 0 #4a9eff; background: rgba(74,158,255,.10); }
 td.pos { font-family: 'Courier New', monospace; color: #94a3b8; }
 td.pts { text-align: right; font-family: 'Courier New', monospace; color: #fbbf24; }
-td.rk { text-align: center; font-family: 'Courier New', monospace; font-size: 9px; color: #94a3b8; }
+td.rk { text-align: center; font-family: 'Courier New', monospace; font-size: 10px; color: #94a3b8; }
 tr.vacia { cursor: pointer; }
 tr.vacia td { color: #475569; font-style: italic; }
 .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: middle; box-shadow: 0 0 6px currentColor; }
-.tag-ally { color: #8fa3bf; font-size: 8.5px; }
+.tag-ally { color: #8fa3bf; font-size: 9.5px; }
 .ico { font-size: 9px; margin-left: 2px; }
 .tu-chip {
-    font-size: 8px; letter-spacing: 1px; color: #001522; background: #4a9eff;
+    font-size: 9px; letter-spacing: 1px; color: #001522; background: #4a9eff;
     border-radius: 6px; padding: 1px 5px; margin-left: 5px; font-weight: 700;
 }
 
@@ -244,9 +244,21 @@ tr.vacia td { color: #475569; font-style: italic; }
     #ag3d_app { height: calc(100vh - 70px); min-height: 560px; }
     .ag3d_cnts { display: none; }
     .ag3d_toggle { display: inline-block; }
+    /* barra superior COMPACTA: el tema del juego agranda los botones
+       y se comían la escena; aquí se fuerza el tamaño del HUD */
+    #ag3d_top { padding: 5px 8px; gap: 5px; }
+    #ag3d_marca { font-size: 13px; }
+    #ag3d_marca .sub { display: none; }
+    .ag3d_chip { font-size: 10px !important; padding: 3px 8px !important; }
+    .ag3d_btn { font-size: 10.5px !important; padding: 6px 9px !important; border-radius: 6px; }
+    .ag3d_mini { font-size: 11px !important; padding: 6px 8px !important; }
+    .ag3d_ir { font-size: 11px !important; padding: 6px 10px !important; }
+    .ag3d_nav input { font-size: 12px !important; width: 44px; padding: 5px 2px !important; }
+    .ag3d_nav { gap: 4px; }
     #ag3d_pos { top: auto; bottom: 8px; left: 8px; right: 8px; width: auto; max-height: 62%; padding: 8px; }
     /* caben las 16 posiciones: menos padding, sin leyenda (está en el detalle) */
     #ag3d_app .ag3d_leyenda { display: none; }
+    table.ag3d_table { font-size: 11px; }
     table.ag3d_table td { padding: 2px 3px; }
     .ag3d_nav { margin-bottom: 6px; }
     #ag3d_det {
@@ -392,5 +404,8 @@ tr.vacia td { color: #475569; font-style: italic; }
     status_fail             = '{$LNG.gl_ajax_status_fail}';
     MaxFleetSetting         = {$settings_fleetactions};
 </script>
+{* motor 3D: ?v= propio — SUBIRLO en cada actualización para que los
+   navegadores de los jugadores descarguen el JS nuevo *}
+<script type="text/javascript" src="scripts/game/galaxy3d.js?v=xn3d24"></script>
 
 {/block}
