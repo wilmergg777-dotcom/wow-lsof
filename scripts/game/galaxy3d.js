@@ -18,8 +18,8 @@
  *                                   15 expedición, 32 asteroide
  *      Dialog.Playercard / Dialog.PM / Dialog.Buddy / OpenPopup (base.js)
  * Reglas visuales aprobadas en la maqueta (v3):
- *  - Dos tablas por defecto: GALAXIA 1-16 (posiciones del sistema) y
- *    PUNTUACIÓN (top del universo por puntos del juego). En móvil, pestañas.
+ *  - UNA tabla: GALAXIA 1-16 (posiciones del sistema). La de
+ *    PUNTUACIÓN se quitó por completo (a petición del usuario).
  *  - Botón ♻ Reciclar SOLO si la posición tiene escombros (o asteroide 32).
  *  - Botón 🚀 Colonizar SOLO en posiciones libres (sin asteroides).
  *  - 🌙 Destruir luna SOLO si hay luna.
@@ -109,9 +109,6 @@
 		construido: null,
 		focus: null,
 		seguir: 0,
-		score: D0.score || [],
-		scoreMe: D0.scoreMe || { rank: 0, pts: 0 },
-		me: D0.me || { pts: 0, rank: 0 },
 		cargando: false
 	};
 
@@ -428,7 +425,6 @@
 		escena.add(grupoSistema);
 		estado.construido = estado.g + ':' + estado.s;
 		pintarTabla();
-		pintarScore();
 		$('ag3d_tit_sistema').textContent = estado.g + ':' + estado.s;
 		$('ag3d_in_g').value = estado.g;
 		$('ag3d_in_s').value = estado.s;
@@ -632,35 +628,6 @@
 		});
 	}
 
-	/* ================= TABLA 2: PUNTUACIÓN (top del universo) ================= */
-	function pintarScore() {
-		var html = '';
-		estado.score.forEach(function (t) {
-			html += '<tr class="fila" data-g="' + t.g + '" data-s="' + t.s + '" data-p="' + t.p + '" data-n="' + esc(t.uname) + '" title="Ir a [' + t.g + ':' + t.s + ':' + t.p + ']">' +
-				'<td class="pos">#' + t.rank + '</td>' +
-				'<td><span style="color:#ffa0a0">' + esc(t.uname) + '</span></td>' +
-				'<td><span class="tag-ally">' + (t.ally ? '[' + esc(t.ally) + ']' : '—') + '</span></td>' +
-				'<td class="pts" title="' + fmt(t.pts) + ' puntos">' + fmtCorto(t.pts) + '</td></tr>';
-		});
-		html += '<tr class="fila propio" id="ag3d_fila_yo" title="Ir a tu planeta [' + HOME.g + ':' + HOME.s + ':' + HOME.p + ']">' +
-			'<td class="pos">#' + (estado.scoreMe.rank || '-') + '</td>' +
-			'<td><span style="color:#4a9eff">' + esc(D0.meName || 'Tú') + '</span><span class="tu-chip">TÚ</span></td>' +
-			'<td><span class="tag-ally">' + (D0.meAlly ? '[' + esc(D0.meAlly) + ']' : '—') + '</span></td>' +
-			'<td class="pts" title="' + fmt(estado.scoreMe.pts) + ' puntos">' + fmtCorto(estado.scoreMe.pts) + '</td></tr>';
-		var tbS = $('ag3d_score_tbody');
-		tbS.innerHTML = html;
-		tbS.querySelectorAll('tr').forEach(function (tr) {
-			tr.addEventListener('click', function () {
-				if (tr.id === 'ag3d_fila_yo') { irHome(); return; }
-				var g = parseInt(tr.dataset.g, 10), s = parseInt(tr.dataset.s, 10), p = parseInt(tr.dataset.p, 10);
-				var nombre = tr.dataset.n;
-				if (g === estado.g && s === estado.s) { seleccionar(p); return; }
-				irA(g, s, p);
-				toast('🏆 <b>' + esc(nombre) + '</b> → [' + g + ':' + s + ':' + p + ']');
-			});
-		});
-	}
-
 	/* ================= PANEL DETALLE (acciones reales del juego) ================= */
 	function urlFleet(pos, mission, type) {
 		return 'game.php?page=fleetTable&galaxy=' + estado.g + '&system=' + estado.s + '&planet=' + pos + '&planettype=' + (type || 1) + '&target_mission=' + mission;
@@ -795,8 +762,6 @@
 			}
 			estado.g = parseInt(d.galaxy, 10); estado.s = parseInt(d.system, 10);
 			estado.filas = d.rows || [];
-			if (d.score) estado.score = d.score;
-			if (d.scoreMe) estado.scoreMe = d.scoreMe;
 			estado.sel = null;
 			selRing.visible = false;
 			construir();
@@ -856,22 +821,6 @@
 		this.classList.add('activo'); $('ag3d_ord_pos').classList.remove('activo');
 		pintarTabla();
 	});
-	// móvil: pestañas para cambiar entre la tabla de galaxia y la de puntuación
-	$('ag3d_tab_gal').addEventListener('click', function () {
-		appEl.classList.remove('score-mv');
-		appEl.classList.add('score-off'); // por defecto SIEMPRE la tabla de galaxia
-		this.classList.add('activo'); $('ag3d_tab_score').classList.remove('activo');
-	});
-	$('ag3d_tab_score').addEventListener('click', function () {
-		appEl.classList.add('score-mv');
-		appEl.classList.remove('score-off'); // la pestaña puntuación la pide explícitamente
-		this.classList.add('activo'); $('ag3d_tab_gal').classList.remove('activo');
-	});
-	// botón 📊 PUNTUACIÓN de la barra superior: mostrar/ocultar en cualquier tamaño
-	$('ag3d_tgl_score').addEventListener('click', function () {
-		appEl.classList.toggle('score-off');
-		if (!appEl.classList.contains('score-off')) pintarScore();
-	});
 	$('ag3d_tgl_pos').addEventListener('click', function () { appEl.classList.toggle('pos-off'); });
 	$('ag3d_tgl_det').addEventListener('click', function () { appEl.classList.toggle('det-open'); });
 	$('ag3d_back').addEventListener('click', function () { appEl.classList.remove('det-open'); });
@@ -896,7 +845,6 @@
 	/* ================= ARRANQUE ================= */
 	construir();
 	pintarDetalle();
-	pintarScore();
 	animar();
 	(function () {
 		var posPropia = HOME.p;

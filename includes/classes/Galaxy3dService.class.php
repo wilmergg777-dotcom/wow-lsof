@@ -12,7 +12,6 @@
  * Métodos:
  *   cargarGalaxia(g, s)        filas + asteroides + flotas entrantes + climas
  *   getMe()                    puntuación propia + etiquetas + planeta actual
- *   getTop()                   TOP 10 del universo (%%STATPOINTS%%) + getMe()
  *   buildAstro3d(g, s, datos)  paquete JSON completo del visor 3D
  *   datosCompletos(g, s)       atajo: cargarGalaxia + buildAstro3d
  *   getAccion(g, s, p)         misiones disponibles de una posición (r=missions)
@@ -177,7 +176,6 @@ class Galaxy3dService
 
 		return array(
 			'me'      => array('pts' => $scoreMe['pts'], 'rank' => $scoreMe['rank']),
-			'scoreMe' => $scoreMe,
 			'meName'  => $meName,
 			'meAlly'  => $meAlly,
 			'home'    => array(
@@ -186,42 +184,6 @@ class Galaxy3dService
 				'p' => (int)$PLANET['planet'],
 			),
 		);
-	}
-
-	// ============================================================
-	// TOP 10 DEL UNIVERSO (misma tabla %%STATPOINTS%% que las
-	// estadísticas clásicas) con las coordenadas del planeta
-	// principal de cada jugador, para viajar a su sistema.
-	// ============================================================
-	public static function getTop()
-	{
-		$sqlTop = 'SELECT s.total_rank, s.total_points, u.username, a.ally_tag, u.id_planet,
-					p.galaxy, p.system, p.planet
-				FROM %%STATPOINTS%% s
-				INNER JOIN %%USERS%% u ON u.id = s.id_owner
-				LEFT JOIN %%ALLIANCE%% a ON a.id = u.ally_id
-				LEFT JOIN %%PLANETS%% p ON p.id = u.id_planet
-				WHERE s.stat_type = :statType
-				ORDER BY s.total_points DESC
-				LIMIT 10';
-		$topRows = Database::get()->select($sqlTop, array(':statType' => 1));
-
-		$score3d = array();
-		if (is_array($topRows)) {
-			foreach ($topRows as $tr) {
-				$score3d[] = array(
-					'rank'  => (int)$tr['total_rank'],
-					'uname' => (string)$tr['username'],
-					'ally'  => (string)$tr['ally_tag'],
-					'pts'   => (int)$tr['total_points'],
-					'g'     => (int)$tr['galaxy'],
-					's'     => (int)$tr['system'],
-					'p'     => (int)$tr['planet'],
-				);
-			}
-		}
-
-		return array_merge(self::getMe(), array('score' => $score3d));
 	}
 
 	// ============================================================
@@ -337,7 +299,7 @@ class Galaxy3dService
 		$astro3dRows[] = array('t' => 'd', 'pos' => $maxPlanets3d + 1);
 
 		// TOP 10 + puntuación propia (misma fuente que la API r=top)
-		$top3d = self::getTop();
+		$me3d = self::getMe();
 
 		return array(
 			'ok'         => true,
@@ -350,11 +312,9 @@ class Galaxy3dService
 			'curGalaxy'  => (int)$PLANET['galaxy'],
 			'curSystem'  => (int)$PLANET['system'],
 			'curPlanet'  => (int)$PLANET['planet'],
-			'meName'     => $top3d['meName'],
-			'meAlly'     => $top3d['meAlly'],
-			'me'         => $top3d['me'],
-			'scoreMe'    => $top3d['scoreMe'],
-			'score'      => $top3d['score'],
+			'meName'     => $me3d['meName'],
+			'meAlly'     => $me3d['meAlly'],
+			'me'         => $me3d['me'],
 			'short'      => $shortStatus3d,
 			'rows'       => $astro3dRows,
 		);

@@ -4,10 +4,9 @@
 {* ============================================================
    GALAXIA 3D (rama xnova3d) — la galaxia es un visor 3D a
    pantalla completa. La tabla antigua desaparece; sus datos
-   pasan a un panel HUD con DOS tablas:
-     1. TABLA DE GALAXIA · POSICIONES 1-16 (del sistema actual)
-     2. PUNTUACIÓN · TOP DEL UNIVERSO (%%STATPOINTS%% del juego)
-   En móvil, las dos tablas cambian con pestañas.
+   pasan a un panel HUD con UNA tabla:
+     TABLA DE GALAXIA · POSICIONES 1-16 (del sistema actual)
+   La de PUNTUACIÓN se quitó POR COMPLETO (petición del usuario).
    Acciones reales: doit()/doitAst() (galaxy.js) y fleetTable.
    Navegación sin recargar: game.php?page=galaxy&mode=fetch
    (misma base de datos que el cliente clásico).
@@ -124,13 +123,6 @@
 }
 .ag3d_bloque { display: flex; flex-direction: column; min-height: 0; }
 #ag3d_bloque_gal { flex: 1 1 auto; }
-#ag3d_bloque_score { flex: 0 1 auto; margin-top: 8px; }
-#ag3d_bloque_score .ag3d_twrap { flex: none; max-height: 132px; }
-/* la tabla de GALAXIA manda: la de puntuación nace oculta y se abre
-   con el botón 📊 PUNTUACIÓN de la barra superior */
-#ag3d_app.score-off #ag3d_bloque_score { display: none !important; }
-.ag3d_tabsmv { display: none; gap: 6px; margin-bottom: 8px; }
-.ag3d_tabsmv .ag3d_mini { flex: 1; text-align: center; padding: 7px 4px; }
 
 .ag3d_twrap {
     flex: 1; overflow: auto; border-radius: 8px; min-height: 0;
@@ -257,7 +249,6 @@ tr.vacia td { color: #475569; font-style: italic; }
     #ag3d_app .ag3d_leyenda { display: none; }
     table.ag3d_table td { padding: 2px 3px; }
     .ag3d_nav { margin-bottom: 6px; }
-    .ag3d_tabsmv .ag3d_mini { padding: 5px 4px; }
     #ag3d_det {
         top: auto; bottom: 8px; left: 8px; right: 8px; width: auto;
         max-height: 62%; display: none;
@@ -266,11 +257,6 @@ tr.vacia td { color: #475569; font-style: italic; }
     #ag3d_app.det-open #ag3d_pos { display: none; }
     #ag3d_app.pos-off #ag3d_pos { display: none; }
     .ag3d_back { display: block; }
-    .ag3d_tabsmv { display: flex; }
-    #ag3d_app.score-mv #ag3d_bloque_gal { display: none; }
-    #ag3d_app:not(.score-mv) #ag3d_bloque_score { display: none; }
-    #ag3d_app.score-mv #ag3d_bloque_score { flex: 1 1 auto; margin-top: 0; }
-    #ag3d_app.score-mv #ag3d_bloque_score .ag3d_twrap { flex: 1; max-height: none; }
     #ag3d_hint { display: none; }
     #ag3d_toasts { top: 96px; }
 }
@@ -283,7 +269,7 @@ tr.vacia td { color: #475569; font-style: italic; }
 </style>
 {/literal}
 
-<div id="ag3d_app" class="score-off">
+<div id="ag3d_app">
 
     <div id="ag3d_canvas"></div>
 
@@ -300,7 +286,6 @@ tr.vacia td { color: #475569; font-style: italic; }
         </div>
         <div class="der">
             <button class="ag3d_btn ag3d_btn-oro" id="ag3d_home" title="Ir al sistema de tu planeta">⌂ MI PLANETA [{$current_galaxy}:{$current_system}:{$current_planet}]</button>
-            <button class="ag3d_btn" id="ag3d_tgl_score" title="Mostrar u ocultar la tabla de puntuación (por defecto oculta: la tabla de galaxia manda)">📊 PUNTUACIÓN</button>
             <button class="ag3d_btn" id="ag3d_clasico" title="Cambiar a la vista clásica (tabla) conservando galaxia:sistema">🖥 CLÁSICO</button>
             <button class="ag3d_btn ag3d_toggle" id="ag3d_tgl_pos">☰ POSICIONES</button>
             <button class="ag3d_btn ag3d_toggle" id="ag3d_tgl_det">ℹ DETALLE</button>
@@ -350,10 +335,6 @@ tr.vacia td { color: #475569; font-style: italic; }
             <button class="ag3d_mini" id="ag3d_sp" title="Sistema siguiente">S»</button>
             <button class="ag3d_ir" id="ag3d_ir">IR</button>
         </div>
-        <div class="ag3d_tabsmv">
-            <button class="ag3d_mini activo" id="ag3d_tab_gal">GALAXIA</button>
-            <button class="ag3d_mini" id="ag3d_tab_score">PUNTUACIÓN</button>
-        </div>
         <div class="ag3d_bloque" id="ag3d_bloque_gal">
             <div class="ag3d_sub">
                 <span>TABLA DE GALAXIA · POSICIONES 1-{$max_planets}</span>
@@ -366,15 +347,6 @@ tr.vacia td { color: #475569; font-style: italic; }
                 <table class="ag3d_table">
                     <thead><tr><th>Pos</th><th>Planeta</th><th>Jugador</th><th>Puntos</th><th>#</th></tr></thead>
                     <tbody id="ag3d_tbody"></tbody>
-                </table>
-            </div>
-        </div>
-        <div class="ag3d_bloque" id="ag3d_bloque_score">
-            <div class="ag3d_sub"><span>PUNTUACIÓN · TOP DEL UNIVERSO</span></div>
-            <div class="ag3d_twrap wrap-score">
-                <table class="ag3d_table">
-                    <thead><tr><th>#</th><th>Jugador</th><th>Alianza</th><th>Puntos</th></tr></thead>
-                    <tbody id="ag3d_score_tbody"></tbody>
                 </table>
             </div>
         </div>
