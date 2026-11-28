@@ -25,7 +25,7 @@ define('DB_PASS', 'CAMBIA-ESTA-CONTRASENA'); // Contraseña de MySQL
 define('DB_SQLITE_PATH', __DIR__ . '/../db/violetero.sqlite');
 
 // ---- Datos generales de la tienda ----
-define('SITE_NAME', 'Violetero');
+define('SITE_NAME', 'KlikCuba');
 define('SITE_URL', (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\'));
 define('CURRENCY', 'CUP');
 

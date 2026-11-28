@@ -127,7 +127,7 @@ include __DIR__ . '/includes/header.php';
 <div class="row-between mb" style="gap:10px;flex-wrap:wrap">
   <h1 style="color:var(--violet-dark);font-size:22px;margin:0">
     <?php
-    if ($ofertas) echo icon('flame', 22) . ' Ofertas de Violetero';
+    if ($ofertas) echo icon('flame', 22) . ' Ofertas de KlikCuba';
     elseif ($q !== '') echo 'Resultados de «' . e($q) . '»';
     elseif ($cat) echo category_icon($cat['slug'], $cat['emoji'], 22) . ' ' . e($cat['name']);
     else echo 'Todo el catálogo';

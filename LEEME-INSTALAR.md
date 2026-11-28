@@ -1,6 +1,6 @@
-# 🌸 Violetero en PHP + MySQL
+# 🌸 KlikCuba en PHP + MySQL
 
-La tienda Violetero convertida a **PHP con base de datos MySQL**, lista para
+La tienda KlikCuba convertida a **PHP con base de datos MySQL**, lista para
 montar en tu VPS o hosting con cPanel. Todo funciona: catálogo con ofertas,
 mini tiendas con suscripción, carrito, pedidos, billetera con recargas,
 panel de administración y sistema de seguridad.
@@ -41,18 +41,18 @@ FLUSH PRIVILEGES;
 ### Después de instalar
 - **Borra `install.php`** del servidor (por seguridad)
 - Entra como administrador con la cuenta de prueba:
-  - Correo: `admin@violetero.cu` · Contraseña: `Violetero2026`
+  - Correo: `admin@klikcuba.cu` · Contraseña: `KlikCuba2026`
 - Ve a **Administración → Datos de cobro** y pon los datos REALES de tu tarjeta
 - Ve a **Mi Cuenta → Seguridad** y cambia la contraseña del administrador
 - Borra o edita los productos de ejemplo cuando quieras
 
 ---
 
-## 👥 Cuentas de prueba (contraseña para todas: `Violetero2026`)
+## 👥 Cuentas de prueba (contraseña para todas: `KlikCuba2026`)
 
 | Cuenta | Correo | Qué hace |
 |---|---|---|
-| Administrador | admin@violetero.cu | Gestionar todo: pedidos, cobros, recargas, seguridad |
+| Administrador | admin@klikcuba.cu | Gestionar todo: pedidos, cobros, recargas, seguridad |
 | María la Tiendita | maria@violetero.cu | Vendedora (tienda "Cosas de María") |
 | Carlos Repuestos | carlos@violetero.cu | Vendedor (tienda "Repuestos Carlos") |
 | Cliente de Prueba | cliente@violetero.cu | Comprar, carrito, billetera |
@@ -68,7 +68,7 @@ FLUSH PRIVILEGES;
 3. **Vende como María**: entra con `maria@violetero.cu`, publica un producto
    (sube una foto o elige de la galería incluida), revisa tu venta en
    "Ventas recibidas" y marca el pedido como entregado.
-4. **Administra**: entra con `admin@violetero.cu`:
+4. **Administra**: entra con `admin@klikcuba.cu`:
    - Cambia los datos de cobro (pide confirmación y avisa a todos los administradores)
    - Verifica y aprueba una recarga de billetera
    - Revisa el registro de seguridad

@@ -1,6 +1,6 @@
 <?php
 /**
- * Autenticación y seguridad de Violetero:
+ * Autenticación y seguridad de KlikCuba:
  * login con bloqueo tras N intentos, sesiones por dispositivo,
  * recuperación de contraseña por código y registro de seguridad.
  */

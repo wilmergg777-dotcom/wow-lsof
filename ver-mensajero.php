@@ -38,7 +38,7 @@ include __DIR__ . '/includes/header.php';
     <div class="row"><b>Estado del perfil:</b>
       <span class="badge <?= $m['status'] === 'aprobado' ? 'b-ok' : ($m['status'] === 'pendiente' ? 'b-info' : 'b-warn') ?>"><?= ucfirst($m['status']) ?></span>
     </div>
-    <div class="row"><b>En Violetero desde:</b><span class="muted"><?= e(fdate($m['user_since'])) ?></span></div>
+    <div class="row"><b>En KlikCuba desde:</b><span class="muted"><?= e(fdate($m['user_since'])) ?></span></div>
   </div>
 
   <div class="card">

@@ -11,7 +11,7 @@ $orders = $st->fetchAll();
 include __DIR__ . '/includes/header.php';
 ?>
 <h1 style="color:var(--violet-dark)"><?= icon('package', 26) ?> Mis Pedidos</h1>
-<p class="muted mb">Aquí aparecen todas tus compras en Violetero.</p>
+<p class="muted mb">Aquí aparecen todas tus compras en KlikCuba.</p>
 
 <?php if (!$orders): ?>
   <div class="card empty"><div class="big"><?= icon('package', 44) ?></div>Todavía no has hecho pedidos.<div class="mt"><a class="btn btn-violet" href="productos.php">Empezar a comprar</a></div></div>

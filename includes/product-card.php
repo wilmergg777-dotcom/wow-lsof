@@ -20,7 +20,7 @@ $pPct = $pOff ? round((1 - $p['price_cup'] / $p['old_price_cup']) * 100) : 0;
     <?php if (!empty($p['store_name'])): ?>
       <span class="seller-mini">Vendido por <b><?= e($p['store_name']) ?></b></span>
     <?php else: ?>
-      <span class="seller-mini">Vendido por <b>Violetero</b></span>
+      <span class="seller-mini">Vendido por <b>KlikCuba</b></span>
     <?php endif; ?>
   </div>
 </a>

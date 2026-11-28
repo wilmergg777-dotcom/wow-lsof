@@ -85,7 +85,7 @@ include __DIR__ . '/includes/header.php';
   <?php endif; ?>
 
   <hr class="sep">
-  <p class="help">La suscripción mantiene tu tienda visible en Violetero. Si se vence, tus productos no se muestran al público (no se borran: cuando pagues, vuelven a verse igual que estaban).</p>
+  <p class="help">La suscripción mantiene tu tienda visible en KlikCuba. Si se vence, tus productos no se muestran al público (no se borran: cuando pagues, vuelven a verse igual que estaban).</p>
 </div>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

@@ -1,5 +1,5 @@
 <?php
-/** Portada de Violetero: carrusel, ofertas, categorías y mini tiendas. */
+/** Portada de KlikCuba: carrusel, ofertas, categorías y mini tiendas. */
 require_once __DIR__ . '/includes/auth.php';
 $page_title = SITE_NAME . ' — Tu tienda online en Cuba';
 
@@ -57,7 +57,7 @@ $cats = top_categories(10);
 
 $slides = [
     ['uploads/gallery/audifonos-1.jpg', 'Todo en pesos cubanos (CUP)', 'Compra en efectivo o por transferencia bancaria. Sin dolares, sin complicaciones.', 'productos.php', 'Ver el catálogo'],
-    ['uploads/gallery/perfume-1.jpeg', 'Abre tu mini tienda gratis', 'Vende lo tuyo en Violetero: 5 días de prueba gratis y luego solo 200 CUP al mes.', 'mi-tienda.php', 'Crear mi tienda'],
+    ['uploads/gallery/perfume-1.jpeg', 'Abre tu mini tienda gratis', 'Vende lo tuyo en KlikCuba: 5 días de prueba gratis y luego solo 200 CUP al mes.', 'mi-tienda.php', 'Crear mi tienda'],
     ['uploads/gallery/laptop-1.jpg', 'Ofertas de bienvenida', 'Precios con descuento en electrónica, hogar y más. ¡Aprovecha antes de que se agoten!', 'productos.php?ofertas=1', 'Ver ofertas'],
 ];
 include __DIR__ . '/includes/header.php';

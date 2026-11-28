@@ -1,6 +1,6 @@
 <?php
 /**
- * Funciones auxiliares de Violetero: formato, seguridad, fotos, avisos.
+ * Funciones auxiliares de KlikCuba: formato, seguridad, fotos, avisos.
  */
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/cuba.php';

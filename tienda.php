@@ -34,7 +34,7 @@ if ($visible) {
   <img src="<?= e($store['photo'] ?: 'assets/img/no-foto.svg') ?>" alt="<?= e($store['name']) ?>">
   <div style="flex:1;min-width:240px">
     <h1><?= icon('store', 26) ?> <?= e($store['name']) ?></h1>
-    <p><?= e($store['description'] ?: 'Tienda de la comunidad de Violetero.') ?></p>
+    <p><?= e($store['description'] ?: 'Tienda de la comunidad de KlikCuba.') ?></p>
     <div class="row" style="margin-top:8px">
       <?= store_status_badge($store) ?>
       <span class="badge b-info">Vendedor: <?= e($store['owner_name']) ?></span>

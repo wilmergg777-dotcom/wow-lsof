@@ -7,7 +7,7 @@ $stores = db()->query('SELECT s.*, (SELECT COUNT(*) FROM products p WHERE p.stor
 include __DIR__ . '/includes/header.php';
 ?>
 <h1 style="color:var(--violet-dark)"><?= icon('store', 26) ?> Mini Tiendas de la comunidad</h1>
-<p class="muted mb">Vendedores independientes de Violetero. Cada tienda tiene 5 días de prueba gratis y luego una suscripción de <?= money(SUBSCRIPTION_CUP) ?> al mes.</p>
+<p class="muted mb">Vendedores independientes de KlikCuba. Cada tienda tiene 5 días de prueba gratis y luego una suscripción de <?= money(SUBSCRIPTION_CUP) ?> al mes.</p>
 
 <?php if (!$stores): ?>
   <div class="card empty"><div class="big"><?= icon('leaf', 44) ?></div>Todavía no hay mini tiendas.<div class="mt"><a class="btn btn-violet" href="mi-tienda.php">Abrir mi mini tienda gratis</a></div></div>

@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $o = $st2->fetch();
         if ($o) {
             $txt = ['confirmado' => 'El vendedor confirmó tu pedido ' . $o['code'] . '. Prepara el pago o espera la verificación de la transferencia.',
-                    'entregado' => 'Tu pedido ' . $o['code'] . ' fue entregado. ¡Gracias por comprar en Violetero!',
+                    'entregado' => 'Tu pedido ' . $o['code'] . ' fue entregado. ¡Gracias por comprar en KlikCuba!',
                     'pendiente' => 'Tu pedido ' . $o['code'] . ' volvió a pendiente.'];
             notify((int)$o['buyer_id'], 'Tu pedido ' . $o['code'] . ': ' . ucfirst($new), $txt[$new], 'pedido.php?id=' . $orderId);
             if ($new === 'entregado') sec_log('pedido_entregado', 'Pedido ' . $o['code'] . ' marcado entregado por ' . $store['name'], (int)$u['id']);

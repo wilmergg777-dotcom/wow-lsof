@@ -359,9 +359,9 @@ function seed_data(): void {
 
     // Usuarios de prueba
     $u = db()->prepare('INSERT INTO users (name, email, phone, password_hash, role, balance_cup, created_at) VALUES (?,?,?,?,?,?,?)');
-    $pw = password_hash('Violetero2026', PASSWORD_DEFAULT);
+    $pw = password_hash('KlikCuba2026', PASSWORD_DEFAULT);
     $now = date('Y-m-d H:i:s');
-    $u->execute(['Administrador', 'admin@violetero.cu', '+53 5555 0001', $pw, 'admin', 0, $now]);
+    $u->execute(['Administrador', 'admin@klikcuba.cu', '+53 5555 0001', $pw, 'admin', 0, $now]);
     $adminId = (int)db()->lastInsertId();
     $u->execute(['María la Tiendita', 'maria@violetero.cu', '+53 5555 0002', $pw, 'seller', 350, $now]);
     $mariaId = (int)db()->lastInsertId();
@@ -409,7 +409,7 @@ function seed_data(): void {
         ->execute(['Banco de ejemplo (cámbialo en Administración)', '9227 9598 0000 0000 (EJEMPLO)', 'Titular de EJEMPLO', '+53 5 000 0000 (EJEMPLO)', $adminId, $now]);
 
     // Aviso de bienvenida
-    notify($adminId, '¡Bienvenido a Violetero!', 'Tu tienda está instalada con datos de ejemplo. Revisa Administración para cambiar los datos de cobro y gestionar el catálogo.', 'admin/index.php');
+    notify($adminId, '¡Bienvenido a KlikCuba!', 'Tu tienda está instalada con datos de ejemplo. Revisa Administración para cambiar los datos de cobro y gestionar el catálogo.', 'admin/index.php');
     notify($mariaId, 'Tu mini tienda está lista', '¡Tu tienda "Cosas de María" ya está abierta! Tienes 5 días de prueba gratis. Después la suscripción cuesta 200 CUP al mes.', 'vender.php');
     notify($carlosId, 'Tu mini tienda está lista', '¡Tu tienda "Repuestos Carlos" ya está abierta! Tienes 5 días de prueba gratis. Después la suscripción cuesta 200 CUP al mes.', 'vender.php');
 
@@ -456,9 +456,9 @@ if ($alreadyFullyInstalled && !$done) {
 <div style="max-width:680px;margin:40px auto;padding:0 16px">
   <div class="card" style="max-width:none">
     <div class="row" style="gap:14px;margin-bottom:14px">
-      <img src="assets/img/icon.svg" width="56" height="56" alt="Violetero">
+      <img src="assets/img/icon.svg" width="56" height="56" alt="KlikCuba">
       <div>
-        <h1 style="color:var(--violet-dark);font-size:24px">Instalación de <?= e(SITE_NAME) ?></h1>
+        <h1 style="color:var(--violet-dark);font-size:24px">Instalación de Klik<span style="color:var(--violet)">Cuba</span></h1>
         <p class="muted">Base de datos: <b><?= e(DB_DRIVER === 'mysql' ? 'MySQL (' . e(DB_HOST) . ' / ' . e(DB_NAME) . ')' : 'SQLite (pruebas)') ?></b></p>
       </div>
     </div>
@@ -467,10 +467,10 @@ if ($alreadyFullyInstalled && !$done) {
 
     <?php if ($done): ?>
       <div class="flash flash-ok">¡Instalación terminada! Tu tienda ya está lista con datos de ejemplo.</div>
-      <h2 style="color:var(--violet-dark);font-size:17px;margin:14px 0 8px">Cuentas de prueba (contraseña: <code>Violetero2026</code>)</h2>
+      <h2 style="color:var(--violet-dark);font-size:17px;margin:14px 0 8px">Cuentas de prueba (contraseña: <code>KlikCuba2026</code>)</h2>
       <div class="table-wrap"><table class="tbl">
         <tr><th>Cuenta</th><th>Correo</th><th>Para qué sirve</th></tr>
-        <tr><td><b>Administrador</b></td><td>admin@violetero.cu</td><td>Gestionar todo: productos, pedidos, cobros, recargas y seguridad</td></tr>
+        <tr><td><b>Administrador</b></td><td>admin@klikcuba.cu</td><td>Gestionar todo: productos, pedidos, cobros, recargas y seguridad</td></tr>
         <tr><td><b>María la Tiendita</b></td><td>maria@violetero.cu</td><td>Vendedora con mini tienda (Cosas de María)</td></tr>
         <tr><td><b>Carlos Repuestos</b></td><td>carlos@violetero.cu</td><td>Vendedor con mini tienda (Repuestos Carlos)</td></tr>
         <tr><td><b>Cliente de Prueba</b></td><td>cliente@violetero.cu</td><td>Comprar, carrito, pedidos y billetera</td></tr>

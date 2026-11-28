@@ -6,9 +6,9 @@ $__up = ($__dirName === 'admin') ? '../' : '';
 <footer class="footer">
   <div class="footer-inner">
     <div class="footer-brand">
-      <img src="<?= $__up ?>assets/img/icon.svg" alt="Violetero" width="40" height="40">
+      <img src="<?= $__up ?>assets/img/icon.svg" alt="KlikCuba" width="40" height="40">
       <div>
-        <b><?= e(SITE_NAME) ?></b>
+        <b>Klik<span style="color:var(--yellow)">Cuba</span></b>
         <p>Tu tienda online de confianza. Todo en pesos cubanos (CUP), pago en efectivo o por transferencia.</p>
       </div>
     </div>

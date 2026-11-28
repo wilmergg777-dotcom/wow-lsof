@@ -1,6 +1,6 @@
 <?php
 /**
- * Cabecera común de Violetero.
+ * Cabecera común de KlikCuba.
  * Detecta si la página está dentro de admin/ y ajusta las rutas.
  * Variables opcionales antes de incluir:
  *   $page_title  (título de la página)
@@ -28,11 +28,14 @@ $__is_seller = $__user && in_array($__user['role'], ['seller', 'admin'], true);
 <header class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="<?= $__up ?>index.php">
-      <img src="<?= $__up ?>assets/img/icon.svg" alt="Violetero" width="34" height="34">
-      <span>Violetero</span>
+      <img class="brand-logo" src="<?= $__up ?>assets/img/icon.svg" alt="KlikCuba" width="38" height="38">
+      <span class="brand-text">
+        <span class="brand-name">Klik<b>Cuba</b></span>
+        <span class="brand-tag">Tu tienda online</span>
+      </span>
     </a>
     <form class="searchbar" action="<?= $__up ?>productos.php" method="get">
-      <input type="search" name="q" placeholder="Buscar productos en Violetero…" value="<?= e($_GET['q'] ?? '') ?>">
+      <input type="search" name="q" placeholder="Buscar productos en KlikCuba…" value="<?= e($_GET['q'] ?? '') ?>">
       <button type="submit" aria-label="Buscar"><?= icon('search', 18) ?></button>
     </form>
     <nav class="topnav-actions">

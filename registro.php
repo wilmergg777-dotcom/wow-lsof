@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $st = db()->prepare('SELECT * FROM users WHERE id = ?');
                 $st->execute([$id]);
                 login_user($st->fetch());
-                notify($id, '¡Bienvenido a Violetero!', 'Ya puedes comprar en toda la tienda. Cuando quieras vender, abre tu mini tienda gratis desde el menú.', 'mi-tienda.php');
+                notify($id, '¡Bienvenido a KlikCuba!', 'Ya puedes comprar en toda la tienda. Cuando quieras vender, abre tu mini tienda gratis desde el menú.', 'mi-tienda.php');
                 flash('¡Cuenta creada! ¡Bienvenido, ' . $name . '!', 'ok');
                 redirect('index.php');
             }

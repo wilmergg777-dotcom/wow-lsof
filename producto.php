@@ -112,7 +112,7 @@ include __DIR__ . '/includes/header.php';
         Vendido por <b><a href="tienda.php?id=<?= (int)$p['store_id'] ?>"><?= e($p['store_name']) ?></a></b><br>
         <span class="muted">Al comprar, el vendedor recibe un aviso y te contacta para coordinar la entrega.</span>
       <?php else: ?>
-        Vendido por <b>Violetero</b> (tienda oficial)<br>
+        Vendido por <b>KlikCuba</b> (tienda oficial)<br>
         <span class="muted">Al comprar recibes un aviso con el resumen de tu pedido.</span>
       <?php endif; ?>
       <div class="mt" style="font-size:13.5px;color:var(--muted)"><?= icon('wallet', 15) ?> Pago: efectivo o transferencia bancaria — todo en CUP.</div>

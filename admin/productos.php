@@ -52,7 +52,7 @@ include __DIR__ . '/admin-header.php';
         <img class="thumb-sm" src="<?= e(photo_of($p['photos'])) ?>" alt="">
         <div><a class="t-title" href="../producto.php?id=<?= (int)$p['id'] ?>"><?= e($p['title']) ?></a></div>
       </td>
-      <td><?= $p['store_name'] ? e($p['store_name']) : '<span class="badge b-info">Violetero (oficial)</span>' ?></td>
+      <td><?= $p['store_name'] ? e($p['store_name']) : '<span class="badge b-info">KlikCuba (oficial)</span>' ?></td>
       <td style="white-space:nowrap"><b><?= money($p['price_cup']) ?></b></td>
       <td>
         <form method="post" class="row" style="gap:6px"><?= csrf_field() ?>
