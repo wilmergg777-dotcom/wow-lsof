@@ -19,7 +19,7 @@ $stats = db()->query('SELECT
 $ultimos = db()->query('SELECT o.*, u.name AS buyer FROM orders o LEFT JOIN users u ON u.id = o.buyer_id ORDER BY o.id DESC LIMIT 8')->fetchAll();
 include __DIR__ . '/admin-header.php';
 ?>
-<h1 style="color:var(--violet-dark)">📊 Resumen general</h1>
+<h1 style="color:var(--violet-dark)"><?= icon('bar-chart', 26) ?> Resumen general</h1>
 
 <div class="stat-grid">
   <div class="stat"><div class="n"><?= (int)$stats['usuarios'] ?></div><div class="l">Usuarios registrados</div></div>
@@ -47,7 +47,7 @@ include __DIR__ . '/admin-header.php';
       <td><?= e($o['buyer'] ?? '—') ?></td>
       <td class="muted" style="white-space:nowrap"><?= e(fdate($o['created_at'])) ?></td>
       <td><b><?= money($o['total_cup']) ?></b></td>
-      <td><?= $o['payment_method'] === 'transferencia' ? '🏦' : '💵' ?> <?= e($o['payment_method']) ?></td>
+      <td><?= $o['payment_method'] === 'transferencia' ? icon('landmark', 14) : icon('banknote', 14) ?> <?= e($o['payment_method']) ?></td>
       <td><span class="state st-<?= e($o['status']) ?>"><?= e(ucfirst($o['status'])) ?></span></td>
     </tr>
     <?php endforeach; ?>

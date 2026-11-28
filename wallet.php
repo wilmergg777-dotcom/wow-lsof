@@ -32,7 +32,7 @@ $topups = $st->fetchAll();
 $pay = payment_data();
 include __DIR__ . '/includes/header.php';
 ?>
-<h1 style="color:var(--violet-dark)">💰 Mi Billetera</h1>
+<h1 style="color:var(--violet-dark)"><?= icon('wallet', 26) ?> Mi Billetera</h1>
 
 <div class="grid grid-cols-2 mt">
   <div>
@@ -70,7 +70,7 @@ include __DIR__ . '/includes/header.php';
   <div class="card">
     <h2 style="color:var(--violet-dark);font-size:17px;margin-bottom:10px">Historial de recargas</h2>
     <?php if (!$topups): ?>
-      <div class="empty"><div class="big">🏦</div>Todavía no has pedido recargas.</div>
+      <div class="empty"><div class="big"><?= icon('landmark', 44) ?></div>Todavía no has pedido recargas.</div>
     <?php else: ?>
       <div class="table-wrap"><table class="tbl">
         <tr><th>Fecha</th><th>Monto</th><th>ID transferencia</th><th>Estado</th><th>Nota</th></tr>

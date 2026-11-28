@@ -10,7 +10,7 @@ $store = $st->fetch();
 if (!$store) {
     $page_title = 'Tienda no encontrada';
     include __DIR__ . '/includes/header.php';
-    echo '<div class="card empty"><div class="big">🍂</div>Esa tienda no existe.<div class="mt"><a class="btn btn-violet" href="tiendas.php">Ver todas las tiendas</a></div></div>';
+    echo '<div class="card empty"><div class="big">' . icon('leaf', 44) . '</div>Esa tienda no existe.<div class="mt"><a class="btn btn-violet" href="tiendas.php">Ver todas las tiendas</a></div></div>';
     include __DIR__ . '/includes/footer.php';
     exit;
 }
@@ -33,7 +33,7 @@ if ($visible) {
 <div class="store-hero">
   <img src="<?= e($store['photo'] ?: 'assets/img/no-foto.svg') ?>" alt="<?= e($store['name']) ?>">
   <div style="flex:1;min-width:240px">
-    <h1>🏪 <?= e($store['name']) ?></h1>
+    <h1><?= icon('store', 26) ?> <?= e($store['name']) ?></h1>
     <p><?= e($store['description'] ?: 'Tienda de la comunidad de Violetero.') ?></p>
     <div class="row" style="margin-top:8px">
       <?= store_status_badge($store) ?>
@@ -47,9 +47,9 @@ if ($visible) {
 <?php endif; ?>
 
 <?php if (!$visible): ?>
-  <div class="card empty"><div class="big">🌙</div>Esta tienda está suspendida temporalmente. Vuelve más tarde.</div>
+  <div class="card empty"><div class="big"><?= icon('leaf', 44) ?></div>Esta tienda está suspendida temporalmente. Vuelve más tarde.</div>
 <?php elseif (!$items): ?>
-  <div class="card empty"><div class="big">🛍️</div>Esta tienda todavía no tiene productos publicados.</div>
+  <div class="card empty"><div class="big"><?= icon('shopping-cart', 44) ?></div>Esta tienda todavía no tiene productos publicados.</div>
 <?php else: ?>
   <div class="section-title"><h2>Productos de la tienda (<?= count($items) ?>)</h2></div>
   <div class="grid grid-products">

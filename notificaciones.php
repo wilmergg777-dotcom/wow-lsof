@@ -23,7 +23,7 @@ $notifs = $st->fetchAll();
 include __DIR__ . '/includes/header.php';
 ?>
 <div class="row-between mb">
-  <h1 style="color:var(--violet-dark)">🔔 Notificaciones</h1>
+  <h1 style="color:var(--violet-dark)"><?= icon('bell', 26) ?> Notificaciones</h1>
   <form method="post" class="row"><?= csrf_field() ?>
     <button class="btn btn-outline btn-sm" name="accion" value="marcar_todas">Marcar todas como leídas</button>
     <button class="btn btn-red btn-sm" name="accion" value="borrar_todas" onclick="return confirmDel('¿Vaciar toda la bandeja?')">Vaciar</button>
@@ -31,7 +31,7 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <?php if (!$notifs): ?>
-  <div class="card empty"><div class="big">🔔</div>No tienes notificaciones todavía. Aquí verás avisos de tus pedidos, ventas y recargas.</div>
+  <div class="card empty"><div class="big"><?= icon('bell', 44) ?></div>No tienes notificaciones todavía. Aquí verás avisos de tus pedidos, ventas y recargas.</div>
 <?php else: ?>
   <?php foreach ($notifs as $n): ?>
     <div class="notif <?= (int)$n['is_read'] === 0 ? 'unread' : '' ?>">

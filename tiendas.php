@@ -6,11 +6,11 @@ $page_title = 'Mini Tiendas — ' . SITE_NAME;
 $stores = db()->query('SELECT s.*, (SELECT COUNT(*) FROM products p WHERE p.store_id = s.id AND p.status = "active") AS nprod FROM stores s ORDER BY s.id DESC')->fetchAll();
 include __DIR__ . '/includes/header.php';
 ?>
-<h1 style="color:var(--violet-dark)">🏪 Mini Tiendas de la comunidad</h1>
+<h1 style="color:var(--violet-dark)"><?= icon('store', 26) ?> Mini Tiendas de la comunidad</h1>
 <p class="muted mb">Vendedores independientes de Violetero. Cada tienda tiene 5 días de prueba gratis y luego una suscripción de <?= money(SUBSCRIPTION_CUP) ?> al mes.</p>
 
 <?php if (!$stores): ?>
-  <div class="card empty"><div class="big">🌸</div>Todavía no hay mini tiendas.<div class="mt"><a class="btn btn-violet" href="mi-tienda.php">Abrir mi mini tienda gratis</a></div></div>
+  <div class="card empty"><div class="big"><?= icon('leaf', 44) ?></div>Todavía no hay mini tiendas.<div class="mt"><a class="btn btn-violet" href="mi-tienda.php">Abrir mi mini tienda gratis</a></div></div>
 <?php else: ?>
   <div class="grid grid-stores">
     <?php foreach ($stores as $s): ?>
@@ -40,7 +40,7 @@ include __DIR__ . '/includes/header.php';
 <div class="card mt" style="text-align:center">
   <h2 style="color:var(--violet-dark)">¿Quieres vender lo tuyo?</h2>
   <p class="muted mb">Abre tu mini tienda gratis: publicas productos con fotos, recibes los pedidos aquí mismo y las gestionas desde tu panel.</p>
-  <a class="btn btn-yellow" href="mi-tienda.php">🌸 Abrir mi mini tienda</a>
+  <a class="btn btn-yellow" href="mi-tienda.php"><?= icon('store', 18) ?> Abrir mi mini tienda</a>
 </div>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

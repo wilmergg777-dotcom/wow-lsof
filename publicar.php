@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 include __DIR__ . '/includes/header.php';
 ?>
-<h1 style="color:var(--violet-dark)"><?= $editing ? '✏️ Editar producto' : '➕ Publicar producto' ?></h1>
+<h1 style="color:var(--violet-dark)"><?= $editing ? icon('save', 24) . ' Editar producto' : icon('shopping-cart', 24) . ' Publicar producto' ?></h1>
 <p class="muted mb">Tienda: <b><?= e($store['name']) ?></b> · Todo en CUP</p>
 
 <div class="card" style="max-width:680px">
@@ -127,7 +127,7 @@ include __DIR__ . '/includes/header.php';
         <p class="help mb">Fotos actuales (botón ✕ para quitar):</p>
         <div class="upload-list" id="upload-list">
           <?php foreach ($existing as $ph): ?>
-            <div class="up"><img src="<?= e($ph) ?>" data-src="<?= e($ph) ?>" alt=""><button type="button" class="del" onclick="removeUpload(this)">✕</button></div>
+            <div class="up"><img src="<?= e($ph) ?>" data-src="<?= e($ph) ?>" alt=""><button type="button" class="del" onclick="removeUpload(this)" aria-label="Quitar"><?= icon('x', 12) ?></button></div>
           <?php endforeach; ?>
         </div>
         <p class="help">Si quitas fotos, pulsa en el botón ✕ y guarda; se eliminan del producto.</p>
@@ -141,7 +141,7 @@ include __DIR__ . '/includes/header.php';
       </div>
     </div>
 
-    <button class="btn btn-yellow" type="submit"><?= $editing ? 'Guardar cambios' : '🚀 Publicar producto' ?></button>
+    <button class="btn btn-yellow" type="submit"><?= $editing ? 'Guardar cambios' : icon('package', 18) . ' Publicar producto' ?></button>
     <a class="btn btn-outline" href="mis-productos.php">Cancelar</a>
   </form>
 </div>

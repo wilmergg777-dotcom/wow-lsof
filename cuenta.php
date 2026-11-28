@@ -60,6 +60,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('Cerramos las sesiones de los demás dispositivos.', 'ok');
         redirect('cuenta.php?tab=seguridad');
     }
+
+    if ($accion === 'ubicacion') {
+        if (!rate_limit('perfil', 15, 600)) { flash('Espera un momento antes de volver a guardar.', 'err'); }
+        else {
+            $province = trim($_POST['default_province'] ?? '');
+            $municipality = trim($_POST['default_municipality'] ?? '');
+            $provs = cuba_provinces();
+            if ($province !== '' && !isset($provs[$province])) { $province = ''; $municipality = ''; }
+            if ($province !== '' && $municipality !== '' && !isset($provs[$province]['municipalities'][$municipality])) {
+                $municipality = '';
+            }
+            db()->prepare('UPDATE users SET default_province = ?, default_municipality = ? WHERE id = ?')
+                ->execute([$province ?: null, $municipality ?: null, $u['id']]);
+            sec_log('ubicacion_actualizada', 'Ubicación por defecto: ' . province_name($province) . ' / ' . municipality_name($province, $municipality), (int)$u['id']);
+            flash('Tu ubicación de búsqueda se guardó. Verás primero las ventas de tu zona.', 'ok');
+        }
+        redirect('cuenta.php?tab=datos');
+    }
 }
 
 $st = db()->prepare('SELECT * FROM user_sessions WHERE user_id = ? ORDER BY last_seen DESC');
@@ -71,7 +89,7 @@ $st->execute([$u['id']]);
 $myStore = $st->fetch();
 include __DIR__ . '/includes/header.php';
 ?>
-<h1 style="color:var(--violet-dark)">👤 Mi Cuenta</h1>
+<h1 style="color:var(--violet-dark)"><?= icon('user', 26) ?> Mi Cuenta</h1>
 <p class="muted mb">Hola, <?= e($u['name']) ?>. Saldo de tu billetera: <b><?= money($u['balance_cup']) ?></b> · <a href="wallet.php">Ver billetera</a></p>
 
 <div class="pill-tabs">
@@ -92,6 +110,45 @@ include __DIR__ . '/includes/header.php';
       <button class="btn btn-violet" type="submit">Guardar datos</button>
     </form>
   </div>
+
+  <div class="card mt" style="max-width:560px">
+    <h2 style="color:var(--violet-dark);font-size:17px;margin-bottom:6px"><?= icon('map-pin', 20) ?> Mi ubicación de búsqueda</h2>
+    <p class="help mb">Elige dónde compras normalmente. En la portada y el catálogo verás primero las ventas de tu municipio, luego de tu provincia y, si no hay, de las provincias cercanas.</p>
+    <form method="post" class="form">
+      <?= csrf_field() ?>
+      <input type="hidden" name="accion" value="ubicacion">
+      <div><label class="f">Provincia</label>
+        <select class="input" name="default_province" id="user-province" onchange="fillUserMunis(this.value)">
+          <option value="">— Toda Cuba (sin preferencia) —</option>
+          <?php foreach (province_options() as $slug => $nm): ?>
+            <option value="<?= e($slug) ?>" <?= ($u['default_province'] ?? '') === $slug ? 'selected' : '' ?>><?= e($nm) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div><label class="f">Municipio (opcional)</label>
+        <select class="input" name="default_municipality" id="user-municipality">
+          <option value="">— Toda la provincia —</option>
+        </select>
+      </div>
+      <button class="btn btn-violet" type="submit"><?= icon('check', 16) ?> Guardar ubicación</button>
+    </form>
+  </div>
+  <script>
+  const CUBA_MUNIS2 = <?= json_encode(array_map(fn($p) => $p['municipalities'], cuba_provinces())) ?>;
+  const SEL_USER_MUNI = <?= json_encode($u['default_municipality'] ?? '') ?>;
+  function fillUserMunis(prov) {
+    const sel = document.getElementById('user-municipality');
+    sel.innerHTML = '<option value="">— Toda la provincia —</option>';
+    const munis = CUBA_MUNIS2[prov] || {};
+    for (const [slug, name] of Object.entries(munis)) {
+      const o = document.createElement('option');
+      o.value = slug; o.textContent = name;
+      if (slug === SEL_USER_MUNI) o.selected = true;
+      sel.appendChild(o);
+    }
+  }
+  (function(){ const p = document.getElementById('user-province'); if (p && p.value) fillUserMunis(p.value); })();
+  </script>
 
 <?php elseif ($tab === 'seguridad'): ?>
   <div class="grid grid-cols-2">
@@ -151,7 +208,7 @@ include __DIR__ . '/includes/header.php';
     <?php elseif ($estado === 'prueba'): ?>
       <div class="flash flash-info">Estás en la prueba gratis hasta el <b><?= e($myStore['trial_until']) ?></b>. Después, la suscripción cuesta <?= money(SUBSCRIPTION_CUP) ?> al mes y se paga con tu saldo.</div>
     <?php else: ?>
-      <div class="flash flash-ok">Suscripción al día hasta el <b><?= e($myStore['subscription_until']) ?></b>. ¡Gracias por apoyar la comunidad! 🌸</div>
+      <div class="flash flash-ok">Suscripción al día hasta el <b><?= e($myStore['subscription_until']) ?></b>. ¡Gracias por apoyar la comunidad!</div>
     <?php endif; ?>
     <div class="row">
       <a class="btn btn-violet" href="vender.php">Ir al panel del vendedor</a>

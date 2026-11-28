@@ -13,7 +13,7 @@ $p = $st->fetch();
 if (!$p || $p['status'] !== 'active') {
     $page_title = 'Producto no encontrado';
     include __DIR__ . '/includes/header.php';
-    echo '<div class="card empty"><div class="big">🍂</div>Este producto no existe o ya no está disponible.<div class="mt"><a class="btn btn-violet" href="productos.php">Ver el catálogo</a></div></div>';
+    echo '<div class="card empty"><div class="big">' . icon('leaf', 44) . '</div>Este producto no existe o ya no está disponible.<div class="mt"><a class="btn btn-violet" href="productos.php">Ver el catálogo</a></div></div>';
     include __DIR__ . '/includes/footer.php';
     exit;
 }
@@ -89,9 +89,9 @@ include __DIR__ . '/includes/header.php';
 
     <div class="row mb">
       <?php if ((int)$p['stock'] > 0): ?>
-        <span class="stock-ok">✔ Disponible: <?= (int)$p['stock'] ?> unidad<?= (int)$p['stock'] === 1 ? '' : 'es' ?></span>
+        <span class="stock-ok"><?= icon('check', 15) ?> Disponible: <?= (int)$p['stock'] ?> unidad<?= (int)$p['stock'] === 1 ? '' : 'es' ?></span>
       <?php else: ?>
-        <span class="stock-out">✘ Agotado</span>
+        <span class="stock-out"><?= icon('x', 15) ?> Agotado</span>
       <?php endif; ?>
     </div>
 
@@ -99,7 +99,7 @@ include __DIR__ . '/includes/header.php';
       <?= csrf_field() ?>
       <input type="hidden" name="accion" value="agregar">
       <input type="number" name="qty" value="1" min="1" max="<?= max(1, (int)$p['stock']) ?>" <?= (int)$p['stock'] <= 0 ? 'disabled' : '' ?>>
-      <button class="btn btn-yellow" type="submit" <?= (int)$p['stock'] <= 0 ? 'disabled' : '' ?>>🛒 Agregar al carrito</button>
+      <button class="btn btn-yellow" type="submit" <?= (int)$p['stock'] <= 0 ? 'disabled' : '' ?>><?= icon('shopping-cart', 18) ?> Agregar al carrito</button>
       <a class="btn btn-outline" href="carrito.php">Ir al carrito</a>
     </form>
 
@@ -115,7 +115,7 @@ include __DIR__ . '/includes/header.php';
         Vendido por <b>Violetero</b> (tienda oficial)<br>
         <span class="muted">Al comprar recibes un aviso con el resumen de tu pedido.</span>
       <?php endif; ?>
-      <div class="mt" style="font-size:13.5px;color:var(--muted)">💰 Pago: efectivo o transferencia bancaria — todo en CUP.</div>
+      <div class="mt" style="font-size:13.5px;color:var(--muted)"><?= icon('wallet', 15) ?> Pago: efectivo o transferencia bancaria — todo en CUP.</div>
     </div>
   </div>
 </div>

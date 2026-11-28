@@ -47,11 +47,11 @@ $orders->execute([$sid, $sid, $sid]);
 $pedidos = $orders->fetchAll();
 include __DIR__ . '/includes/header.php';
 ?>
-<h1 style="color:var(--violet-dark)">🧾 Ventas recibidas — <?= e($store['name']) ?></h1>
+<h1 style="color:var(--violet-dark)"><?= icon('receipt', 26) ?> Ventas recibidas — <?= e($store['name']) ?></h1>
 <p class="muted mb">Pedidos de la comunidad que incluyen productos tuyos. Cambia el estado para avisar al comprador.</p>
 
 <?php if (!$pedidos): ?>
-  <div class="card empty"><div class="big">🧾</div>Todavía no te han comprado. Publica más productos y comparte tu tienda.<div class="mt"><a class="btn btn-violet" href="publicar.php">Publicar producto</a></div></div>
+  <div class="card empty"><div class="big"><?= icon('receipt', 44) ?></div>Todavía no te han comprado. Publica más productos y comparte tu tienda.<div class="mt"><a class="btn btn-violet" href="publicar.php">Publicar producto</a></div></div>
 <?php else: ?>
   <?php foreach ($pedidos as $o): ?>
     <?php
@@ -64,7 +64,7 @@ include __DIR__ . '/includes/header.php';
         <div>
           <b style="font-size:16px"><?= e($o['code']) ?></b>
           <span class="state st-<?= e($o['status']) ?>" style="margin-left:8px"><?= e(ucfirst($o['status'])) ?></span>
-          <div class="help"><?= e(fdate($o['created_at'])) ?> · <?= $o['payment_method'] === 'transferencia' ? '🏦 Transferencia' . (!empty($o['transfer_id']) ? ' (ID: ' . e($o['transfer_id']) . ')' : ' (sin ID aún)') : '💵 Efectivo' ?></div>
+          <div class="help"><?= e(fdate($o['created_at'])) ?> · <?= $o['payment_method'] === 'transferencia' ? icon('landmark', 14) . ' Transferencia' . (!empty($o['transfer_id']) ? ' (ID: ' . e($o['transfer_id']) . ')' : ' (sin ID aún)') : icon('banknote', 14) . ' Efectivo' ?></div>
         </div>
         <div style="text-align:right">
           <div class="help">Tu parte</div>
@@ -77,11 +77,12 @@ include __DIR__ . '/includes/header.php';
         <tr><td class="t-title"><?= e($it['title']) ?></td><td><?= (int)$it['qty'] ?></td><td><?= money((int)$it['qty'] * (int)$it['price_cup']) ?></td></tr>
         <?php endforeach; ?>
       </table></div>
-      <div class="row mt">
-        <span class="badge b-info">👤 <?= e($mis[0]['buyer_name'] ?? 'Cliente') ?></span>
-        <span class="badge b-info">📞 <?= e($o['phone']) ?></span>
-        <span class="badge b-info">📍 <?= e($o['address']) ?></span>
-        <?php if ($o['note']): ?><span class="badge b-info">💬 <?= e($o['note']) ?></span><?php endif; ?>
+      <div class="row mt" style="gap:8px">
+        <span class="badge b-info"><?= icon('user', 14) ?> <?= e($mis[0]['buyer_name'] ?? 'Cliente') ?></span>
+        <span class="badge b-info"><?= icon('phone', 14) ?> <?= e($o['phone']) ?></span>
+        <span class="badge b-info"><?= icon('map-pin', 14) ?> <?= e($o['address']) ?><?php if (!empty($o['province'])): ?> · <?= e(province_name($o['province'])) ?><?php if (!empty($o['municipality'])): ?>, <?= e(municipality_name($o['province'], $o['municipality'])) ?><?php endif; endif; ?></span>
+        <a class="badge b-ok" href="<?= e(maps_link($o['delivery_lat'] ?? null, $o['delivery_lng'] ?? null, $o['address'] ?? null, $o['province'] ?? null, $o['municipality'] ?? null)) ?>" target="_blank" rel="noopener"><?= icon('map-pin', 14) ?> Cómo llegar (Google Maps)</a>
+        <?php if ($o['note']): ?><span class="badge b-info"><?= icon('message-circle', 14) ?> <?= e($o['note']) ?></span><?php endif; ?>
       </div>
       <div class="row mt">
         <form method="post" class="row"><?= csrf_field() ?>

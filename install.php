@@ -39,6 +39,8 @@ function create_tables(): void {
                 password_hash VARCHAR(255) NOT NULL,
                 role VARCHAR(20) NOT NULL DEFAULT 'customer',
                 balance_cup INT NOT NULL DEFAULT 0,
+                default_province VARCHAR(60) NULL,
+                default_municipality VARCHAR(80) NULL,
                 failed_attempts INT NOT NULL DEFAULT 0,
                 locked_until DATETIME NULL,
                 last_login DATETIME NULL,
@@ -70,10 +72,12 @@ function create_tables(): void {
                 slug VARCHAR(140) NOT NULL,
                 description TEXT NULL,
                 photo VARCHAR(300) NULL,
+                province VARCHAR(60) NULL,
+                municipality VARCHAR(80) NULL,
                 trial_until DATE NULL,
                 subscription_until DATE NULL,
                 created_at DATETIME NOT NULL,
-                INDEX (owner_id), INDEX (slug)
+                INDEX (owner_id), INDEX (slug), INDEX (province), INDEX (municipality)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
             "CREATE TABLE IF NOT EXISTS categories (
                 id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -112,10 +116,14 @@ function create_tables(): void {
                 transfer_id VARCHAR(80) NULL,
                 status VARCHAR(20) NOT NULL DEFAULT 'pendiente',
                 address VARCHAR(240) NULL,
+                province VARCHAR(60) NULL,
+                municipality VARCHAR(80) NULL,
+                delivery_lat DECIMAL(10,7) NULL,
+                delivery_lng DECIMAL(10,7) NULL,
                 phone VARCHAR(40) NULL,
                 note VARCHAR(300) NULL,
                 created_at DATETIME NOT NULL,
-                INDEX (buyer_id), INDEX (status), INDEX (code)
+                INDEX (buyer_id), INDEX (status), INDEX (code), INDEX (province), INDEX (municipality)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
             "CREATE TABLE IF NOT EXISTS order_items (
                 id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -188,6 +196,8 @@ function create_tables(): void {
                 password_hash TEXT NOT NULL,
                 role TEXT NOT NULL DEFAULT 'customer',
                 balance_cup INTEGER NOT NULL DEFAULT 0,
+                default_province TEXT,
+                default_municipality TEXT,
                 failed_attempts INTEGER NOT NULL DEFAULT 0,
                 locked_until DATETIME,
                 last_login DATETIME,
@@ -217,10 +227,14 @@ function create_tables(): void {
                 slug TEXT NOT NULL,
                 description TEXT,
                 photo TEXT,
+                province TEXT,
+                municipality TEXT,
                 trial_until DATE,
                 subscription_until DATE,
                 created_at DATETIME NOT NULL
             )",
+            "CREATE INDEX IF NOT EXISTS idx_stores_province ON stores(province)",
+            "CREATE INDEX IF NOT EXISTS idx_stores_municipality ON stores(municipality)",
             "CREATE TABLE IF NOT EXISTS categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -257,10 +271,16 @@ function create_tables(): void {
                 transfer_id TEXT,
                 status TEXT NOT NULL DEFAULT 'pendiente',
                 address TEXT,
+                province TEXT,
+                municipality TEXT,
+                delivery_lat REAL,
+                delivery_lng REAL,
                 phone TEXT,
                 note TEXT,
                 created_at DATETIME NOT NULL
             )",
+            "CREATE INDEX IF NOT EXISTS idx_orders_province ON orders(province)",
+            "CREATE INDEX IF NOT EXISTS idx_orders_municipality ON orders(municipality)",
             "CREATE TABLE IF NOT EXISTS order_items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 order_id INTEGER NOT NULL,
@@ -350,17 +370,19 @@ function seed_data(): void {
     $u->execute(['Cliente de Prueba', 'cliente@violetero.cu', '+53 5555 0004', $pw, 'customer', 500, $now]);
     $clienteId = (int)db()->lastInsertId();
 
-    // Mini tiendas (con 5 días de prueba gratis)
-    $s = db()->prepare('INSERT INTO stores (owner_id, name, slug, description, photo, trial_until, subscription_until, created_at) VALUES (?,?,?,?,?,?,?,?)');
+    // Mini tiendas (con 5 días de prueba gratis y ubicación en Cuba)
+    $s = db()->prepare('INSERT INTO stores (owner_id, name, slug, description, photo, province, municipality, trial_until, subscription_until, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)');
     $t5 = date('Y-m-d', time() + TRIAL_DAYS * 86400);
-    $s->execute([$mariaId, 'Cosas de María', 'cosas-de-maria', 'Ropa, perfumes y detalles para el hogar. ¡Todo fresquito y barato!', $g('perfume-1.jpeg'), $t5, null, $now]);
+    $s->execute([$mariaId, 'Cosas de María', 'cosas-de-maria', 'Ropa, perfumes y detalles para el hogar. ¡Todo fresquito y barato!', $g('perfume-1.jpeg'), 'la-habana', 'centro-habana', $t5, null, $now]);
     $mariaStore = (int)db()->lastInsertId();
-    $s->execute([$carlosId, 'Repuestos Carlos', 'repuestos-carlos', 'Audífonos, altavoces y todo para tu computadora. Garantía de 30 días.', $g('audifonos-1.jpg'), $t5, null, $now]);
+    $s->execute([$carlosId, 'Repuestos Carlos', 'repuestos-carlos', 'Audífonos, altavoces y todo para tu computadora. Garantía de 30 días.', $g('audifonos-1.jpg'), 'artemisa', 'artemisa', $t5, null, $now]);
     $carlosStore = (int)db()->lastInsertId();
-    db()->prepare('UPDATE users SET role = ? WHERE id = ?')->execute(['seller', $mariaId]);
-    db()->prepare('UPDATE users SET role = ? WHERE id = ?')->execute(['seller', $carlosId]);
+    db()->prepare('UPDATE users SET role = ?, default_province = ?, default_municipality = ? WHERE id = ?')->execute(['seller', 'la-habana', 'centro-habana', $mariaId]);
+    db()->prepare('UPDATE users SET role = ?, default_province = ?, default_municipality = ? WHERE id = ?')->execute(['seller', 'artemisa', 'artemisa', $carlosId]);
     db()->prepare('UPDATE users SET balance_cup = ? WHERE id = ?')->execute([350, $mariaId]);
     db()->prepare('UPDATE users SET balance_cup = ? WHERE id = ?')->execute([120, $carlosId]);
+    // El cliente de prueba vive en La Habana (Vedado)
+    db()->prepare('UPDATE users SET default_province = ?, default_municipality = ? WHERE id = ?')->execute(['la-habana', 'plaza-de-la-revolucion', $clienteId]);
 
     // Ofertas de bienvenida: la web NUNCA arranca vacía
     $p = db()->prepare('INSERT INTO products (store_id, category_id, title, description, price_cup, old_price_cup, stock, photos, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)');

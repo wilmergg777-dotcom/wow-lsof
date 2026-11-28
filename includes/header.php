@@ -32,29 +32,33 @@ $__is_admin = $__user && $__user['role'] === 'admin';
     </a>
     <form class="searchbar" action="<?= $__up ?>productos.php" method="get">
       <input type="search" name="q" placeholder="Buscar productos en Violetero…" value="<?= e($_GET['q'] ?? '') ?>">
-      <button type="submit" aria-label="Buscar">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      </button>
+      <button type="submit" aria-label="Buscar"><?= icon('search', 18) ?></button>
     </form>
     <nav class="topnav-actions">
       <?php if ($__user): ?>
+        <!-- Saldo del usuario arriba (visible siempre, como en Amazon/eBay) -->
+        <a class="balance-chip" href="<?= $__up ?>wallet.php" title="Ver mi billetera">
+          <?= icon('wallet', 18) ?>
+          <span class="balance-chip-lbl">Saldo</span>
+          <b><?= money($__user['balance_cup'] ?? 0) ?></b>
+        </a>
         <a class="icon-link" href="<?= $__up ?>notificaciones.php" title="Notificaciones">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+          <?= icon('bell', 20) ?>
           <?php if ($__unread > 0): ?><span class="dot"><?= $__unread > 9 ? '9+' : $__unread ?></span><?php endif; ?>
         </a>
         <a class="icon-link" href="<?= $__up ?>carrito.php" title="Carrito">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1.6"/><circle cx="19" cy="21" r="1.6"/><path d="M2 3h3l2.6 12.6a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 7H6"/></svg>
+          <?= icon('shopping-cart', 20) ?>
           <?php if ($__cart > 0): ?><span class="dot"><?= $__cart ?></span><?php endif; ?>
         </a>
         <div class="user-menu">
           <a href="<?= $__up ?>cuenta.php" class="user-chip"><b><?= e(mb_substr($__user['name'], 0, 1)) ?></b><span><?= e($__user['name']) ?></span></a>
           <div class="user-dropdown">
-            <a href="<?= $__up ?>cuenta.php">Mi Cuenta</a>
-            <a href="<?= $__up ?>pedidos.php">Mis Pedidos</a>
-            <a href="<?= $__up ?>wallet.php">Mi Billetera</a>
-            <a href="<?= $__up ?>vender.php">Mi Mini Tienda</a>
-            <?php if ($__is_admin): ?><a href="index.php">Administración</a><?php endif; ?>
-            <a href="<?= $__up ?>logout.php">Salir</a>
+            <a href="<?= $__up ?>cuenta.php"><?= icon('user', 16) ?> Mi Cuenta</a>
+            <a href="<?= $__up ?>pedidos.php"><?= icon('package', 16) ?> Mis Pedidos</a>
+            <a href="<?= $__up ?>wallet.php"><?= icon('wallet', 16) ?> Mi Billetera</a>
+            <a href="<?= $__up ?>vender.php"><?= icon('store', 16) ?> Mi Mini Tienda</a>
+            <?php if ($__is_admin): ?><a href="index.php"><?= icon('bar-chart', 16) ?> Administración</a><?php endif; ?>
+            <a href="<?= $__up ?>logout.php"><?= icon('x', 16) ?> Salir</a>
           </div>
         </div>
       <?php else: ?>

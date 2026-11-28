@@ -35,7 +35,7 @@ if ($q !== '') {
 }
 include __DIR__ . '/admin-header.php';
 ?>
-<h1 style="color:var(--violet-dark)">📦 Productos de toda la tienda</h1>
+<h1 style="color:var(--violet-dark)"><?= icon('package', 26) ?> Productos de toda la tienda</h1>
 
 <form method="get" class="row mb"><?= csrf_field() ?>
   <input class="input" style="max-width:340px" name="q" placeholder="Buscar producto por nombre…" value="<?= e($q) ?>">

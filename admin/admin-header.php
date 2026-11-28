@@ -2,14 +2,14 @@
 /** Cabecera del panel de administración (usa la plantilla general). */
 if (!function_exists('e')) require_once __DIR__ . '/../includes/auth.php';
 $adminMenu = [
-    'index.php' => '📊 Resumen',
-    'pedidos.php' => '🧾 Pedidos',
-    'productos.php' => '📦 Productos',
-    'tiendas.php' => '🏪 Mini tiendas',
-    'usuarios.php' => '👥 Usuarios',
-    'cobros.php' => '🏦 Datos de cobro',
-    'recargas.php' => '💰 Recargas',
-    'seguridad.php' => '🛡️ Seguridad',
+    'index.php'      => [icon('bar-chart', 16), 'Resumen'],
+    'pedidos.php'    => [icon('receipt', 16), 'Pedidos'],
+    'productos.php'  => [icon('package', 16), 'Productos'],
+    'tiendas.php'    => [icon('store', 16), 'Mini tiendas'],
+    'usuarios.php'   => [icon('users', 16), 'Usuarios'],
+    'cobros.php'     => [icon('landmark', 16), 'Datos de cobro'],
+    'recargas.php'   => [icon('wallet', 16), 'Recargas'],
+    'seguridad.php'  => [icon('shield', 16), 'Seguridad'],
 ];
 $adminActual = basename($_SERVER['SCRIPT_NAME'] ?? '');
 ob_start();
@@ -17,7 +17,7 @@ ob_start();
 <div class="admin-layout">
   <nav class="admin-nav">
     <?php foreach ($adminMenu as $f => $lbl): ?>
-      <a href="<?= e($f) ?>" class="<?= $adminActual === $f ? 'on' : '' ?>"><?= e($lbl) ?></a>
+      <a href="<?= e($f) ?>" class="<?= $adminActual === $f ? 'on' : '' ?>"><?= $lbl[0] ?> <?= e($lbl[1]) ?></a>
     <?php endforeach; ?>
     <hr class="sep" style="border-color:rgba(255,255,255,.15)">
     <a href="../index.php">← Volver a la tienda</a>

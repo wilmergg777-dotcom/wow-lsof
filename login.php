@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Correo o contraseña incorrectos.';
         } else {
             login_user($user);
-            flash('¡Hola, ' . $user['name'] . '! Bienvenido de vuelta. 🌸', 'ok');
+            flash('¡Hola, ' . $user['name'] . '! Bienvenido de vuelta.', 'ok');
             $dest = $volver && str_starts_with($volver, 'http') === false && !str_contains($volver, '//') ? $volver : 'index.php';
             redirect($dest);
         }

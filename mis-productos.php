@@ -47,12 +47,12 @@ $items = $st->fetchAll();
 include __DIR__ . '/includes/header.php';
 ?>
 <div class="row-between mb">
-  <h1 style="color:var(--violet-dark)">📦 Inventario de <?= e($store['name']) ?></h1>
-  <a class="btn btn-yellow" href="publicar.php">➕ Publicar producto</a>
+  <h1 style="color:var(--violet-dark)"><?= icon('package', 26) ?> Inventario de <?= e($store['name']) ?></h1>
+  <a class="btn btn-yellow" href="publicar.php"><?= icon('shopping-cart', 16) ?> Publicar producto</a>
 </div>
 
 <?php if (!$items): ?>
-  <div class="card empty"><div class="big">📦</div>Tu inventario está vacío.<div class="mt"><a class="btn btn-violet" href="publicar.php">Publicar el primer producto</a></div></div>
+  <div class="card empty"><div class="big"><?= icon('package', 44) ?></div>Tu inventario está vacío.<div class="mt"><a class="btn btn-violet" href="publicar.php">Publicar el primer producto</a></div></div>
 <?php else: ?>
   <div class="card">
     <div class="table-wrap"><table class="tbl">

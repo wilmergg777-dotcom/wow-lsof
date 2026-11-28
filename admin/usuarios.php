@@ -59,7 +59,7 @@ if ($q !== '') {
 }
 include __DIR__ . '/admin-header.php';
 ?>
-<h1 style="color:var(--violet-dark)">👥 Usuarios</h1>
+<h1 style="color:var(--violet-dark)"><?= icon('users', 26) ?> Usuarios</h1>
 
 <form method="get" class="row mb">
   <input class="input" style="max-width:340px" name="q" placeholder="Buscar por nombre, correo o teléfono…" value="<?= e($q) ?>">

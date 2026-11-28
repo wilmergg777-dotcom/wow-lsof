@@ -9,11 +9,11 @@ $log = db()->query('SELECT l.*, u.name AS uname FROM security_log l LEFT JOIN us
 $sesiones = db()->query('SELECT us.*, u.name AS uname FROM user_sessions us LEFT JOIN users u ON u.id = us.user_id ORDER BY us.last_seen DESC LIMIT 60')->fetchAll();
 include __DIR__ . '/admin-header.php';
 ?>
-<h1 style="color:var(--violet-dark)">🛡️ Seguridad</h1>
+<h1 style="color:var(--violet-dark)"><?= icon('shield', 26) ?> Seguridad</h1>
 
 <h2 style="color:var(--violet-dark);font-size:17px;margin:10px 0">Cuentas bloqueadas ahora mismo</h2>
 <?php if (!$bloqueadas): ?>
-  <div class="card empty">Ninguna cuenta bloqueada en este momento. ✅</div>
+  <div class="card empty"><?= icon('check', 20) ?> Ninguna cuenta bloqueada en este momento.</div>
 <?php else: ?>
   <div class="card">
     <div class="table-wrap"><table class="tbl">

@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'pagar
     $base = !empty($store['subscription_until']) && strtotime($store['subscription_until']) > time() ? strtotime($store['subscription_until']) : time();
     $until = date('Y-m-d', $base + SUBSCRIPTION_DAYS * 86400);
     db()->prepare('UPDATE stores SET subscription_until = ? WHERE id = ?')->execute([$until, $store['id']]);
-    notify((int)$u['id'], 'Suscripción pagada 🌸', 'Tu tienda «' . $store['name'] . '» está al día hasta el ' . $until . '. ¡A vender!', 'vender.php');
+    notify((int)$u['id'], 'Suscripción pagada', 'Tu tienda «' . $store['name'] . '» está al día hasta el ' . $until . '. ¡A vender!', 'vender.php');
     foreach (db()->query("SELECT id FROM users WHERE role = 'admin'")->fetchAll() as $adm) {
         notify((int)$adm['id'], 'Suscripción pagada', $store['name'] . ' pagó ' . money(SUBSCRIPTION_CUP) . ' de suscripción (hasta ' . $until . ').', 'admin/tiendas.php');
     }
@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'pagar
 $estado = store_status($store);
 include __DIR__ . '/includes/header.php';
 ?>
-<h1 style="color:var(--violet-dark)">💳 Suscripción de mi mini tienda</h1>
+<h1 style="color:var(--violet-dark)"><?= icon('wallet', 26) ?> Suscripción de mi mini tienda</h1>
 
 <div class="card" style="max-width:620px">
   <div class="row-between mb">

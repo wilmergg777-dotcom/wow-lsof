@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) NOT NULL DEFAULT 'customer',
     balance_cup INT NOT NULL DEFAULT 0,
+    default_province VARCHAR(60) NULL,
+    default_municipality VARCHAR(80) NULL,
     failed_attempts INT NOT NULL DEFAULT 0,
     locked_until DATETIME NULL,
     last_login DATETIME NULL,
@@ -55,10 +57,12 @@ CREATE TABLE IF NOT EXISTS stores (
     slug VARCHAR(140) NOT NULL,
     description TEXT NULL,
     photo VARCHAR(300) NULL,
+    province VARCHAR(60) NULL,
+    municipality VARCHAR(80) NULL,
     trial_until DATE NULL,
     subscription_until DATE NULL,
     created_at DATETIME NOT NULL,
-    INDEX (owner_id), INDEX (slug)
+    INDEX (owner_id), INDEX (slug), INDEX (province), INDEX (municipality)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS categories (
@@ -101,10 +105,14 @@ CREATE TABLE IF NOT EXISTS orders (
     transfer_id VARCHAR(80) NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pendiente',
     address VARCHAR(240) NULL,
+    province VARCHAR(60) NULL,
+    municipality VARCHAR(80) NULL,
+    delivery_lat DECIMAL(10,7) NULL,
+    delivery_lng DECIMAL(10,7) NULL,
     phone VARCHAR(40) NULL,
     note VARCHAR(300) NULL,
     created_at DATETIME NOT NULL,
-    INDEX (buyer_id), INDEX (status), INDEX (code)
+    INDEX (buyer_id), INDEX (status), INDEX (code), INDEX (province), INDEX (municipality)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS order_items (

@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $stores = db()->query('SELECT s.*, u.name AS owner, (SELECT COUNT(*) FROM products p WHERE p.store_id = s.id) AS nprod FROM stores s LEFT JOIN users u ON u.id = s.owner_id ORDER BY s.id DESC')->fetchAll();
 include __DIR__ . '/admin-header.php';
 ?>
-<h1 style="color:var(--violet-dark)">🏪 Mini tiendas</h1>
+<h1 style="color:var(--violet-dark)"><?= icon('store', 26) ?> Mini tiendas</h1>
 <p class="muted mb">Prueba gratis: <?= TRIAL_DAYS ?> días · Suscripción: <?= money(SUBSCRIPTION_CUP) ?>/mes (<?= SUBSCRIPTION_DAYS ?> días)</p>
 
 <?php if (!$stores): ?>

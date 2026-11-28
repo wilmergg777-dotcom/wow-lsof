@@ -46,14 +46,14 @@ foreach ($items as $it) {
 $total = array_sum(array_map(fn($i) => $i['price_cup'] * $i['qty'], $valid));
 include __DIR__ . '/includes/header.php';
 ?>
-<h1 style="color:var(--violet-dark)">🛒 Mi Carrito</h1>
+<h1 style="color:var(--violet-dark)"><?= icon('shopping-cart', 26) ?> Mi Carrito</h1>
 
 <?php if ($removed): ?>
   <div class="flash flash-warn">Quitamos del carrito: <?= e(implode(', ', $removed)) ?> (agotado o tienda suspendida).</div>
 <?php endif; ?>
 
 <?php if (!$valid): ?>
-  <div class="card empty"><div class="big">🛒</div>Tu carrito está vacío.<div class="mt"><a class="btn btn-violet" href="productos.php">Ver productos</a></div></div>
+  <div class="card empty"><div class="big"><?= icon('shopping-cart', 44) ?></div>Tu carrito está vacío.<div class="mt"><a class="btn btn-violet" href="productos.php">Ver productos</a></div></div>
 <?php else: ?>
   <div class="card">
     <div class="table-wrap"><table class="tbl">

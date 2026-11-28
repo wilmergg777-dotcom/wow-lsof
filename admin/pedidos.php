@@ -41,7 +41,7 @@ if (in_array($filtro, $estados, true)) {
 $orders = $st->fetchAll();
 include __DIR__ . '/admin-header.php';
 ?>
-<h1 style="color:var(--violet-dark)">🧾 Pedidos</h1>
+<h1 style="color:var(--violet-dark)"><?= icon('receipt', 26) ?> Pedidos</h1>
 
 <div class="pill-tabs">
   <a href="pedidos.php" class="<?= $filtro === '' ? 'on' : '' ?>">Todos</a>
@@ -55,14 +55,19 @@ include __DIR__ . '/admin-header.php';
 <?php else: ?>
   <div class="card">
     <div class="table-wrap"><table class="tbl">
-      <tr><th>Pedido</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Pago</th><th>ID transfer.</th><th>Estado</th><th>Cambiar a</th></tr>
+      <tr><th>Pedido</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Pago</th><th>Entrega</th><th>ID transfer.</th><th>Estado</th><th>Cambiar a</th></tr>
       <?php foreach ($orders as $o): ?>
       <tr>
         <td><a href="../pedido.php?id=<?= (int)$o['id'] ?>"><b><?= e($o['code']) ?></b></a></td>
         <td><?= e($o['buyer'] ?? '—') ?><br><span class="help"><?= e($o['phone']) ?></span></td>
         <td class="muted" style="white-space:nowrap"><?= e(fdate($o['created_at'])) ?></td>
         <td><b><?= money($o['total_cup']) ?></b></td>
-        <td><?= $o['payment_method'] === 'transferencia' ? '🏦' : '💵' ?></td>
+        <td><?= $o['payment_method'] === 'transferencia' ? icon('landmark', 14) : icon('banknote', 14) ?></td>
+        <td class="help">
+          <?= e($o['address'] ?: '—') ?><br>
+          <?php if (!empty($o['province'])): ?>📍 <?= e(province_name($o['province'])) ?><?php if (!empty($o['municipality'])): ?> · <?= e(municipality_name($o['province'], $o['municipality'])) ?><?php endif; ?><br><?php endif; ?>
+          <a href="<?= e(maps_link($o['delivery_lat'] ?? null, $o['delivery_lng'] ?? null, $o['address'] ?? null, $o['province'] ?? null, $o['municipality'] ?? null)) ?>" target="_blank" rel="noopener" style="font-size:12px"><?= icon('map-pin', 12) ?> Google Maps</a>
+        </td>
         <td class="help"><?= e($o['transfer_id'] ?: '—') ?></td>
         <td><span class="state st-<?= e($o['status']) ?>"><?= e(ucfirst($o['status'])) ?></span></td>
         <td>

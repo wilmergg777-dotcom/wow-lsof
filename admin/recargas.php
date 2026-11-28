@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             db()->prepare('UPDATE topups SET status = "aprobada", processed_at = ?, admin_note = ? WHERE id = ?')
                 ->execute([date('Y-m-d H:i:s'), mb_substr(trim($_POST['nota'] ?? ''), 0, 300), $tid]);
             db()->prepare('UPDATE users SET balance_cup = balance_cup + ? WHERE id = ?')->execute([(int)$t['amount_cup'], (int)$t['user_id']]);
-            notify((int)$t['user_id'], '¡Recarga aprobada! 💰', 'Acreditamos ' . money($t['amount_cup']) . ' en tu billetera. ¡Buenas compras!', 'wallet.php');
+            notify((int)$t['user_id'], '¡Recarga aprobada!', 'Acreditamos ' . money($t['amount_cup']) . ' en tu billetera. ¡Buenas compras!', 'wallet.php');
             flash('Recarga aprobada: se acreditaron ' . money($t['amount_cup']) . ' a ' . $t['uname'] . '.', 'ok');
         }
         if ($accion === 'rechazar') {
@@ -34,7 +34,7 @@ $pend = db()->query('SELECT t.*, u.name AS uname, u.phone AS uphone FROM topups 
 $hist = db()->query('SELECT t.*, u.name AS uname FROM topups t LEFT JOIN users u ON u.id = t.user_id WHERE t.status != "pendiente" ORDER BY t.id DESC LIMIT 50')->fetchAll();
 include __DIR__ . '/admin-header.php';
 ?>
-<h1 style="color:var(--violet-dark)">💰 Recargas de billetera</h1>
+<h1 style="color:var(--violet-dark)"><?= icon('wallet', 26) ?> Recargas de billetera</h1>
 
 <?php if ($pend): ?>
   <div class="flash flash-warn">Tienes <b><?= count($pend) ?></b> recarga(s) por verificar. Comprueba el ID de la transferencia en el banco antes de aprobar.</div>
@@ -42,7 +42,7 @@ include __DIR__ . '/admin-header.php';
 
 <h2 style="color:var(--violet-dark);font-size:17px;margin:10px 0">Pendientes de verificar</h2>
 <?php if (!$pend): ?>
-  <div class="card empty">No hay recargas pendientes. Todo al día. ✅</div>
+  <div class="card empty"><?= icon('check', 20) ?> No hay recargas pendientes. Todo al día.</div>
 <?php else: ?>
   <?php foreach ($pend as $t): ?>
   <div class="card mb">
@@ -55,8 +55,8 @@ include __DIR__ . '/admin-header.php';
     <form method="post" class="row mt"><?= csrf_field() ?>
       <input type="hidden" name="topup_id" value="<?= (int)$t['id'] ?>">
       <input class="input" style="max-width:340px" name="nota" placeholder="Nota (opcional al aprobar / obligatoria al rechazar)">
-      <button class="btn btn-green" name="accion" value="aprobar" type="submit" onclick="return confirmDel('¿Aprobar y acreditar <?= money($t['amount_cup']) ?> a <?= e($t['uname']) ?>?')">✔ Aprobar y acreditar</button>
-      <button class="btn btn-red" name="accion" value="rechazar" type="submit" onclick="return confirmDel('¿Rechazar esta recarga?')">✘ Rechazar</button>
+      <button class="btn btn-green" name="accion" value="aprobar" type="submit" onclick="return confirmDel('¿Aprobar y acreditar <?= money($t['amount_cup']) ?> a <?= e($t['uname']) ?>?')"><?= icon('check', 16) ?> Aprobar y acreditar</button>
+      <button class="btn btn-red" name="accion" value="rechazar" type="submit" onclick="return confirmDel('¿Rechazar esta recarga?')"><?= icon('x', 16) ?> Rechazar</button>
     </form>
   </div>
   <?php endforeach; ?>

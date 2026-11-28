@@ -82,7 +82,7 @@ include __DIR__ . '/includes/header.php';
 ?>
 <div class="form-page">
   <div class="card">
-    <h1>🔑 Recuperar mi contraseña</h1>
+    <h1><?= icon('key', 24) ?> Recuperar mi contraseña</h1>
 
     <?php if ($error): ?><div class="flash flash-err"><?= e($error) ?></div><?php endif; ?>
 

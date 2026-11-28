@@ -49,7 +49,7 @@ $page_title = 'Pedido ' . $o['code'] . ' — ' . SITE_NAME;
 include __DIR__ . '/includes/header.php';
 ?>
 <div class="breadcrumb"><a href="pedidos.php">Mis Pedidos</a> › Pedido <?= e($o['code']) ?></div>
-<h1 style="color:var(--violet-dark)">📦 Pedido <?= e($o['code']) ?>
+<h1 style="color:var(--violet-dark)"><?= icon('package', 26) ?> Pedido <?= e($o['code']) ?>
   <span class="state st-<?= e($o['status']) ?>" style="vertical-align:middle;margin-left:8px"><?= e(ucfirst($o['status'])) ?></span>
 </h1>
 <p class="muted mb">Creado el <?= e(fdate($o['created_at'])) ?></p>
@@ -77,9 +77,17 @@ include __DIR__ . '/includes/header.php';
   <div class="card">
     <h2 style="color:var(--violet-dark);font-size:17px;margin-bottom:10px">Entrega y pago</h2>
     <div class="row"><b>Dirección:</b><span><?= e($o['address']) ?></span></div>
+    <div class="row"><b>Ubicación:</b><span><?= e(province_name($o['province'] ?? null)) ?><?= $o['municipality'] ? ' · ' . e(municipality_name($o['province'] ?? null, $o['municipality'])) : '' ?></span></div>
+    <?php
+      $glink = maps_link($o['delivery_lat'] ?? null, $o['delivery_lng'] ?? null, $o['address'] ?? null, $o['province'] ?? null, $o['municipality'] ?? null);
+    ?>
+    <div class="row"><b>Mapa:</b><a href="<?= e($glink) ?>" target="_blank" rel="noopener" class="btn btn-outline btn-sm"><?= icon('map-pin', 14) ?> Ver en Google Maps</a></div>
+    <?php if (($o['delivery_lat'] ?? null) && ($o['delivery_lng'] ?? null)): ?>
+      <div id="mapa-pedido" style="height:240px;border-radius:10px;overflow:hidden;border:1px solid var(--violet-border);margin:10px 0"></div>
+    <?php endif; ?>
     <div class="row"><b>Teléfono:</b><span><?= e($o['phone']) ?></span></div>
     <?php if ($o['note']): ?><div class="row"><b>Nota:</b><span><?= e($o['note']) ?></span></div><?php endif; ?>
-    <div class="row"><b>Método:</b><span><?= $o['payment_method'] === 'transferencia' ? '🏦 Transferencia bancaria' : '💵 Efectivo' ?></span></div>
+    <div class="row"><b>Método:</b><span><?= $o['payment_method'] === 'transferencia' ? icon('landmark', 14) . ' Transferencia bancaria' : icon('banknote', 14) . ' Efectivo' ?></span></div>
 
     <?php if ($o['payment_method'] === 'transferencia'): ?>
       <div class="paydata">
@@ -116,5 +124,19 @@ include __DIR__ . '/includes/header.php';
     <?php endif; ?>
   </div>
 </div>
+
+<?php if (($o['delivery_lat'] ?? null) && ($o['delivery_lng'] ?? null)): ?>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+(function(){
+  const lat = <?= (float)$o['delivery_lat'] ?>, lng = <?= (float)$o['delivery_lng'] ?>;
+  const m = L.map('mapa-pedido').setView([lat, lng], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
+  L.marker([lat, lng], { draggable: false }).addTo(m).bindTooltip('Ubicación de entrega').openTooltip();
+  setTimeout(function(){ m.invalidateSize(); }, 200);
+})();
+</script>
+<?php endif; ?>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

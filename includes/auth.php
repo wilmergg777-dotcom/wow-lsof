@@ -15,6 +15,11 @@ if ($__entry !== 'install.php' && $__entry !== 'logout.php' && !db_installed()) 
     header('Location: install.php');
     exit;
 }
+// Auto-migración de columnas de ubicación (provincia/municipio/lat/lng).
+// Idempotente: solo ejecuta una vez por instalación.
+if ($__entry !== 'install.php' && $__entry !== 'logout.php' && function_exists('auto_migrate_location')) {
+    auto_migrate_location();
+}
 
 /* ---------- Usuario actual ---------- */
 function current_user(): ?array {

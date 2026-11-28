@@ -23,7 +23,7 @@ $stats->execute([$store['id'], $store['id'], $store['id'], $store['id']]);
 $s = $stats->fetch();
 include __DIR__ . '/includes/header.php';
 ?>
-<h1 style="color:var(--violet-dark)">🏪 <?= e($store['name']) ?></h1>
+<h1 style="color:var(--violet-dark)"><?= icon('store', 26) ?> <?= e($store['name']) ?></h1>
 <div class="row mb"><?= store_status_badge($store) ?>
   <?php if ($status === 'prueba'): ?><span class="help">Prueba gratis hasta el <?= e($store['trial_until']) ?></span><?php endif; ?>
   <?php if ($status === 'activa'): ?><span class="help">Suscripción al día hasta el <?= e($store['subscription_until']) ?></span><?php endif; ?>
@@ -44,14 +44,14 @@ include __DIR__ . '/includes/header.php';
   <div class="card">
     <h2 style="color:var(--violet-dark);font-size:17px;margin-bottom:10px">Gestionar</h2>
     <div class="row">
-      <a class="btn btn-yellow" href="publicar.php">➕ Publicar producto</a>
-      <a class="btn btn-violet" href="mis-productos.php">📦 Inventario</a>
-      <a class="btn btn-outline" href="ventas.php">🧾 Ventas recibidas</a>
+      <a class="btn btn-yellow" href="publicar.php"><?= icon('shopping-cart', 16) ?> Publicar producto</a>
+      <a class="btn btn-violet" href="mis-productos.php"><?= icon('package', 16) ?> Inventario</a>
+      <a class="btn btn-outline" href="ventas.php"><?= icon('receipt', 16) ?> Ventas recibidas</a>
     </div>
     <div class="row mt">
-      <a class="btn btn-outline" href="mi-tienda.php">⚙️ Datos de mi tienda</a>
-      <a class="btn btn-outline" href="suscripcion.php">💳 Suscripción</a>
-      <a class="btn btn-outline" href="tienda.php?id=<?= (int)$store['id'] ?>">👁 Ver mi tienda</a>
+      <a class="btn btn-outline" href="mi-tienda.php"><?= icon('store', 16) ?> Datos de mi tienda</a>
+      <a class="btn btn-outline" href="suscripcion.php"><?= icon('wallet', 16) ?> Suscripción</a>
+      <a class="btn btn-outline" href="tienda.php?id=<?= (int)$store['id'] ?>"><?= icon('search', 16) ?> Ver mi tienda</a>
     </div>
   </div>
   <div class="card">

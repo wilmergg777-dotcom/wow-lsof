@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'guard
 }
 include __DIR__ . '/admin-header.php';
 ?>
-<h1 style="color:var(--violet-dark)">🏦 Datos de cobro (transferencias)</h1>
+<h1 style="color:var(--violet-dark)"><?= icon('landmark', 26) ?> Datos de cobro (transferencias)</h1>
 <p class="muted mb">Estos datos se muestran SOLO cuando un cliente elige pagar por transferencia (checkout, recarga) o cuando ya hizo un pedido con transferencia. Nadie más los ve.</p>
 
 <div class="card" style="max-width:640px">
@@ -62,7 +62,7 @@ include __DIR__ . '/admin-header.php';
       <input class="input" name="holder" required value="<?= e($pay['holder'] ?? '') ?>" placeholder="Nombre completo del titular"></div>
     <div><label class="f">Teléfono asociado *</label>
       <input class="input" name="phone" required value="<?= e($pay['phone'] ?? '') ?>" placeholder="+53 5xxx xxxx"></div>
-    <button class="btn btn-violet" type="submit">💾 Guardar datos de cobro</button>
+    <button class="btn btn-violet" type="submit"><?= icon('save', 18) ?> Guardar datos de cobro</button>
     <p class="help">Al guardar se te pedirá confirmar y se avisará a todos los administradores automáticamente.</p>
   </form>
 </div>
