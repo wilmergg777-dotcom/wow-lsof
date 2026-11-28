@@ -144,36 +144,65 @@
 			var ang = (i / zonas.length) * Math.PI * 2 + 0.6;
 			var x = Math.cos(ang) * 5.3, z = Math.sin(ang) * 5.3;
 
-			var sp = X.spriteElemento(it.img, 1.7);
-			sp.position.set(x, 1.0, z);
-			sp.userData = { tipo: 'colaResumen', zona: zona };
-			g.add(sp);
-			X.estado.rayTargets.push(sp);
+			// MODELO 3D REAL del primer elemento de cada cola
+			var modelo;
+			if (zona === 'construccion' && X.modeloEdificio) modelo = X.modeloEdificio(it.id, it.nombre, 0.9);
+			else if (zona === 'investigacion' && X.modeloInvestigacion) modelo = X.modeloInvestigacion(it.id, it.nombre, 0.9);
+			else if (zona === 'naves' && X.modeloNave) modelo = X.modeloNave(it.id, it.nombre, 0.7);
+			else modelo = X.spriteElemento(it.img, 1.7);
+			modelo.position.set(x, 0.45, z);
+			modelo.rotation.y = -ang;
+			modelo.userData = { tipo: 'colaResumen', zona: zona };
+			g.add(modelo);
+			X.estado.rayTargets.push(modelo);
 
 			var txt = it.nombre + (it.nivel ? ' ' + it.nivel : '') + (it.cantidad ? ' ×' + it.cantidad : '');
 			var et = X.etiqueta(txt + ' · ' + X.segAHms(it.restante || 0), '#7dd3fc', 0.62);
-			et.position.set(x, 2.2, z);
+			et.position.set(x, 2.0, z);
 			g.add(et);
 		}
 
-		// flotas en vuelo (la nave principal de cada misión)
+		// flotas en vuelo: nave 3D real girando en órbita (alTick)
 		var flotas = (d.flotas || []).slice(0, 6);
 		for (var j = 0; j < flotas.length; j++) {
 			var f = flotas[j];
 			if (!f.naves || !f.naves.length) continue;
-			var angF = (j / 6) * Math.PI * 2 + 2.2;
-			var rf = 7.6 + (j % 2) * 0.7;
-			var xf = Math.cos(angF) * rf, zf = Math.sin(angF) * rf;
 
-			var sf = X.spriteElemento(f.naves[0].img, 1.6);
-			sf.position.set(xf, 1.4 + (j % 3) * 0.5, zf);
-			sf.userData = { tipo: 'flotaResumen', item: f };
-			g.add(sf);
-			X.estado.rayTargets.push(sf);
+			// portador: nave + etiqueta, animado en el ciclo de animación
+			var portador = new THREE.Group();
+			var nave = (X.modeloNave)
+				? X.modeloNave(f.naves[0].id, f.naves[0].nombre, 0.85)
+				: X.spriteElemento(f.naves[0].img, 1.6);
+			nave.rotation.y = Math.PI; // el modelo mira a -z; alinear al vuelo
+			portador.add(nave);
 
 			var etF = X.etiqueta(f.misionNombre + ' → ' + f.destino.split(' ')[0] + ' · ' + X.segAHms(f.volviendo ? f.regreso : f.llegada), f.volviendo ? '#ffb347' : '#35ff8f', 0.58);
-			etF.position.set(xf, 2.5 + (j % 3) * 0.5, zf);
-			g.add(etF);
+			etF.position.y = 1.35;
+			portador.add(etF);
+
+			portador.userData = { tipo: 'flotaResumen', item: f };
+			g.add(portador);
+			X.estado.rayTargets.push(portador);
+
+			var vuelo = {
+				a0: (j / 6) * Math.PI * 2 + 2.2,
+				r: 7.6 + (j % 2) * 0.7,
+				y: 1.4 + (j % 3) * 0.5,
+				vel: (f.volviendo ? -0.16 : 0.22) + (j % 3) * 0.03,
+				fase: j * 1.7
+			};
+			portador.position.set(Math.cos(vuelo.a0) * vuelo.r, vuelo.y, Math.sin(vuelo.a0) * vuelo.r);
+
+			X.alTick(function (portador, vuelo) {
+				return function (dt, t) {
+					var a = vuelo.a0 + t * vuelo.vel;
+					var px = Math.cos(a) * vuelo.r, pz = Math.sin(a) * vuelo.r;
+					var py = vuelo.y + Math.sin(t * 1.6 + vuelo.fase) * 0.15;
+					portador.position.set(px, py, pz);
+					// morro hacia la tangente de la órbita
+					portador.lookAt(Math.cos(a + 0.12 * (vuelo.vel > 0 ? 1 : -1)) * vuelo.r, py, Math.sin(a + 0.12 * (vuelo.vel > 0 ? 1 : -1)) * vuelo.r);
+				};
+			}(portador, vuelo));
 		}
 
 		// anillos guía (suelo de la escena)

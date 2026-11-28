@@ -92,23 +92,20 @@
 			var r = RADIO + anillo * 2.3;
 			var x = Math.cos(ang) * r, z = Math.sin(ang) * r;
 
-			var sp = X.spriteElemento(e.img, 1.9);
-			sp.position.set(x, 0.9 + (anillo % 2) * 0.3, z);
-			sp.userData = { tipo: 'edificio', item: e };
-			g.add(sp);
-			X.estado.rayTargets.push(sp);
+			// MODELO 3D REAL del edificio (fábrica por nombre/id, idea de
+			// los dibujos del juego); el sprite plano solo si no hay fábrica
+			var mod = X.modeloEdificio
+				? X.modeloEdificio(e.id, e.nombre, 1.2)
+				: X.spriteElemento(e.img, 1.9);
+			mod.position.set(x, 0.12 + (anillo % 2) * 0.22, z);
+			mod.rotation.y = -ang; // orientado al giro del anillo
+			mod.userData = { tipo: 'edificio', item: e };
+			g.add(mod);
+			X.estado.rayTargets.push(mod);
 
 			var et = X.etiqueta(e.nombre + ' ' + e.nivel, e.comprable ? '#7dd3fc' : '#64748b', 0.62);
-			et.position.set(x, 2.15 + (anillo % 2) * 0.3, z);
+			et.position.set(x, 1.95 + (anillo % 2) * 0.25, z);
 			g.add(et);
-
-			// pedestal (suelo de la escena, no imagen del juego)
-			var ped = new THREE.Mesh(
-				new THREE.CylinderGeometry(0.55, 0.75, 0.22, 18),
-				new THREE.MeshStandardMaterial({ color: 0x16233c, roughness: 0.9 })
-			);
-			ped.position.set(x, -0.05, z);
-			g.add(ped);
 		}
 
 		// anillo guía

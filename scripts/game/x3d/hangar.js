@@ -44,20 +44,19 @@
 				var e = lista[i];
 				var ang = (i / n) * Math.PI * 2;
 				var x = Math.cos(ang) * radio, z = Math.sin(ang) * radio;
-				var sp = X.spriteElemento(e.img, 1.7);
-				sp.position.set(x, 0.85, z);
-				sp.userData = { tipo: 'nave', item: e, zona: zona };
-				g.add(sp);
-				X.estado.rayTargets.push(sp);
+				// MODELO 3D REAL (fábrica por nombre/id; sprite solo como reserva)
+				var modelo;
+				if (zona === 'fleet' && X.modeloNave) modelo = X.modeloNave(e.id, e.nombre, 0.9);
+				else if (zona === 'defense' && X.modeloDefensa) modelo = X.modeloDefensa(e.id, e.nombre, 0.9);
+				else modelo = X.spriteElemento(e.img, 1.7);
+				modelo.position.set(x, 0.45, z);
+				modelo.rotation.y = -ang;
+				modelo.userData = { tipo: 'nave', item: e, zona: zona };
+				g.add(modelo);
+				X.estado.rayTargets.push(modelo);
 				var et = X.etiqueta(e.nombre + ' ×' + X.fmtCorto(e.tengo), zona === 'fleet' ? '#7dd3fc' : '#c084fc', 0.55);
-				et.position.set(x, 1.95, z);
+				et.position.set(x, 1.8, z);
 				g.add(et);
-				var ped = new THREE.Mesh(
-					new THREE.CylinderGeometry(0.5, 0.68, 0.18, 16),
-					new THREE.MeshStandardMaterial({ color: 0x16233c, roughness: 0.9 })
-				);
-				ped.position.set(x, -0.04, z);
-				g.add(ped);
 			}
 			var circ = [];
 			for (var a = 0; a <= 96; a++) {
@@ -71,9 +70,11 @@
 		anillo(d.naves || [], 4.6, 'fleet');
 		anillo(d.defensas || [], 7.6, 'defense');
 
-		// hangar central (edificio 21 real del juego)
-		var centro = X.spriteElemento(X.DPATH + 'gebaeude/21.gif', 2.6);
-		centro.position.set(0, 1.6, 0);
+		// hangar central: fábrica 3D real (edificio 21)
+		var centro = (X.modeloEdificio)
+			? X.modeloEdificio(21, 'Hangar', 1.6)
+			: X.spriteElemento(X.DPATH + 'gebaeude/21.gif', 2.6);
+		centro.position.set(0, 0.2, 0);
 		g.add(centro);
 
 		X.estado.grupo = g;

@@ -193,6 +193,9 @@ window.X3D = (function () {
 	var estado = { escena: 'resumen', datos: null, sel: null, grupo: null, rayTargets: [] };
 
 	function limpiarEscena() {
+		// animaciones propias del módulo saliente (ruedas, flotas volando…)
+		for (var t = 0; t < ticks.length; t++) ticks[t] = null;
+		ticks.length = 0;
 		if (!estado.grupo) return;
 		estado.grupo.traverse(function (o) {
 			if (o.geometry) o.geometry.dispose();
@@ -205,6 +208,11 @@ window.X3D = (function () {
 		estado.grupo = null;
 		estado.rayTargets = [];
 		estado.sel = null;
+	}
+	/* animaciones registradas por el módulo ACTIVO: alTick(function (dt, t) {…}) */
+	var ticks = [];
+	function alTick(fn) {
+		if (typeof fn === 'function') ticks.push(fn);
 	}
 
 	/* ================= datos (fetch JSON del juego) ================= */
@@ -352,7 +360,10 @@ window.X3D = (function () {
 	}
 	function recargarEscena() {
 		var mod = modulos[estado.escena];
-		if (mod && mod.construir) cargarDatos(estado.escena, mod.construir);
+		if (mod && mod.construir) {
+			limpiarEscena(); // reconstruir sin duplicar la escena anterior
+			cargarDatos(estado.escena, mod.construir);
+		}
 	}
 	/* saltar a otra escena del dock (la usan los módulos para enlazarse) */
 	function irA(nombre) {
@@ -375,10 +386,15 @@ window.X3D = (function () {
 			puntero.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
 			puntero.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
 			raycaster.setFromCamera(puntero, camara);
-			var hits = raycaster.intersectObjects(estado.rayTargets, false);
+			// recursivo: los modelos 3D reales son GRUPOS de mallas
+			var hits = raycaster.intersectObjects(estado.rayTargets, true);
 			if (!hits.length) return;
+			// subir hasta el ancestro con userData del módulo (el grupo raíz)
+			var obj = hits[0].object;
+			while (obj && (!obj.userData || !obj.userData.tipo) && obj.parent) obj = obj.parent;
+			if (!obj || !obj.userData) return;
 			var mod = modulos[estado.escena];
-			if (mod && mod.alClic) mod.alClic(hits[0].object.userData);
+			if (mod && mod.alClic) mod.alClic(obj.userData);
 		});
 	}
 
@@ -392,6 +408,10 @@ window.X3D = (function () {
 			requestAnimationFrame(ciclo);
 			var dt = reloj.getDelta();
 			var t = reloj.elapsedTime;
+			// animaciones del módulo activo (ruedas de mina, flotas volando…)
+			for (var i = 0; i < ticks.length; i++) {
+				if (ticks[i]) { try { ticks[i](dt, t); } catch (e) { ticks[i] = null; } }
+			}
 			if (estado.grupo) {
 				estado.grupo.rotation.y += dt * 0.02;
 				estado.grupo.traverse(function (o) {
@@ -470,6 +490,8 @@ window.X3D = (function () {
 		recargarEscena: recargarEscena,
 		irA: irA,
 		hayPara: hayPara,
+		// animación por módulo (se limpia al cambiar de escena)
+		alTick: alTick,
 		// UI compartida
 		fmt: fmt,
 		fmtCorto: fmtCorto,

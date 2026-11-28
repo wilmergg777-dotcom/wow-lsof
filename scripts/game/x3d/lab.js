@@ -65,20 +65,25 @@
 			pad.position.set(x, -0.55, z);
 			g.add(pad);
 
-			var sp = X.spriteElemento(t.img, 1.6);
-			sp.position.set(x, 0.55, z);
-			sp.userData = { tipo: 'tech', item: t };
-			g.add(sp);
-			X.estado.rayTargets.push(sp);
+			// MODELO 3D REAL: artefacto de investigación sobre el pad
+			var modelo = (X.modeloInvestigacion)
+				? X.modeloInvestigacion(t.id, t.nombre, 1.0)
+				: X.spriteElemento(t.img, 1.6);
+			modelo.position.set(x, -0.35, z);
+			modelo.userData = { tipo: 'tech', item: t };
+			g.add(modelo);
+			X.estado.rayTargets.push(modelo);
 
 			var et = X.etiqueta(t.nombre + ' ' + t.nivel, t.comprable ? '#7dd3fc' : '#64748b', 0.52);
-			et.position.set(x, 1.5, z);
+			et.position.set(x, 1.6, z);
 			g.add(et);
 		}
 
-		// laboratorio central real (edificio 31 del juego)
-		var centro = X.spriteElemento(X.DPATH + 'gebaeude/31.gif', 2.4);
-		centro.position.set(0, 1.8, -(Math.ceil(techs.length / porFila)) * 3.4 - 1.5);
+		// laboratorio central: fábrica 3D real (edificio 31)
+		var centro = (X.modeloEdificio)
+			? X.modeloEdificio(31, 'Laboratorio de investigación', 1.7)
+			: X.spriteElemento(X.DPATH + 'gebaeude/31.gif', 2.4);
+		centro.position.set(0, 0, -(Math.ceil(techs.length / porFila)) * 3.4 - 1.5);
 		g.add(centro);
 
 		X.estado.grupo = g;

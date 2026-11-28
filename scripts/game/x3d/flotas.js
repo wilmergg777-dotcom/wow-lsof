@@ -39,17 +39,31 @@
 		var n = flotas.length || 1;
 		for (var i = 0; i < flotas.length; i++) {
 			var f = flotas[i];
-			var ang = (i / n) * Math.PI * 2;
-			var x = Math.cos(ang) * 6.5, z = Math.sin(ang) * 6.5;
-			var img = (f.naves && f.naves[0]) ? f.naves[0].img : X.DPATH + 'gebaeude/203.gif';
-			var sp = X.spriteElemento(img, 1.7);
-			sp.position.set(x, 0.7, z);
-			sp.userData = { tipo: 'flota', item: f };
-			g.add(sp);
-			X.estado.rayTargets.push(sp);
+			var nave0 = (f.naves && f.naves[0]) ? f.naves[0] : null;
+			// MODELO 3D REAL volando en órbita (portador nave + etiqueta)
+			var portador = new THREE.Group();
+			var nave = (X.modeloNave && nave0)
+				? X.modeloNave(nave0.id, nave0.nombre, 0.95)
+				: X.spriteElemento(nave0 ? nave0.img : X.DPATH + 'gebaeude/203.gif', 1.7);
+			nave.rotation.y = Math.PI;
+			portador.add(nave);
 			var et = X.etiqueta(f.misionNombre + (f.volviendo ? ' ↩' : ' →') + ' ' + f.destino, f.volviendo ? '#a78bfa' : '#7dd3fc', 0.55);
-			et.position.set(x, 1.85, z);
-			g.add(et);
+			et.position.y = 1.5;
+			portador.add(et);
+			portador.userData = { tipo: 'flota', item: f };
+			g.add(portador);
+			X.estado.rayTargets.push(portador);
+			var vuelo = { a0: (i / n) * Math.PI * 2, r: 6.5, y: 0.8, vel: (f.volviendo ? -0.2 : 0.3) + (i % 3) * 0.03, fase: i * 1.9 };
+			portador.position.set(Math.cos(vuelo.a0) * vuelo.r, vuelo.y, Math.sin(vuelo.a0) * vuelo.r);
+			X.alTick(function (portador, vuelo) {
+				return function (dt, t) {
+					var a = vuelo.a0 + t * vuelo.vel;
+					var px = Math.cos(a) * vuelo.r, pz = Math.sin(a) * vuelo.r;
+					var py = vuelo.y + Math.sin(t * 1.5 + vuelo.fase) * 0.15;
+					portador.position.set(px, py, pz);
+					portador.lookAt(Math.cos(a + 0.12 * (vuelo.vel > 0 ? 1 : -1)) * vuelo.r, py, Math.sin(a + 0.12 * (vuelo.vel > 0 ? 1 : -1)) * vuelo.r);
+				};
+			}(portador, vuelo));
 		}
 		if (!flotas.length) {
 			g.add(X.etiqueta('No hay flotas en vuelo', '#64748b', 1.3));
