@@ -47,7 +47,7 @@
 	var MAX_S = parseInt(D0.maxSystem, 10) || 1;
 	var MAX_P = parseInt(D0.maxPlanets, 10) || 15;
 	var HOME = { g: parseInt(D0.curGalaxy, 10), s: parseInt(D0.curSystem, 10), p: parseInt(D0.curPlanet, 10) };
-	var DPATH = (D0.dpath || 'styles/themes/gow/').replace(/\/?$/, '/');
+	var DPATH = (D0.dpath || 'styles/theme/gow/').replace(/\/?$/, '/');
 
 	/* ================= ESTADOS / COLORES ================= */
 	var CLASES = {
@@ -128,12 +128,34 @@
 	controles.maxDistance = 170;
 	controles.maxPolarAngle = Math.PI * 0.52;
 	controles.enablePan = false;
+	controles.maxDistance = 280;
 	controles.addEventListener('start', function () { estado.seguir = 0; estado.focus = null; });
 
 	var renderer = new THREE.WebGLRenderer({ antialias: true });
 	renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 	renderer.setSize(cont.clientWidth, cont.clientHeight);
 	cont.appendChild(renderer.domElement);
+
+	/* cámara inicial según la forma de la pantalla: SIEMPRE se ve el
+	   sistema entero (sol + las 15 órbitas + espacio profundo). En
+	   móvil vertical el panel inferior tapa el 62% de abajo, así que
+	   se DESPLAZA el encuadre (setViewOffset) para que el sol y las
+	   órbitas queden en la franja libre de arriba. */
+	function camaraInicial() {
+		var aspecto = cont.clientWidth / Math.max(cont.clientHeight, 1);
+		if (aspecto < 0.9) {
+			camara.position.set(0, 40, 88);
+			controles.target.set(0, 0, 0);
+			var desfase = Math.round(cont.clientHeight * 0.26);
+			camara.setViewOffset(cont.clientWidth, cont.clientHeight + desfase, 0, desfase, cont.clientWidth, cont.clientHeight);
+		} else {
+			camara.clearViewOffset();
+			if (aspecto < 1.6) camara.position.set(0, 36, 70);  // ventana cuadrada/media
+			else camara.position.set(0, 27, 58);                // escritorio panorámico
+			controles.target.set(0, 0, 0);
+		}
+	}
+	camaraInicial();
 
 	escena.add(new THREE.AmbientLight(0x3a4a66, 1.25));
 	var luzSol = new THREE.PointLight(0xffdd88, 1.6, 260);
@@ -270,7 +292,7 @@
 		);
 		lin.computeLineDistances();
 		escena.add(lin);
-		var sp = etiqueta('🛰 ESPACIO PROFUNDO · EXPEDICIONES (' + (MAX_P + 1) + ')', '#b06cff', 2.2);
+		var sp = etiqueta('🛰 ESPACIO PROFUNDO (' + (MAX_P + 1) + ')', '#b06cff', 1.3);
 		sp.position.set(0, 3.2, r);
 		sp.userData = { tipo: 'profundo' };
 		escena.add(sp);
@@ -503,7 +525,9 @@
 	}
 
 	/* ---------- selección ---------- */
-	function seleccionar(pos) {
+	/* volar=false: marca la fila y el anillo pero la cámara NO se acerca
+	   (se usa al arrancar para que se vea el sistema entero) */
+	function seleccionar(pos, volar) {
 		var f = null;
 		for (var i = 0; i < estado.filas.length; i++) if (estado.filas[i].pos === pos) f = estado.filas[i];
 		if (!f) return;
@@ -520,12 +544,14 @@
 			redibujarEtiqueta(selLabel, txt, f.t === 'd' ? '#b06cff' : colorDe(f));
 			selLabel.position.set(0, (f._radio || 0.5) + 1.7, 0);
 			selLabel.visible = true;
-			estado.focus = { pos: f._grupo.position.clone().setY(0.4), dist: 16 };
-			estado.seguir = reloj.elapsedTime + 2.8;
+			if (volar !== false) {
+				estado.focus = { pos: f._grupo.position.clone().setY(0.4), dist: 16 };
+				estado.seguir = reloj.elapsedTime + 2.8;
+			}
 		}
 		pintarTabla();
 		pintarDetalle();
-		if (window.matchMedia && matchMedia('(max-width: 900px)').matches) appEl.classList.add('det-open');
+		if (window.matchMedia && matchMedia('(max-width: 900px)').matches && volar !== false) appEl.classList.add('det-open');
 	}
 
 	/* ---------- picking ---------- */
@@ -748,8 +774,7 @@
 
 	/* ================= NAVEGACIÓN POR LA API (fetch JSON) ================= */
 	function resetCamara() {
-		camara.position.set(0, 26, 46);
-		controles.target.set(0, 0, 0);
+		camaraInicial();
 		estado.focus = null;
 	}
 	function irA(g, s, selPos) {
@@ -834,11 +859,18 @@
 	// móvil: pestañas para cambiar entre la tabla de galaxia y la de puntuación
 	$('ag3d_tab_gal').addEventListener('click', function () {
 		appEl.classList.remove('score-mv');
+		appEl.classList.add('score-off'); // por defecto SIEMPRE la tabla de galaxia
 		this.classList.add('activo'); $('ag3d_tab_score').classList.remove('activo');
 	});
 	$('ag3d_tab_score').addEventListener('click', function () {
 		appEl.classList.add('score-mv');
+		appEl.classList.remove('score-off'); // la pestaña puntuación la pide explícitamente
 		this.classList.add('activo'); $('ag3d_tab_gal').classList.remove('activo');
+	});
+	// botón 📊 PUNTUACIÓN de la barra superior: mostrar/ocultar en cualquier tamaño
+	$('ag3d_tgl_score').addEventListener('click', function () {
+		appEl.classList.toggle('score-off');
+		if (!appEl.classList.contains('score-off')) pintarScore();
 	});
 	$('ag3d_tgl_pos').addEventListener('click', function () { appEl.classList.toggle('pos-off'); });
 	$('ag3d_tgl_det').addEventListener('click', function () { appEl.classList.toggle('det-open'); });
@@ -858,6 +890,7 @@
 		camara.aspect = w / h;
 		camara.updateProjectionMatrix();
 		renderer.setSize(w, h);
+		camaraInicial(); // reaplica el encuadre (desfase móvil) al cambiar tamaño
 	});
 
 	/* ================= ARRANQUE ================= */
@@ -868,7 +901,7 @@
 	(function () {
 		var posPropia = HOME.p;
 		for (var i = 0; i < estado.filas.length; i++) if (estado.filas[i].own) posPropia = estado.filas[i].pos;
-		seleccionar(posPropia);
+		seleccionar(posPropia, false); // marcada en tabla/anillo, la cámara muestra TODO el sistema
 	})();
 	if (window.matchMedia && matchMedia('(max-width: 900px)').matches) appEl.classList.remove('det-open');
 

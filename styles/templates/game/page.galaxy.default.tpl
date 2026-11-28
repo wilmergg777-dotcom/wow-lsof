@@ -19,7 +19,7 @@
 #ag3d_app {
     position: relative; width: 100%;
     box-sizing: border-box;
-    height: calc(100vh - 150px); min-height: 540px;
+    height: calc(100vh - 118px); min-height: 560px;
     background: #0a101e; border-radius: 12px; overflow: hidden;
     font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     color: #cbd5e1;
@@ -124,8 +124,11 @@
 }
 .ag3d_bloque { display: flex; flex-direction: column; min-height: 0; }
 #ag3d_bloque_gal { flex: 1 1 auto; }
-#ag3d_bloque_score { flex: 0 0 auto; margin-top: 8px; }
-#ag3d_bloque_score .ag3d_twrap { flex: none; max-height: 172px; }
+#ag3d_bloque_score { flex: 0 1 auto; margin-top: 8px; }
+#ag3d_bloque_score .ag3d_twrap { flex: none; max-height: 132px; }
+/* la tabla de GALAXIA manda: la de puntuación nace oculta y se abre
+   con el botón 📊 PUNTUACIÓN de la barra superior */
+#ag3d_app.score-off #ag3d_bloque_score { display: none !important; }
 .ag3d_tabsmv { display: none; gap: 6px; margin-bottom: 8px; }
 .ag3d_tabsmv .ag3d_mini { flex: 1; text-align: center; padding: 7px 4px; }
 
@@ -245,13 +248,19 @@ tr.vacia td { color: #475569; font-style: italic; }
 
 /* ====== móvil ====== */
 @media (max-width: 900px) {
-    #ag3d_app { height: calc(100vh - 120px); min-height: 480px; }
+    /* más alto: la tabla de galaxia 1-16 debe verse completa */
+    #ag3d_app { height: calc(100vh - 70px); min-height: 560px; }
     .ag3d_cnts { display: none; }
     .ag3d_toggle { display: inline-block; }
-    #ag3d_pos { top: auto; bottom: 8px; left: 8px; right: 8px; width: auto; max-height: 46%; }
+    #ag3d_pos { top: auto; bottom: 8px; left: 8px; right: 8px; width: auto; max-height: 62%; padding: 8px; }
+    /* caben las 16 posiciones: menos padding, sin leyenda (está en el detalle) */
+    #ag3d_app .ag3d_leyenda { display: none; }
+    table.ag3d_table td { padding: 2px 3px; }
+    .ag3d_nav { margin-bottom: 6px; }
+    .ag3d_tabsmv .ag3d_mini { padding: 5px 4px; }
     #ag3d_det {
         top: auto; bottom: 8px; left: 8px; right: 8px; width: auto;
-        max-height: 56%; display: none;
+        max-height: 62%; display: none;
     }
     #ag3d_app.det-open #ag3d_det { display: block; }
     #ag3d_app.det-open #ag3d_pos { display: none; }
@@ -274,7 +283,7 @@ tr.vacia td { color: #475569; font-style: italic; }
 </style>
 {/literal}
 
-<div id="ag3d_app">
+<div id="ag3d_app" class="score-off">
 
     <div id="ag3d_canvas"></div>
 
@@ -291,6 +300,7 @@ tr.vacia td { color: #475569; font-style: italic; }
         </div>
         <div class="der">
             <button class="ag3d_btn ag3d_btn-oro" id="ag3d_home" title="Ir al sistema de tu planeta">⌂ MI PLANETA [{$current_galaxy}:{$current_system}:{$current_planet}]</button>
+            <button class="ag3d_btn" id="ag3d_tgl_score" title="Mostrar u ocultar la tabla de puntuación (por defecto oculta: la tabla de galaxia manda)">📊 PUNTUACIÓN</button>
             <button class="ag3d_btn" id="ag3d_clasico" title="Cambiar a la vista clásica (tabla) conservando galaxia:sistema">🖥 CLÁSICO</button>
             <button class="ag3d_btn ag3d_toggle" id="ag3d_tgl_pos">☰ POSICIONES</button>
             <button class="ag3d_btn ag3d_toggle" id="ag3d_tgl_det">ℹ DETALLE</button>
