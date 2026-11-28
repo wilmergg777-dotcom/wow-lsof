@@ -27,8 +27,10 @@
  *     para evitar el error SQL 1064.
  * GALAXIA 3D (rama xnova3d) v2.0:
  *   - La lógica de datos vive en Galaxy3dService (compartida con la API).
- *   - SELECTOR DE VISTA: el jugador elige entorno 3D o clásico con
- *     ?page=galaxy&vista=3d|clasico (se recuerda en la sesión). Es la MISMA
+ *   - SELECTOR DE VISTA: pulsar GALAXIA en el menú abre SIEMPRE el
+ *     visor 3D. La tabla clásica solo con 🖥 CLÁSICO
+ *     (?page=galaxy&vista=clasico) y se mantiene mientras se navega
+ *     dentro de ella. Es la MISMA
  *     instalación y la MISMA base de datos: solo cambia la forma de jugar.
  *   - show(): renderiza page.galaxy.default.tpl (3D) o page.galaxy.clasico.tpl.
  *   - fetch(): API JSON AJAX del visor 3D (cobra deuterio igual que la clásica).
@@ -47,12 +49,16 @@ class ShowGalaxyPage extends AbstractGamePage
 	}
 
 	// ============================================================
-	// SELECTOR DE VISTA (xnova3d v2.0)
+	// SELECTOR DE VISTA (xnova3d v2.1)
 	// El usuario escoge si juega en el entorno 3D o en el clásico:
 	//   ?page=galaxy&vista=3d      -> visor 3D
 	//   ?page=galaxy&vista=clasico -> tabla clásica
-	// La elección se recuerda en la sesión del usuario mientras dure
-	// su conexión. Por defecto: 3D (esta rama).
+	// REGLA PRINCIPAL: pulsar GALAXIA en el menú (clic limpio, sin
+	// parámetros) abre SIEMPRE el visor 3D. La tabla clásica solo se
+	// mantiene mientras el jugador navega DENTRO de ella (flechas <->
+	// y MOSTRAR, que envían galaxy/system); al pulsar el menú otra
+	// vez vuelve al 3D. Los botones 🖥 CLÁSICO / 🌐 GALAXIA 3D fijan
+	// la vista explícitamente (vista=3d|clasico).
 	// ============================================================
 	private function elegirVista()
 	{
@@ -62,6 +68,16 @@ class ShowGalaxyPage extends AbstractGamePage
 		if ($vista === 'clasico' || $vista === '3d') {
 			$session->ag3d_vista = $vista;
 			return $vista;
+		}
+		// ¿es navegación interna de la tabla clásica? (flechas, MOSTRAR
+		// o enlaces de misiles: siempre llevan galaxy/system o galaxyLeft...)
+		$navegaTabla = HTTP::_GP('galaxy', 0) || HTTP::_GP('system', 0)
+			|| HTTP::_GP('galaxyLeft', '') !== '' || HTTP::_GP('galaxyRight', '') !== ''
+			|| HTTP::_GP('systemLeft', '') !== '' || HTTP::_GP('systemRight', '') !== '';
+		if (!$navegaTabla) {
+			// clic limpio en el menú GALAXIA -> visor 3D siempre
+			$session->ag3d_vista = '3d';
+			return '3d';
 		}
 		$guardada = $session->ag3d_vista;
 		return ($guardada === 'clasico') ? 'clasico' : '3d';
